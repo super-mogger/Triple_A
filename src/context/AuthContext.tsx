@@ -6,7 +6,8 @@ import {
   signOut,
   onAuthStateChanged,
   GoogleAuthProvider,
-  signInWithPopup
+  signInWithPopup,
+  createUserWithEmailAndPassword
 } from 'firebase/auth';
 import { auth } from '../config/firebase';
 
@@ -17,6 +18,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   loginWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
+  signup: (email: string, password: string) => Promise<void>;
   error: string | null;
 }
 
@@ -73,6 +75,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const signup = async (email: string, password: string) => {
+    try {
+      setError(null);
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      setUser(userCredential.user);
+      navigate('/');
+    } catch (err) {
+      setError('Failed to create an account');
+      throw err;
+    }
+  };
+
   return (
     <AuthContext.Provider 
       value={{ 
@@ -82,6 +96,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         login, 
         loginWithGoogle, 
         logout, 
+        signup, 
         error 
       }}
     >

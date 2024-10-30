@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Dumbbell, Mail, Lock, ArrowRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -105,6 +106,14 @@ export default function Login() {
             Login with Google
           </button>
         </form>
+
+        {/* Link to Signup Page */}
+        <div className="mt-6 text-center">
+          <span className="text-sm text-gray-600">Don't have an account? </span>
+          <Link to="/signup" className="text-sm text-emerald-600 hover:text-emerald-700">
+            Create one
+          </Link>
+        </div>
       </div>
     </div>
   );

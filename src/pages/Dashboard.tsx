@@ -1,11 +1,10 @@
-import { Dumbbell, LogOut, Utensils, Activity, QrCode } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
+import { Dumbbell, Utensils, Activity, QrCode } from 'lucide-react';
+
 import { NavLink } from 'react-router-dom';
 import MetricCard from '../components/MetricCard';
 import WorkoutCard from '../components/WorkoutCard';
 
 export default function Dashboard() {
-  const { user, logout } = useAuth();
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -17,14 +16,7 @@ export default function Dashboard() {
               <span className="ml-2 text-xl font-semibold text-gray-900">Fitness Tracker</span>
             </div>
             <div className="flex items-center space-x-4">
-              <span className="text-gray-700">{user?.email}</span>
-              <button
-                onClick={logout}
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
-              >
-                <LogOut className="h-4 w-4 mr-2" />
-                Logout
-              </button>
+              
             </div>
           </div>
         </div>

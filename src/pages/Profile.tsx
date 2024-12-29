@@ -3,20 +3,24 @@ import { useAuth } from '../context/AuthContext';
 import { LogOut } from 'lucide-react';
 
 export default function Profile() {
-  const { user, logout, updateUserDetails } = useAuth();
-  const [name, setName] = useState(user?.displayName || '');
-  const [isEditing, setIsEditing] = useState(false);
+  const { user, logout } = useAuth();
+  const [isDarkMode, setIsDarkMode] = useState(false);
 
-  const handleUpdate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    await updateUserDetails({ displayName: name });
-    setIsEditing(false);
+  const toggleDarkMode = () => {
+    setIsDarkMode(!isDarkMode);
+    document.body.classList.toggle('dark', !isDarkMode);
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-6">
+    <div className={`min-h-screen p-4 md:p-6 ${isDarkMode ? 'bg-gray-800 text-white' : 'bg-gray-50 text-gray-800'}`}>
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-2xl font-bold text-gray-800 mb-6">Profile</h1>
+        <h1 className="text-2xl font-bold mb-6">Profile</h1>
+        <button
+          onClick={toggleDarkMode}
+          className="mb-4 px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700"
+        >
+          Toggle Dark Mode
+        </button>
         {user ? (
           <div>
             <img
@@ -24,44 +28,8 @@ export default function Profile() {
               alt="Profile"
               className="w-24 h-24 rounded-full mb-4"
             />
-            <form onSubmit={handleUpdate} className="mb-6">
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700">Name</label>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className={`mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 ${isEditing ? '' : 'bg-gray-100 cursor-not-allowed'}`}
-                  disabled={!isEditing}
-                  required
-                />
-              </div>
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700">Email</label>
-                <input
-                  type="email"
-                  value={user.email || ''}
-                  className="mt-1 block w-full border-gray-300 rounded-md shadow-sm bg-gray-100 cursor-not-allowed"
-                  disabled
-                />
-              </div>
-              {isEditing ? (
-                <button
-                  type="submit"
-                  className="w-full inline-flex items-center justify-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                >
-                  Save Changes
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setIsEditing(true)}
-                  className="w-full inline-flex items-center justify-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                >
-                  Edit
-                </button>
-              )}
-            </form>
+            <p className="text-lg font-semibold">{user.displayName || 'User'}</p>
+            <p className="text-sm">{user.email}</p>
           </div>
         ) : (
           <p>No user information available.</p>

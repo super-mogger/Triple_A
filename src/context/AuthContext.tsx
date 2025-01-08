@@ -7,9 +7,12 @@ import {
   onAuthStateChanged,
   GoogleAuthProvider,
   signInWithPopup,
-  createUserWithEmailAndPassword
+  createUserWithEmailAndPassword,
+  sendEmailVerification,
+  sendPasswordResetEmail
 } from 'firebase/auth';
 import { auth } from '../config/firebase';
+import { createUserProfile } from '../services/database';
 
 interface AuthContextType {
   user: User | null;
@@ -20,6 +23,8 @@ interface AuthContextType {
   logout: () => Promise<void>;
   signup: (email: string, password: string) => Promise<void>;
   error: string | null;
+  sendVerificationEmail: () => Promise<void>;
+  isEmailVerified: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -43,6 +48,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       setError(null);
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      
+      if (!userCredential.user.emailVerified) {
+        setError('Please verify your email before signing in');
+        await signOut(auth);
+        return;
+      }
+      
       setUser(userCredential.user);
       navigate('/');
     } catch (err) {
@@ -57,7 +69,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const provider = new GoogleAuthProvider();
       const userCredential = await signInWithPopup(auth, provider);
       setUser(userCredential.user);
-      navigate('/');
+      navigate('/dashboard');
     } catch (err) {
       setError('Failed to sign in with Google');
       throw err;
@@ -68,7 +80,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await signOut(auth);
       setUser(null);
-      navigate('/login');
+      navigate('/welcome');
     } catch (err) {
       setError('Failed to log out');
       throw err;
@@ -79,11 +91,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       setError(null);
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      
+      // Create user profile in Firestore
+      await createUserProfile({
+        uid: userCredential.user.uid,
+        email: userCredential.user.email!,
+        displayName: userCredential.user.displayName || undefined,
+        photoURL: userCredential.user.photoURL || undefined,
+        joinDate: new Date(),
+        lastUpdated: new Date()
+      });
+      
+      // Send verification email
+      await sendEmailVerification(userCredential.user);
       setUser(userCredential.user);
-      navigate('/');
-    } catch (err) {
-      setError('Failed to create an account');
+      
+      navigate('/verify-email');
+    } catch (err: any) {
+      if (err.code === 'auth/email-already-in-use') {
+        setError('An account with this email already exists');
+      } else {
+        setError('Failed to create an account');
+      }
       throw err;
+    }
+  };
+
+  const sendVerificationEmail = async () => {
+    if (user && !user.emailVerified) {
+      try {
+        await sendEmailVerification(user);
+      } catch (err) {
+        setError('Failed to send verification email');
+        throw err;
+      }
     }
   };
 
@@ -97,7 +138,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         loginWithGoogle, 
         logout, 
         signup, 
-        error 
+        error,
+        sendVerificationEmail,
+        isEmailVerified: user?.emailVerified ?? false,
       }}
     >
       {!isLoading && children}

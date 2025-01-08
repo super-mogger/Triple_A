@@ -18,3 +18,54 @@ body.dark {
 .dark .text-gray-800 {
   color: #f7fafc; /* Light text color for gray-800 */
 }
+
+/* Calendar Styles */
+.react-calendar {
+  width: 100%;
+  border: none;
+  font-family: inherit;
+}
+
+.react-calendar__tile {
+  padding: 1em 0.5em;
+  position: relative;
+}
+
+.attendance-present {
+  background-color: rgba(16, 185, 129, 0.1);
+}
+
+.attendance-absent {
+  background-color: rgba(239, 68, 68, 0.1);
+}
+
+.dark .attendance-present {
+  background-color: rgba(16, 185, 129, 0.2);
+}
+
+.dark .attendance-absent {
+  background-color: rgba(239, 68, 68, 0.2);
+}
+
+.dark-calendar {
+  background-color: transparent;
+  color: #E5E7EB;
+}
+
+.dark-calendar .react-calendar__tile:enabled:hover,
+.dark-calendar .react-calendar__tile:enabled:focus {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.dark-calendar .react-calendar__tile--now {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.dark-calendar .react-calendar__tile--active {
+  background-color: #10B981;
+  color: white;
+}
+
+.dark-calendar .react-calendar__month-view__weekdays {
+  color: #9CA3AF;
+}

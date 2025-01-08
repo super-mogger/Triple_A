@@ -1,88 +1,162 @@
-import { Dumbbell, Utensils, Activity, QrCode } from 'lucide-react';
-
-import { NavLink } from 'react-router-dom';
-import MetricCard from '../components/MetricCard';
-import WorkoutCard from '../components/WorkoutCard';
+import React from 'react';
+import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
+import { 
+  Activity, 
+  Target, 
+  Calendar, 
+  TrendingUp, 
+  Dumbbell, 
+  Scale,
+  Clock,
+  ChevronRight
+} from 'lucide-react';
 
 export default function Dashboard() {
+  const { isDarkMode } = useTheme();
+  const { user } = useAuth();
+
+  // Mock data (replace with actual data from your database)
+  const userStats = {
+    currentWeight: '75 kg',
+    targetWeight: '80 kg',
+    workoutsCompleted: 12,
+    currentStreak: 5,
+    nextWorkout: 'Push Day (Chest, Shoulders, Triceps)',
+    calorieTarget: '2800 kcal',
+    proteinTarget: '160g',
+    progress: {
+      monthly: '+2.5 kg',
+      workoutFrequency: '4 days/week'
+    }
+  };
+
+  const StatCard = ({ icon: Icon, title, value, subtext }: {
+    icon: React.ElementType;
+    title: string;
+    value: string;
+    subtext?: string;
+  }) => (
+    <div className={`p-4 rounded-lg ${
+      isDarkMode ? 'bg-dark-surface' : 'bg-white'
+    } shadow-lg`}>
+      <div className="flex items-start justify-between">
+        <div>
+          <p className={`text-sm ${
+            isDarkMode ? 'text-gray-400' : 'text-gray-600'
+          }`}>{title}</p>
+          <h3 className="text-xl font-bold mt-1">{value}</h3>
+          {subtext && (
+            <p className={`text-sm ${
+              isDarkMode ? 'text-gray-400' : 'text-gray-600'
+            } mt-1`}>{subtext}</p>
+          )}
+        </div>
+        <Icon className={`w-5 h-5 ${
+          isDarkMode ? 'text-emerald-400' : 'text-emerald-600'
+        }`} />
+      </div>
+    </div>
+  );
+
+  const NextWorkoutCard = () => (
+    <div className={`p-4 rounded-lg ${
+      isDarkMode ? 'bg-dark-surface' : 'bg-white'
+    } shadow-lg`}>
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="text-lg font-semibold">Next Workout</h3>
+        <Calendar className="w-5 h-5 text-emerald-600" />
+      </div>
+      <p className={`text-sm ${
+        isDarkMode ? 'text-gray-400' : 'text-gray-600'
+      } mb-3`}>Today's Session</p>
+      <div className="flex justify-between items-center">
+        <div>
+          <p className="font-medium">{userStats.nextWorkout}</p>
+          <p className={`text-sm ${
+            isDarkMode ? 'text-gray-400' : 'text-gray-600'
+          } mt-1`}>Estimated time: 60 min</p>
+        </div>
+        <button className={`px-3 py-1.5 rounded-lg flex items-center ${
+          isDarkMode ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-emerald-500 hover:bg-emerald-600'
+        } text-white transition-colors text-sm`}>
+          Start
+          <ChevronRight className="w-4 h-4 ml-1" />
+        </button>
+      </div>
+    </div>
+  );
+
+  const NutritionCard = () => (
+    <div className={`p-4 rounded-lg ${
+      isDarkMode ? 'bg-dark-surface' : 'bg-white'
+    } shadow-lg`}>
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="text-lg font-semibold">Daily Nutrition</h3>
+        <Target className="w-5 h-5 text-emerald-600" />
+      </div>
+      <div className="space-y-3">
+        <div>
+          <div className="flex justify-between text-sm mb-1">
+            <span>Calories</span>
+            <span>{userStats.calorieTarget}</span>
+          </div>
+          <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+            <div className="h-full bg-emerald-500 w-3/4"></div>
+          </div>
+        </div>
+        <div>
+          <div className="flex justify-between text-sm mb-1">
+            <span>Protein</span>
+            <span>{userStats.proteinTarget}</span>
+          </div>
+          <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+            <div className="h-full bg-emerald-500 w-1/2"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <Dumbbell className="h-8 w-8 text-emerald-600" />
-              <span className="ml-2 text-xl font-semibold text-gray-900">Fitness Tracker</span>
-            </div>
-            <div className="flex items-center space-x-4">
-              
-            </div>
-          </div>
-        </div>
-      </nav>
+    <div className={`max-w-4xl mx-auto p-4 ${
+      isDarkMode ? 'text-dark-text' : 'text-gray-800'
+    }`}>
+      {/* Welcome Section */}
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold">Welcome back, {user?.displayName || 'Athlete'}!</h1>
+        <p className={`${
+          isDarkMode ? 'text-gray-400' : 'text-gray-600'
+        }`}>Let's crush today's goals</p>
+      </div>
 
-      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="px-4 py-6 sm:px-0">
-          <h1 className="text-2xl font-semibold text-gray-900">Welcome to your Dashboard</h1>
-          <p className="mt-2 text-gray-600">Your fitness journey starts here.</p>
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+        <StatCard
+          icon={Scale}
+          title="Current Weight"
+          value={userStats.currentWeight}
+          subtext={`Target: ${userStats.targetWeight}`}
+        />
+        <StatCard
+          icon={Activity}
+          title="Workouts Completed"
+          value={userStats.workoutsCompleted.toString()}
+          subtext={`${userStats.currentStreak} day streak`}
+        />
+        <StatCard
+          icon={TrendingUp}
+          title="Monthly Progress"
+          value={userStats.progress.monthly}
+          subtext={userStats.progress.workoutFrequency}
+        />
+      </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
-            <MetricCard
-              title="Calories Burned"
-              value="500"
-              target="1000"
-              icon={Activity}
-              color="bg-emerald-500"
-              progress={50}
-              unit="kcal"
-            />
-            <MetricCard
-              title="Steps"
-              value="8000"
-              target="10000"
-              icon={Dumbbell}
-              color="bg-blue-500"
-              progress={80}
-              unit="steps"
-            />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
-            <WorkoutCard
-              title="Morning Yoga"
-              icon={Utensils}
-              duration="30 mins"
-              exercises={5}
-              color="bg-purple-500"
-            />
-            <WorkoutCard
-              title="Evening Run"
-              icon={QrCode}
-              duration="45 mins"
-              exercises={1}
-              color="bg-red-500"
-            />
-          </div>
-        </div>
-      </main>
-
-      <footer className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 py-4">
-        <div className="max-w-7xl mx-auto flex justify-around">
-          <NavLink to="/diet" className="flex flex-col items-center text-gray-600 hover:text-emerald-600">
-            <Utensils className="w-6 h-6" />
-            <span className="text-sm">Diet Plan</span>
-          </NavLink>
-          <NavLink to="/progress" className="flex flex-col items-center text-gray-600 hover:text-emerald-600">
-            <Activity className="w-6 h-6" />
-            <span className="text-sm">Progress</span>
-          </NavLink>
-          <NavLink to="/attendance" className="flex flex-col items-center text-gray-600 hover:text-emerald-600">
-            <QrCode className="w-6 h-6" />
-            <span className="text-sm">Attendance</span>
-          </NavLink>
-        </div>
-      </footer>
+      {/* Workout and Nutrition Section */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <NextWorkoutCard />
+        <NutritionCard />
+      </div>
     </div>
   );
 }

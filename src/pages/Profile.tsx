@@ -1,4 +1,5 @@
 import React from 'react';
+<<<<<<< Updated upstream
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { User, Mail, Phone, Calendar } from 'lucide-react';
@@ -83,8 +84,79 @@ export default function Profile() {
             isDarkMode ? 'bg-gray-800' : 'bg-gray-50'
           }`}>
             <p>Your progress statistics will appear here</p>
+=======
+import { useNavigate } from 'react-router-dom';
+import { useProfile } from '../context/ProfileContext';
+import { useAuth } from '../context/AuthContext';
+import { 
+  Edit, 
+  Crown, 
+  Star, 
+  Calendar, 
+  Clock, 
+  Shield, 
+  Settings,
+  BarChart2
+} from 'lucide-react';
+
+export default function Profile() {
+  const navigate = useNavigate();
+  const { profileData } = useProfile();
+  const { user } = useAuth();
+
+  // Temporarily show admin controls for all users
+  const isAdmin = true; // Changed this line to always return true
+
+  return (
+    <div className="min-h-screen bg-[#121212] text-white">
+      <div className="max-w-3xl mx-auto px-4 py-4 pb-24">
+        {/* Profile Header */}
+        <div className="bg-[#1E1E1E] rounded-xl shadow-sm mb-6">
+          <div className="p-6 flex justify-between items-center">
+            <div className="flex items-center gap-4">
+              <h1 className="text-xl font-semibold">Profile</h1>
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => navigate('/admin/membership')}
+                className="flex items-center gap-2 px-4 py-2 bg-yellow-500 text-black rounded-lg hover:bg-yellow-400 transition-colors"
+              >
+                <Shield className="w-4 h-4" />
+                <span>Grant Membership</span>
+              </button>
+              <button
+                onClick={() => navigate('/profile/edit')}
+                className="flex items-center gap-2 px-4 py-2 bg-[#282828] rounded-lg hover:bg-[#333] transition-colors"
+              >
+                <Settings className="w-4 h-4" />
+                <span>Edit Profile</span>
+              </button>
+            </div>
+>>>>>>> Stashed changes
           </div>
         </div>
+
+        {/* Quick Actions */}
+        <div className="bg-[#1E1E1E] rounded-xl shadow-sm mb-6">
+          <div className="p-6">
+            <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
+              <Shield className="w-5 h-5 text-yellow-500" />
+              Membership Controls
+            </h3>
+            <div className="grid grid-cols-1 gap-4">
+              <button
+                onClick={() => navigate('/admin/membership')}
+                className="flex items-center justify-center gap-2 px-4 py-3 bg-[#282828] rounded-lg hover:bg-[#333] transition-colors"
+              >
+                <Crown className="w-4 h-4 text-yellow-500" />
+                <span>Grant 6-Month Membership</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Existing Membership Section */}
+        {/* ... rest of your profile sections ... */}
       </div>
     </div>
   );

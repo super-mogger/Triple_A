@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Dumbbell, Mail, Lock, ArrowRight } from 'lucide-react';
+import { Dumbbell, Mail, Lock, ArrowRight, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const { login, loginWithGoogle, error } = useAuth();
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetStatus, setResetStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null);
+  const { login, loginWithGoogle, error, sendPasswordResetEmail } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -14,6 +17,27 @@ export default function Login() {
       await login(email, password);
     } catch (err) {
       console.error('Login failed:', err);
+    }
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await sendPasswordResetEmail(resetEmail);
+      setResetStatus({
+        type: 'success',
+        message: 'Password reset email sent! Please check your inbox.'
+      });
+      setTimeout(() => {
+        setShowResetModal(false);
+        setResetStatus(null);
+        setResetEmail('');
+      }, 3000);
+    } catch (err) {
+      setResetStatus({
+        type: 'error',
+        message: 'Failed to send reset email. Please try again.'
+      });
     }
   };
 
@@ -76,7 +100,11 @@ export default function Login() {
               <input type="checkbox" className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500" />
               <span className="text-sm text-gray-600">Remember me</span>
             </label>
-            <button type="button" className="text-sm text-emerald-600 hover:text-emerald-700">
+            <button 
+              type="button" 
+              onClick={() => setShowResetModal(true)}
+              className="text-sm text-emerald-600 hover:text-emerald-700"
+            >
               Forgot Password?
             </button>
           </div>
@@ -115,6 +143,65 @@ export default function Login() {
           </Link>
         </div>
       </div>
+
+      {/* Password Reset Modal */}
+      {showResetModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md relative">
+            <button
+              onClick={() => {
+                setShowResetModal(false);
+                setResetStatus(null);
+                setResetEmail('');
+              }}
+              className="absolute right-4 top-4 text-gray-400 hover:text-gray-600"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            
+            <h2 className="text-xl font-bold text-gray-800 mb-4">Reset Password</h2>
+            
+            {resetStatus ? (
+              <div className={`p-3 rounded ${
+                resetStatus.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+              } mb-4`}>
+                {resetStatus.message}
+              </div>
+            ) : (
+              <p className="text-gray-600 mb-4">
+                Enter your email address and we'll send you instructions to reset your password.
+              </p>
+            )}
+
+            <form onSubmit={handleResetPassword} className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700" htmlFor="resetEmail">
+                  Email
+                </label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <input
+                    id="resetEmail"
+                    type="email"
+                    value={resetEmail}
+                    onChange={(e) => setResetEmail(e.target.value)}
+                    className="w-full pl-11 pr-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
+                    placeholder="Enter your email"
+                    required
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                className="w-full bg-emerald-600 text-white py-3 rounded-lg font-medium hover:bg-emerald-700 transition-colors"
+              >
+                Send Reset Instructions
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

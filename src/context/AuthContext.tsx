@@ -9,7 +9,7 @@ import {
   signInWithPopup,
   createUserWithEmailAndPassword,
   sendEmailVerification,
-  sendPasswordResetEmail
+  sendPasswordResetEmail as firebaseSendPasswordResetEmail
 } from 'firebase/auth';
 import { auth } from '../config/firebase';
 import { createUserProfile } from '../services/database';
@@ -25,6 +25,7 @@ interface AuthContextType {
   error: string | null;
   sendVerificationEmail: () => Promise<void>;
   isEmailVerified: boolean;
+  sendPasswordResetEmail: (email: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -128,6 +129,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const sendPasswordResetEmail = async (email: string) => {
+    try {
+      await firebaseSendPasswordResetEmail(auth, email);
+    } catch (err) {
+      setError('Failed to send password reset email');
+      throw err;
+    }
+  };
+
   return (
     <AuthContext.Provider 
       value={{ 
@@ -141,6 +151,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         error,
         sendVerificationEmail,
         isEmailVerified: user?.emailVerified ?? false,
+        sendPasswordResetEmail,
       }}
     >
       {!isLoading && children}

@@ -1,9 +1,19 @@
 import React from 'react';
 import { useProfile } from '../context/ProfileContext';
-import { Activity, Award, Calendar, Clock, Dumbbell, Target, TrendingUp, User } from 'lucide-react';
+import { Activity, Award, Calendar, Clock, Crown, Dumbbell, Target, TrendingUp, User } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 export default function Dashboard() {
   const { profileData, loading } = useProfile();
+  const navigate = useNavigate();
+
+  // Mock active membership data (replace with actual data from backend)
+  const activeMembership = {
+    plan: 'quarterly',
+    startDate: '2024-01-08',
+    endDate: '2024-04-08',
+    isActive: false
+  };
 
   if (loading) {
     return (
@@ -16,6 +26,27 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-[#121212] text-white">
       <div className="container mx-auto px-4 py-4 pb-24">
+        {/* Membership Alert */}
+        {!activeMembership.isActive && (
+          <div className="bg-red-500/10 border border-red-500/20 rounded-xl shadow-sm p-4 mb-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Crown className="h-6 w-6 text-red-500" />
+                <div>
+                  <h3 className="text-lg font-medium text-red-500">No Active Membership</h3>
+                  <p className="text-sm text-red-400/80">Get access to all gym facilities and features</p>
+                </div>
+              </div>
+              <button
+                onClick={() => navigate('/membership')}
+                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+              >
+                View Plans
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Welcome Section */}
         <div className="bg-[#1E1E1E] rounded-xl shadow-sm p-6 mb-6">
           <h1 className="text-2xl font-bold text-white">

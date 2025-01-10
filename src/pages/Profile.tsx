@@ -263,52 +263,12 @@ export default function Profile() {
                 </div>
               </div>
               <div className="mt-4">
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-sm text-gray-400">Dietary Preferences</p>
-                  <button
-                    onClick={() => {
-                      setEditingDietary(!editingDietary);
-                      setSaveError(null);
-                    }}
-                    className="text-sm text-emerald-500 hover:text-emerald-400"
-                  >
-                    {editingDietary ? 'Cancel' : 'Edit'}
-                  </button>
-                </div>
-                {editingDietary ? (
-                  <div>
-                    <div className="flex flex-wrap gap-2 mb-4">
-                      {dietaryOptions.map((option) => (
-                        <button
-                          key={option}
-                          onClick={() => handleDietaryChange(option)}
-                          className={`px-3 py-1 rounded-full text-sm transition-colors ${
-                            dietaryPreferences.includes(option)
-                              ? 'bg-emerald-600 text-white'
-                              : 'bg-[#282828] text-gray-300 hover:bg-[#333]'
-                          }`}
-                        >
-                          {option}
-                        </button>
-                      ))}
-                    </div>
-                    {saveError && (
-                      <p className="text-red-500 text-sm mb-3">{saveError}</p>
-                    )}
-                    <button
-                      onClick={saveDietaryPreferences}
-                      className="bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-emerald-700 transition-colors"
-                    >
-                      Save Preferences
-                    </button>
-                  </div>
-                ) : (
-                  <p className="mt-1">
-                    {profileData?.preferences?.dietary?.length > 0 
-                      ? profileData.preferences.dietary.join(', ') 
-                      : 'No dietary preferences set'}
-                  </p>
-                )}
+                <p className="text-sm text-gray-400">Dietary Preferences</p>
+                <p className="mt-1">
+                  {profileData?.preferences?.dietary?.length > 0 
+                    ? profileData.preferences.dietary.join(', ') 
+                    : 'No dietary preferences set'}
+                </p>
               </div>
             </div>
           </div>

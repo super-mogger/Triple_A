@@ -35,7 +35,7 @@ interface ProfileData {
   medicalInfo: {
     conditions: string;
   };
-  membership?: Membership;
+  membership: Membership;
   createdAt: string;
   lastUpdated: string;
 }
@@ -72,7 +72,18 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
 
         if (docSnap.exists()) {
           console.log('Existing profile found:', docSnap.data());
-          setProfileData(docSnap.data() as ProfileData);
+          const data = docSnap.data();
+          // Ensure membership exists
+          if (!data.membership) {
+            data.membership = {
+              planId: '',
+              startDate: '',
+              endDate: '',
+              isActive: false,
+              lastPaymentId: ''
+            };
+          }
+          setProfileData(data as ProfileData);
         } else {
           console.log('Creating new profile for:', user.email);
           const initialProfile: ProfileData = {

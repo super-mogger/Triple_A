@@ -88,15 +88,14 @@ export function PaymentProvider({ children }: { children: React.ReactNode }) {
     try {
       const paymentsRef = collection(db, 'payments');
       const newPaymentRef = doc(paymentsRef);
-      await setDoc(newPaymentRef, {
+      const newPayment = {
         ...payment,
         id: newPaymentRef.id
-      });
+      };
 
-      setPayments(prev => [{
-        ...payment,
-        id: newPaymentRef.id
-      } as Payment, ...prev]);
+      await setDoc(newPaymentRef, newPayment);
+
+      setPayments(prev => [newPayment as Payment, ...prev]);
     } catch (error) {
       console.error('Error adding payment:', error);
       throw error;

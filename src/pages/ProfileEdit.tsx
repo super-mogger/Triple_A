@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useProfile } from '../context/ProfileContext';
 import { ArrowLeft, Check } from 'lucide-react';
@@ -8,7 +8,6 @@ export default function ProfileEdit() {
   const { profileData, updateProfile } = useProfile();
   const [formData, setFormData] = useState({
     personalInfo: {
-      age: profileData?.personalInfo?.age || '',
       dateOfBirth: profileData?.personalInfo?.dateOfBirth || '',
       gender: profileData?.personalInfo?.gender || '',
       bloodType: profileData?.personalInfo?.bloodType || ''
@@ -26,6 +25,21 @@ export default function ProfileEdit() {
       dietary: profileData?.preferences?.dietary || []
     }
   });
+
+  // Calculate age from DOB
+  const calculateAge = (dob: string): string => {
+    if (!dob) return '';
+    const birthDate = new Date(dob);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    
+    return age.toString();
+  };
 
   const dietaryOptions = [
     'Vegetarian',
@@ -66,7 +80,18 @@ export default function ProfileEdit() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await updateProfile(formData);
+      // Calculate age before submitting
+      const age = calculateAge(formData.personalInfo.dateOfBirth);
+      
+      await updateProfile({
+        personalInfo: {
+          ...formData.personalInfo,
+          age // Add calculated age
+        },
+        medicalInfo: formData.medicalInfo,
+        stats: formData.stats,
+        preferences: formData.preferences
+      });
       navigate('/profile');
     } catch (error) {
       console.error('Failed to update profile:', error);
@@ -91,12 +116,9 @@ export default function ProfileEdit() {
             <div className="grid grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm text-gray-400 mb-2">Age</label>
-                <input
-                  type="number"
-                  value={formData.personalInfo.age}
-                  onChange={(e) => handleChange('personalInfo', 'age', e.target.value)}
-                  className="w-full bg-[#282828] rounded-lg px-4 py-2 text-white border border-gray-700 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
-                />
+                <p className="px-4 py-2 bg-[#282828] rounded-lg text-gray-400">
+                  {calculateAge(formData.personalInfo.dateOfBirth) || 'Will be calculated from DOB'}
+                </p>
               </div>
               <div>
                 <label className="block text-sm text-gray-400 mb-2">Date of Birth</label>

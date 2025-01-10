@@ -2,18 +2,12 @@ import React from 'react';
 import { useProfile } from '../context/ProfileContext';
 import { Activity, Award, Calendar, Clock, Crown, Dumbbell, Target, TrendingUp, User } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { usePayment } from '../context/PaymentContext';
 
 export default function Dashboard() {
   const { profileData, loading } = useProfile();
+  const { membership } = usePayment();
   const navigate = useNavigate();
-
-  // Mock active membership data (replace with actual data from backend)
-  const activeMembership = {
-    plan: 'quarterly',
-    startDate: '2024-01-08',
-    endDate: '2024-04-08',
-    isActive: false
-  };
 
   if (loading) {
     return (
@@ -27,7 +21,7 @@ export default function Dashboard() {
     <div className="min-h-screen bg-[#121212] text-white">
       <div className="container mx-auto px-4 py-4 pb-24">
         {/* Membership Alert */}
-        {!activeMembership.isActive && (
+        {!membership?.isActive && (
           <div className="bg-red-500/10 border border-red-500/20 rounded-xl shadow-sm p-4 mb-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">

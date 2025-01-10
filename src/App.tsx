@@ -17,36 +17,41 @@ import Workouts from './pages/Workouts';
 import ProfileEdit from './pages/ProfileEdit';
 import { ProfileProvider } from './context/ProfileContext';
 import MembershipDetails from './pages/MembershipDetails';
+import PaymentHistory from './pages/PaymentHistory';
+import { PaymentProvider } from './context/PaymentContext';
 
 function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
         <ProfileProvider>
-          <Routes>
-            <Route path="/welcome" element={<GetStarted />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<SignUp />} />
-            <Route path="/user-info" element={<UserInfoForm />} />
-            <Route path="/verify-email" element={<VerifyEmail />} />
-            <Route 
-              element={
-                <PrivateRoute>
-                  <Layout />
-                </PrivateRoute>
-              }
-            >
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/workouts" element={<Workouts />} />
-              <Route path="/diet" element={<DietPlan />} />
-              <Route path="/attendance" element={<Attendance />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/profile/edit" element={<ProfileEdit />} />
-              <Route path="/membership" element={<MembershipDetails />} />
-            </Route>
-            <Route path="*" element={<Navigate to="/welcome" replace />} />
-          </Routes>
+          <PaymentProvider>
+            <Routes>
+              <Route path="/welcome" element={<GetStarted />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<SignUp />} />
+              <Route path="/user-info" element={<UserInfoForm />} />
+              <Route path="/verify-email" element={<VerifyEmail />} />
+              <Route 
+                element={
+                  <PrivateRoute>
+                    <Layout />
+                  </PrivateRoute>
+                }
+              >
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/workouts" element={<Workouts />} />
+                <Route path="/diet" element={<DietPlan />} />
+                <Route path="/attendance" element={<Attendance />} />
+                <Route path="/profile" element={<Profile />} />
+                <Route path="/profile/edit" element={<ProfileEdit />} />
+                <Route path="/membership" element={<MembershipDetails />} />
+                <Route path="/payment-history" element={<PaymentHistory />} />
+              </Route>
+              <Route path="*" element={<Navigate to="/welcome" replace />} />
+            </Routes>
+          </PaymentProvider>
         </ProfileProvider>
       </AuthProvider>
     </ThemeProvider>

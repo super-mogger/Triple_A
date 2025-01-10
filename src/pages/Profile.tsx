@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useProfile } from '../context/ProfileContext';
 import { useAuth } from '../context/AuthContext';
 import { useState, useEffect } from 'react';
+import { usePayment } from '../context/PaymentContext';
 
 interface Plan {
   id: string;
@@ -62,6 +63,7 @@ export default function Profile() {
   const navigate = useNavigate();
   const { profileData, updateProfile } = useProfile();
   const { user } = useAuth();
+  const { membership } = usePayment();
 
   // Mock active membership data (replace with actual data from backend)
   const activeMembership = {
@@ -144,7 +146,7 @@ export default function Profile() {
               <Crown className="w-5 h-5 text-yellow-500" />
               Active Membership
             </h2>
-            {activeMembership.isActive ? (
+            {membership?.isActive ? (
               <span className="bg-emerald-600/20 text-emerald-500 px-3 py-1 rounded-full text-sm">
                 Active
               </span>
@@ -155,17 +157,17 @@ export default function Profile() {
             )}
           </div>
           <div className="p-6">
-            {activeMembership.isActive ? (
+            {membership?.isActive ? (
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
                   <div>
-                    <h3 className="text-lg font-medium">{plans.find(p => p.id === activeMembership.plan)?.name}</h3>
-                    <p className="text-gray-400 text-sm">Valid until {new Date(activeMembership.endDate).toLocaleDateString()}</p>
+                    <h3 className="text-lg font-medium">{plans.find(p => p.id === membership.planId)?.name}</h3>
+                    <p className="text-gray-400 text-sm">Valid until {new Date(membership.endDate).toLocaleDateString()}</p>
                   </div>
                   <div className="text-right">
                     <p className="text-sm text-gray-400">Days Remaining</p>
                     <p className="text-2xl font-bold text-emerald-500">
-                      {Math.ceil((new Date(activeMembership.endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))}
+                      {Math.ceil((new Date(membership.endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))}
                     </p>
                   </div>
                 </div>
@@ -173,8 +175,8 @@ export default function Profile() {
                   <div 
                     className="bg-emerald-600 h-2 rounded-full"
                     style={{
-                      width: `${Math.max(0, Math.min(100, (new Date(activeMembership.endDate).getTime() - new Date().getTime()) / 
-                        (new Date(activeMembership.endDate).getTime() - new Date(activeMembership.startDate).getTime()) * 100))}%`
+                      width: `${Math.max(0, Math.min(100, (new Date(membership.endDate).getTime() - new Date().getTime()) / 
+                        (new Date(membership.endDate).getTime() - new Date(membership.startDate).getTime()) * 100))}%`
                     }}
                   />
                 </div>

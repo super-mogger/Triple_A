@@ -21,6 +21,9 @@ import { ProfileProvider } from './context/ProfileContext';
 import Membership from './pages/Membership';
 import AdminMembership from './pages/AdminMembership';
 import ForgotPassword from './pages/ForgotPassword';
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 
 function App() {

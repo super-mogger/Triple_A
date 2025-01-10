@@ -131,6 +131,7 @@ export default function Profile() {
                 <Settings className="w-4 h-4" />
                 <span>Edit Profile</span>
               </button>
+<<<<<<< Updated upstream
             </div>
 >>>>>>> Stashed changes
           </div>
@@ -151,10 +152,34 @@ export default function Profile() {
                 <Crown className="w-4 h-4 text-yellow-500" />
                 <span>Grant 6-Month Membership</span>
               </button>
+=======
+>>>>>>> Stashed changes
             </div>
           </div>
         </div>
 
+<<<<<<< Updated upstream
+=======
+        {/* Quick Actions */}
+        <div className="bg-[#1E1E1E] rounded-xl shadow-sm mb-6">
+          <div className="p-6">
+            <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
+              <Shield className="w-5 h-5 text-yellow-500" />
+              Membership Controls
+            </h3>
+            <div className="grid grid-cols-1 gap-4">
+              <button
+                onClick={() => navigate('/admin/membership')}
+                className="flex items-center justify-center gap-2 px-4 py-3 bg-[#282828] rounded-lg hover:bg-[#333] transition-colors"
+              >
+                <Crown className="w-4 h-4 text-yellow-500" />
+                <span>Grant 6-Month Membership</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+>>>>>>> Stashed changes
         {/* Existing Membership Section */}
         {/* ... rest of your profile sections ... */}
       </div>

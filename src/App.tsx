@@ -14,13 +14,17 @@ import SignUp from './pages/SignUp';
 import VerifyEmail from './pages/VerifyEmail';
 import { ThemeProvider } from './context/ThemeContext';
 import Workouts from './pages/Workouts';
+<<<<<<< HEAD
 import ProfileEdit from './pages/ProfileEdit';
 import { ProfileProvider } from './context/ProfileContext';
+=======
+>>>>>>> parent of 90f2545 (push)
 
 function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
+<<<<<<< HEAD
         <ProfileProvider>
           <Routes>
             <Route path="/welcome" element={<GetStarted />} />
@@ -46,6 +50,30 @@ function App() {
             <Route path="*" element={<Navigate to="/welcome" replace />} />
           </Routes>
         </ProfileProvider>
+=======
+        <Routes>
+          <Route path="/welcome" element={<GetStarted />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/user-info" element={<UserInfoForm />} />
+          <Route path="/signup" element={<SignUp />} />
+          <Route path="/verify-email" element={<VerifyEmail />} />
+          <Route 
+            element={
+              <PrivateRoute>
+                <Layout />
+              </PrivateRoute>
+            }
+          >
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/workouts" element={<Workouts />} />
+            <Route path="/diet" element={<DietPlan />} />
+            <Route path="/attendance" element={<Attendance />} />
+            <Route path="/profile" element={<Profile />} />
+          </Route>
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+>>>>>>> parent of 90f2545 (push)
       </AuthProvider>
     </ThemeProvider>
   );

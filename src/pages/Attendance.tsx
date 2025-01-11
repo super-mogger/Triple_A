@@ -1,14 +1,12 @@
 import React, { useState } from 'react';
-import { useTheme } from '../context/ThemeContext';
+import QRScanner from '../components/QRScanner';
+import { useProfile } from '../context/ProfileContext';
+import { usePayment } from '../context/PaymentContext';
+import { Crown, QrCode, Calendar as CalendarIcon, CheckCircle2, XCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import Calendar from 'react-calendar';
 import { format } from 'date-fns';
-import { 
-  QrCode, 
-  Calendar as CalendarIcon,
-  CheckCircle2,
-  XCircle,
-  X
-} from 'lucide-react';
+import 'react-calendar/dist/Calendar.css';
 
 type AttendanceRecord = {
   date: string;
@@ -17,36 +15,29 @@ type AttendanceRecord = {
 };
 
 export default function Attendance() {
-  const { isDarkMode } = useTheme();
   const [showScanner, setShowScanner] = useState(false);
-  const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([
-    { date: '2024-02-01', status: 'present', time: '09:15 AM' },
-    { date: '2024-02-03', status: 'absent' },
-    { date: '2024-02-05', status: 'present', time: '09:30 AM' },
+  const [scanResult, setScanResult] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const { membership } = usePayment();
+  const navigate = useNavigate();
+
+  // Mock attendance records (replace with actual data from backend)
+  const [attendanceRecords] = useState<AttendanceRecord[]>([
+    { date: '2024-01-15', status: 'present', time: '09:15 AM' },
+    { date: '2024-01-16', status: 'absent' },
+    { date: '2024-01-17', status: 'present', time: '10:30 AM' },
   ]);
 
-  const handleScan = (data: string | null) => {
-    if (data) {
-      // Validate QR code data and mark attendance
-      if (data === 'your-gym-qr-code') { // Replace with your actual QR code validation
-        const today = format(new Date(), 'yyyy-MM-dd');
-        const newRecord: AttendanceRecord = {
-          date: today,
-          status: 'present',
-          time: format(new Date(), 'hh:mm a')
-        };
-        
-        setAttendanceRecords(prev => [...prev, newRecord]);
-        setShowScanner(false);
-        
-        // Show success message
-        alert('Attendance marked successfully!');
-      }
-    }
+  const handleScanSuccess = (result: string) => {
+    setScanResult(result);
+    setError(null);
+    setShowScanner(false);
+    // Here you would typically validate the QR code and mark attendance
   };
 
-  const handleError = (err: any) => {
-    console.error(err);
+  const handleScanError = (error: string) => {
+    setError(error);
+    setScanResult(null);
   };
 
   const tileClassName = ({ date }: { date: Date }) => {
@@ -55,7 +46,7 @@ export default function Attendance() {
     
     if (!record) return '';
     
-    return `attendance-${record.status} ${isDarkMode ? 'dark' : ''}`;
+    return `attendance-${record.status}`;
   };
 
   const tileContent = ({ date }: { date: Date }) => {
@@ -75,71 +66,161 @@ export default function Attendance() {
     );
   };
 
-  return (
-    <div className={`max-w-4xl mx-auto p-4 ${
-      isDarkMode ? 'text-dark-text' : 'text-gray-800'
-    }`}>
-      {/* Header */}
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center">
-            <CalendarIcon className="w-6 h-6 mr-2" />
-            Attendance
-          </h1>
-          <p className={`${
-            isDarkMode ? 'text-gray-400' : 'text-gray-600'
-          }`}>Track your gym visits</p>
-        </div>
-        <button
-          onClick={() => setShowScanner(true)}
-          className={`px-4 py-2 rounded-lg flex items-center ${
-            isDarkMode ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-emerald-500 hover:bg-emerald-600'
-          } text-white transition-colors`}
-        >
-          <QrCode className="w-5 h-5 mr-2" />
-          Scan QR
-        </button>
-      </div>
-
-      {/* Calendar */}
-      <div className={`p-4 rounded-lg ${
-        isDarkMode ? 'bg-dark-surface' : 'bg-white'
-      } shadow-lg mb-6`}>
-        <Calendar
-          className={`w-full ${isDarkMode ? 'dark-calendar' : ''}`}
-          tileClassName={tileClassName}
-          tileContent={tileContent}
-        />
-      </div>
-
-      {/* QR Scanner Modal */}
-      {showScanner && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className={`relative p-4 rounded-lg ${
-            isDarkMode ? 'bg-dark-surface' : 'bg-white'
-          } max-w-md w-full mx-4`}>
-            <button
-              onClick={() => setShowScanner(false)}
-              className="absolute top-2 right-2 p-2 rounded-full hover:bg-gray-100"
-            >
-              <X className="w-6 h-6" />
-            </button>
-            
-            <h2 className="text-lg font-semibold mb-4">Scan QR Code</h2>
-            
-            <div className="aspect-square rounded-lg overflow-hidden bg-black mb-4">
-              {/* Add QR Scanner component here when needed */}
-              <p className="text-center text-white p-4">
-                QR Scanner will be implemented here
+  if (!membership?.isActive) {
+    return (
+      <div className="min-h-screen bg-[#121212] text-white py-8">
+        <div className="max-w-3xl mx-auto px-4">
+          <div className="bg-red-500/10 border border-red-500/20 rounded-xl shadow-sm p-6">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-red-600/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Crown className="w-8 h-8 text-red-500" />
+              </div>
+              <h2 className="text-xl font-semibold text-red-500 mb-2">Active Membership Required</h2>
+              <p className="text-gray-400 mb-4">
+                You need an active membership to access the attendance feature
               </p>
+              <button
+                onClick={() => navigate('/membership')}
+                className="bg-red-500 text-white px-6 py-2 rounded-lg hover:bg-red-600 transition-colors"
+              >
+                View Membership Plans
+              </button>
             </div>
-            
-            <p className="text-sm text-center text-gray-500">
-              Position the QR code within the frame to mark your attendance
-            </p>
           </div>
         </div>
-      )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-[#121212] text-white py-8">
+      <div className="max-w-3xl mx-auto px-4">
+        {/* Header with Scan Button */}
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h1 className="text-2xl font-semibold flex items-center gap-2">
+              <CalendarIcon className="w-6 h-6" />
+              Attendance
+            </h1>
+            <p className="text-gray-400 mt-1">Track your gym visits</p>
+          </div>
+          <button
+            onClick={() => setShowScanner(true)}
+            className="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition-colors flex items-center gap-2"
+          >
+            <QrCode className="w-5 h-5" />
+            Scan QR
+          </button>
+        </div>
+
+        {/* Calendar */}
+        <div className="bg-[#1E1E1E] rounded-xl p-6 mb-6">
+          <Calendar
+            className="attendance-calendar"
+            tileClassName={tileClassName}
+            tileContent={tileContent}
+          />
+        </div>
+
+        {/* Recent Activity */}
+        <div className="bg-[#1E1E1E] rounded-xl p-6">
+          <h2 className="text-xl font-semibold mb-4">Recent Activity</h2>
+          <div className="space-y-4">
+            {attendanceRecords.slice(0, 5).map((record, index) => (
+              <div
+                key={index}
+                className="flex items-center justify-between p-4 bg-[#282828] rounded-lg"
+              >
+                <div className="flex items-center gap-3">
+                  {record.status === 'present' ? (
+                    <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+                  ) : (
+                    <XCircle className="w-5 h-5 text-red-500" />
+                  )}
+                  <div>
+                    <p className="font-medium">
+                      {format(new Date(record.date), 'MMMM d, yyyy')}
+                    </p>
+                    {record.time && (
+                      <p className="text-sm text-gray-400">{record.time}</p>
+                    )}
+                  </div>
+                </div>
+                <span
+                  className={`px-3 py-1 rounded-full text-sm ${
+                    record.status === 'present'
+                      ? 'bg-emerald-500/20 text-emerald-500'
+                      : 'bg-red-500/20 text-red-500'
+                  }`}
+                >
+                  {record.status === 'present' ? 'Present' : 'Absent'}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* QR Scanner Modal */}
+        {showScanner && (
+          <QRScanner
+            onScanSuccess={handleScanSuccess}
+            onScanError={handleScanError}
+            onClose={() => setShowScanner(false)}
+          />
+        )}
+
+        {/* Success Message */}
+        {scanResult && (
+          <div className="fixed bottom-4 right-4 bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-4 max-w-md">
+            <h3 className="text-emerald-500 font-medium mb-1">Attendance Marked!</h3>
+            <p className="text-gray-400 text-sm">
+              Your attendance has been recorded successfully.
+            </p>
+          </div>
+        )}
+      </div>
+
+      <style>{`
+        .attendance-calendar {
+          width: 100%;
+          background: transparent !important;
+          border: none !important;
+          color: white !important;
+        }
+        .attendance-calendar .react-calendar__tile {
+          color: white !important;
+          padding: 1em 0.5em !important;
+        }
+        .attendance-calendar .react-calendar__month-view__days__day--weekend {
+          color: #ef4444 !important;
+        }
+        .attendance-calendar .react-calendar__tile--now {
+          background: #374151 !important;
+        }
+        .attendance-calendar .react-calendar__tile--active {
+          background: #059669 !important;
+        }
+        .attendance-calendar .react-calendar__navigation button {
+          color: white !important;
+        }
+        .attendance-calendar .react-calendar__navigation button:disabled {
+          color: #6b7280 !important;
+        }
+        .attendance-calendar .react-calendar__navigation button:enabled:hover,
+        .attendance-calendar .react-calendar__navigation button:enabled:focus {
+          background-color: #374151 !important;
+        }
+        .attendance-calendar .react-calendar__tile:enabled:hover,
+        .attendance-calendar .react-calendar__tile:enabled:focus {
+          background-color: #374151 !important;
+        }
+        .attendance-present {
+          background-color: rgba(16, 185, 129, 0.1) !important;
+        }
+        .attendance-absent {
+          background-color: rgba(239, 68, 68, 0.1) !important;
+        }
+      `}</style>
     </div>
   );
 }

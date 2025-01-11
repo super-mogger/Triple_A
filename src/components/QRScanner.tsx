@@ -23,12 +23,22 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onScanError, onClo
           fps: 10,
           qrbox: 250,
         },
-        (decodedText) => {
+        async (decodedText) => {
           if (scannerRef.current) {
-            scannerRef.current.stop().then(() => {
-              setIsScanning(false);
+            // Stop scanning immediately after successful scan
+            await scannerRef.current.stop();
+            setIsScanning(false);
+
+            // Check if the scanned text matches our expected format
+            if (decodedText === "triple-a676789") {
+              // Call the success handler with the decoded text
               onScanSuccess(decodedText);
-            });
+            } else {
+              // Handle invalid QR code
+              if (onScanError) {
+                onScanError("Invalid QR code");
+              }
+            }
           }
         },
         (error) => {

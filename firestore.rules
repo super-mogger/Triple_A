@@ -1,13 +1,47 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /payments/{paymentId} {
-      allow read: if request.auth != null && request.auth.uid == resource.data.userId;
-      allow write: if request.auth != null && request.auth.uid == request.resource.data.userId;
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
     }
+
+    // Helper function to check if user is accessing their own data
+    function isUserOwned(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Allow users to read and write their own data
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow write: if isUserOwned(userId);
+      
+      // Allow users to update their own membership
+      match /membership/{document=**} {
+        allow read: if isUserOwned(userId);
+        allow write: if isUserOwned(userId);
+      }
+    }
+    
+    // Allow users to read and write their own payments
+    match /payments/{paymentId} {
+      allow read: if isAuthenticated() && 
+        resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() && 
+        request.resource.data.userId == request.auth.uid;
+      allow update: if false; // Payments should never be updated
+      allow delete: if false; // Payments should never be deleted
+    }
+    
+    // Allow users to read and write their own profile
+    match /profiles/{userId} {
+      allow read, write: if isUserOwned(userId);
+    }
+
+    // Allow users to read their own membership details
     match /memberships/{userId} {
-      allow read: if request.auth != null && request.auth.uid == userId;
-      allow write: if request.auth != null && request.auth.uid == userId;
+      allow read, write: if isUserOwned(userId);
     }
   }
 }

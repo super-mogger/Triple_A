@@ -20,6 +20,7 @@ import { ProfileProvider } from './context/ProfileContext';
 import MembershipDetails from './pages/MembershipDetails';
 import PaymentHistory from './pages/PaymentHistory';
 import { PaymentProvider } from './context/PaymentContext';
+import { PaymentPlans } from './components/PaymentPlans';
 
 function App() {
   return (
@@ -50,6 +51,7 @@ function App() {
                 <Route path="/membership" element={<MembershipDetails />} />
                 <Route path="/payment-history" element={<PaymentHistory />} />
               </Route>
+              <Route path="/plans" element={<PaymentPlans />} />
               <Route path="*" element={<Navigate to="/welcome" replace />} />
             </Routes>
           </PaymentProvider>

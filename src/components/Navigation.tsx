@@ -18,9 +18,11 @@ export default function Navigation({ onLogout }: NavigationProps) {
   const { isDarkMode } = useTheme();
 
   return (
-    <nav className={`fixed bottom-0 left-0 right-0 ${
-      isDarkMode ? 'bg-dark-surface border-gray-800' : 'bg-white border-gray-200'
-    } border-t px-4 py-2 z-50`}>
+    <nav className={`fixed bottom-0 left-0 right-0 z-50 ${
+      isDarkMode 
+        ? 'bg-dark-surface border-gray-800' 
+        : 'bg-white border-gray-200'
+    } border-t shadow-lg backdrop-blur-lg backdrop-filter`}>
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center">
           {navItems.map(({ to, icon: Icon, label }) => (
@@ -31,8 +33,8 @@ export default function Navigation({ onLogout }: NavigationProps) {
                 `flex flex-col items-center space-y-1 flex-grow px-3 py-2 rounded-lg transition-colors ${
                   isDarkMode
                     ? isActive
-                      ? 'text-dark-primary'
-                      : 'text-dark-text-secondary hover:text-dark-primary'
+                      ? 'text-emerald-500'
+                      : 'text-gray-400 hover:text-emerald-500'
                     : isActive
                       ? 'text-emerald-600'
                       : 'text-gray-600 hover:text-emerald-600'

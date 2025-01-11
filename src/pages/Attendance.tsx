@@ -22,17 +22,34 @@ export default function Attendance() {
   const navigate = useNavigate();
 
   // Mock attendance records (replace with actual data from backend)
-  const [attendanceRecords] = useState<AttendanceRecord[]>([
+  const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([
     { date: '2024-01-15', status: 'present', time: '09:15 AM' },
     { date: '2024-01-16', status: 'absent' },
     { date: '2024-01-17', status: 'present', time: '10:30 AM' },
   ]);
 
   const handleScanSuccess = (result: string) => {
-    setScanResult(result);
-    setError(null);
+    if (result === 'triple-a676789') {
+      const today = format(new Date(), 'yyyy-MM-dd');
+      const currentTime = format(new Date(), 'hh:mm a');
+      
+      // Check if attendance is already marked for today
+      const todayRecord = attendanceRecords.find(record => record.date === today);
+      
+      if (!todayRecord) {
+        setAttendanceRecords(prev => [
+          { date: today, status: 'present', time: currentTime },
+          ...prev
+        ]);
+      }
+      
+      setScanResult('Attendance marked successfully!');
+      setError(null);
+    } else {
+      setError('Invalid QR code');
+      setScanResult(null);
+    }
     setShowScanner(false);
-    // Here you would typically validate the QR code and mark attendance
   };
 
   const handleScanError = (error: string) => {

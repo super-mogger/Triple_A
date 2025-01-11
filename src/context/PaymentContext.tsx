@@ -47,6 +47,24 @@ export function PaymentProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const { profileData, updateProfile } = useProfile();
 
+  // Immediately update membership when profileData changes
+  useEffect(() => {
+    if (profileData?.membership) {
+      setMembership(profileData.membership);
+    } else if (user?.uid) {
+      // If no membership exists, create a default one
+      const defaultMembership: Membership = {
+        planId: 'monthly',
+        startDate: new Date().toISOString(),
+        endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        isActive: true,
+        lastPaymentId: 'initial_free_month'
+      };
+      updateProfile({ membership: defaultMembership });
+      setMembership(defaultMembership);
+    }
+  }, [profileData, user]);
+
   useEffect(() => {
     const fetchPayments = async () => {
       if (!user?.uid) {
@@ -67,20 +85,15 @@ export function PaymentProvider({ children }: { children: React.ReactNode }) {
           ...doc.data()
         })) as Payment[];
         setPayments(paymentsData);
-
-        // Set membership from profile data
-        if (profileData?.membership) {
-          setMembership(profileData.membership);
-        }
+        setLoading(false);
       } catch (error) {
         console.error('Error fetching payments:', error);
-      } finally {
         setLoading(false);
       }
     };
 
     fetchPayments();
-  }, [user, profileData]);
+  }, [user]);
 
   const addPayment = async (payment: Omit<Payment, 'id'>) => {
     if (!user?.uid) return;
@@ -94,7 +107,6 @@ export function PaymentProvider({ children }: { children: React.ReactNode }) {
       };
 
       await setDoc(newPaymentRef, newPayment);
-
       setPayments(prev => [newPayment as Payment, ...prev]);
     } catch (error) {
       console.error('Error adding payment:', error);
@@ -106,7 +118,6 @@ export function PaymentProvider({ children }: { children: React.ReactNode }) {
     if (!user?.uid) return;
 
     try {
-      // Update membership in profile
       await updateProfile({
         membership: newMembership
       });

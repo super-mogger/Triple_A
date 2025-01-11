@@ -73,15 +73,17 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
         if (docSnap.exists()) {
           console.log('Existing profile found:', docSnap.data());
           const data = docSnap.data();
-          // Ensure membership exists
-          if (!data.membership) {
+          // Ensure membership exists and is active
+          if (!data.membership || !data.membership.isActive) {
             data.membership = {
-              planId: '',
-              startDate: '',
-              endDate: '',
-              isActive: false,
-              lastPaymentId: ''
+              planId: 'monthly',
+              startDate: new Date().toISOString(),
+              endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+              isActive: true,
+              lastPaymentId: 'initial_free_month'
             };
+            // Update the document with active membership
+            await setDoc(docRef, data, { merge: true });
           }
           setProfileData(data as ProfileData);
         } else {
@@ -111,11 +113,11 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
               conditions: '',
             },
             membership: {
-              planId: '',
-              startDate: '',
-              endDate: '',
-              isActive: false,
-              lastPaymentId: ''
+              planId: 'monthly',
+              startDate: new Date().toISOString(),
+              endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days from now
+              isActive: true,
+              lastPaymentId: 'initial_free_month'
             },
             createdAt: new Date().toISOString(),
             lastUpdated: new Date().toISOString()

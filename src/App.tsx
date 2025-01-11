@@ -1,3 +1,4 @@
+import { Analytics } from "@vercel/analytics/react"
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import GetStarted from './pages/GetStarted';

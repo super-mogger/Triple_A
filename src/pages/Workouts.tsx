@@ -350,44 +350,47 @@ export default function Workouts() {
 
     return (
       <>
-        <div className="min-h-screen bg-[#121212] text-white py-8">
+        <div className="min-h-screen bg-[#121212] text-white py-4 sm:py-8">
           <div className="max-w-6xl mx-auto px-4">
-            <div className="flex justify-between items-center mb-8">
+            {/* Header Section */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
               <div>
-                <h1 className="text-3xl font-bold">{selectedWorkout.title}</h1>
-                <p className="text-gray-400 mt-2">{selectedWorkout.description}</p>
+                <h1 className="text-2xl sm:text-3xl font-bold">{selectedWorkout.title}</h1>
+                <p className="text-gray-400 mt-2 text-sm sm:text-base">{selectedWorkout.description}</p>
               </div>
               <button
                 onClick={changeWorkoutPlan}
-                className="bg-emerald-500 text-white px-4 py-2 rounded-lg hover:bg-emerald-600 transition-colors"
+                className="w-full sm:w-auto bg-emerald-500 text-white px-4 py-2 rounded-lg hover:bg-emerald-600 transition-colors"
               >
                 Change Workout Plan
               </button>
             </div>
 
-            {/* Day Selection */}
-            <div className="grid grid-cols-7 gap-2 mb-8">
+            {/* Day Selection - Scrollable on mobile */}
+            <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 mb-6">
+              <div className="grid grid-cols-7 gap-2 min-w-[640px] sm:min-w-0">
               {selectedWorkout.schedule?.days.map((day) => (
                 <button
                   key={day.day}
                   onClick={() => setCurrentDay(day.day)}
-                  className={`p-4 rounded-lg text-center transition-colors ${
+                    className={`p-3 sm:p-4 rounded-lg text-center transition-colors ${
                     currentDay === day.day
                       ? 'bg-emerald-500 text-white'
                       : 'bg-[#282828] text-gray-400 hover:bg-[#333]'
                   }`}
                 >
-                  <div className="font-medium">{day.day.slice(0, 3)}</div>
-                  <div className="text-xs mt-1">{day.focus.split(' ')[0]}</div>
+                    <div className="font-medium text-sm sm:text-base">{day.day.slice(0, 3)}</div>
+                    <div className="text-[10px] sm:text-xs mt-1">{day.focus.split(' ')[0]}</div>
                 </button>
               ))}
+              </div>
             </div>
 
             {/* Current Day Workout */}
             {currentDayWorkout && (
-              <div className="bg-[#1E1E1E] rounded-xl p-6">
-                <h2 className="text-2xl font-semibold mb-6 flex items-center gap-2">
-                  <Calendar className="w-6 h-6" />
+              <div className="bg-[#1E1E1E] rounded-xl p-4 sm:p-6">
+                <h2 className="text-xl sm:text-2xl font-semibold mb-4 sm:mb-6 flex items-center gap-2">
+                  <Calendar className="w-5 h-5 sm:w-6 sm:h-6" />
                   {currentDayWorkout.focus}
                 </h2>
                 {renderDaySchedule(currentDayWorkout)}
@@ -395,10 +398,127 @@ export default function Workouts() {
             )}
           </div>
         </div>
-        {selectedExercise && renderExerciseModal()}
+
+        {/* Exercise Modal */}
+        {selectedExercise && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-2 sm:p-4 z-50">
+            <div className="bg-[#1E1E1E] rounded-xl p-4 sm:p-6 w-full max-w-4xl max-h-[95vh] overflow-y-auto">
+              {/* Modal Header */}
+              <div className="flex justify-between items-start mb-4 sm:mb-6">
+                <h2 className="text-xl sm:text-2xl font-semibold">{selectedExercise.name}</h2>
+                <button
+                  onClick={() => setSelectedExercise(null)}
+                  className="p-1 sm:p-2 hover:bg-[#282828] rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5 sm:w-6 sm:h-6" />
+                </button>
+              </div>
+
+              {/* Video Section */}
+              <div className="mb-6 sm:mb-8">
+                <div className="relative pt-[56.25%] rounded-lg overflow-hidden bg-black">
+                  <iframe
+                    src={selectedExercise.videoUrl}
+                    className="absolute inset-0 w-full h-full"
+                    allowFullScreen
+                    title={`${selectedExercise.name} demonstration`}
+                  />
+                </div>
+              </div>
+
+              {/* Exercise Info Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
+                {/* Target Muscles */}
+                <div className="bg-[#282828] p-3 sm:p-4 rounded-lg">
+                  <h3 className="font-semibold mb-2 sm:mb-3 text-sm sm:text-base">Target Muscles</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedExercise.targetMuscles.map((muscle, index) => (
+                      <span key={index} className="bg-emerald-500/10 text-emerald-500 px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm">
+                        {muscle}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Secondary Muscles */}
+                <div className="bg-[#282828] p-3 sm:p-4 rounded-lg">
+                  <h3 className="font-semibold mb-2 sm:mb-3 text-sm sm:text-base">Secondary Muscles</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedExercise.secondaryMuscles.map((muscle, index) => (
+                      <span key={index} className="bg-blue-500/10 text-blue-500 px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm">
+                        {muscle}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Equipment */}
+                <div className="bg-[#282828] p-3 sm:p-4 rounded-lg">
+                  <h3 className="font-semibold mb-2 sm:mb-3 text-sm sm:text-base">Required Equipment</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedExercise.equipment.map((item, index) => (
+                      <span key={index} className="bg-purple-500/10 text-purple-500 px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm">
+                        {item}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Difficulty & Category */}
+                <div className="bg-[#282828] p-3 sm:p-4 rounded-lg">
+                  <h3 className="font-semibold mb-2 sm:mb-3 text-sm sm:text-base">Exercise Info</h3>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-400">Difficulty:</span>
+                      <span className="text-orange-500">{selectedExercise.difficulty}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-400">Category:</span>
+                      <span className="text-emerald-500">{selectedExercise.category}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Instructions */}
+              <div className="mb-6 sm:mb-8">
+                <h3 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">Instructions</h3>
+                <div className="space-y-3 sm:space-y-4">
+                  {selectedExercise.instructions.map((instruction, index) => (
+                    <div key={index} className="flex gap-3 sm:gap-4">
+                      <div className="flex-shrink-0 w-6 h-6 sm:w-8 sm:h-8 bg-emerald-500/10 text-emerald-500 rounded-full flex items-center justify-center text-sm sm:text-base">
+                        {index + 1}
+                      </div>
+                      <p className="text-gray-300 text-sm sm:text-base">{instruction}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Tips */}
+              <div>
+                <h3 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">Pro Tips</h3>
+                <div className="bg-[#282828] rounded-lg p-3 sm:p-4">
+                  <ul className="space-y-2 sm:space-y-3">
+                    {selectedExercise.tips.map((tip, index) => (
+                      <li key={index} className="flex items-start gap-2 sm:gap-3 text-gray-300 text-sm sm:text-base">
+                        <div className="flex-shrink-0 w-4 h-4 sm:w-5 sm:h-5 bg-blue-500/10 text-blue-500 rounded-full flex items-center justify-center text-[10px] sm:text-xs mt-0.5">
+                          ✓
+                        </div>
+                        {tip}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Loading Overlay */}
         {loadingExercise && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500"></div>
+            <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-emerald-500"></div>
           </div>
         )}
       </>

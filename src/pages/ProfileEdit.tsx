@@ -166,14 +166,51 @@ export default function ProfileEdit() {
           {/* Medical Information */}
           <div className="bg-[#1E1E1E] rounded-xl p-6">
             <h2 className="text-xl font-semibold mb-6">Medical Information</h2>
-            <div>
-              <label className="block text-sm text-gray-400 mb-2">Medical Conditions</label>
-              <textarea
-                value={formData.medicalInfo.conditions}
-                onChange={(e) => handleChange('medicalInfo', 'conditions', e.target.value)}
-                className="w-full bg-[#282828] rounded-lg px-4 py-2 text-white border border-gray-700 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 h-24"
-                placeholder="List any medical conditions or allergies..."
-              />
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm text-gray-400 mb-2">Do you have any medical conditions?</label>
+                <div className="flex gap-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleChange('medicalInfo', 'conditions', '');
+                    }}
+                    className={`px-4 py-2 rounded-lg text-sm transition-colors
+                      ${!formData.medicalInfo.conditions || formData.medicalInfo.conditions === ''
+                        ? 'bg-emerald-600 text-white'
+                        : 'bg-[#282828] text-gray-300 hover:bg-[#333]'
+                      }`}
+                  >
+                    No
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!formData.medicalInfo.conditions) {
+                        handleChange('medicalInfo', 'conditions', ' ');
+                      }
+                    }}
+                    className={`px-4 py-2 rounded-lg text-sm transition-colors
+                      ${formData.medicalInfo.conditions && formData.medicalInfo.conditions !== ''
+                        ? 'bg-emerald-600 text-white'
+                        : 'bg-[#282828] text-gray-300 hover:bg-[#333]'
+                      }`}
+                  >
+                    Yes
+                  </button>
+                </div>
+              </div>
+              {formData.medicalInfo.conditions !== null && formData.medicalInfo.conditions !== undefined && (
+                <div className="mt-4">
+                  <label className="block text-sm text-gray-400 mb-2">Please list your medical conditions</label>
+                  <textarea
+                    value={formData.medicalInfo.conditions}
+                    onChange={(e) => handleChange('medicalInfo', 'conditions', e.target.value)}
+                    className="w-full bg-[#282828] rounded-lg px-4 py-2 text-white border border-gray-700 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 h-24"
+                    placeholder="List any medical conditions or allergies..."
+                  />
+                </div>
+              )}
             </div>
           </div>
 

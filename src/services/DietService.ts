@@ -88,7 +88,7 @@ const MEAL_IMAGES = {
   dinner: {
     salmon: 'https://images.unsplash.com/photo-1467003909585-2f8a72700288',
     turkeyMeatballs: 'https://images.unsplash.com/photo-1529042410759-befb1204b468',
-    steak: 'https://images.unsplash.com/photo-1544025162-d76694265947'
+    grilledChicken: 'https://images.unsplash.com/photo-1532550907401-a500c9a57435'
   },
   snacks: {
     appleAlmondButter: 'https://images.unsplash.com/photo-1479490382520-5e9f356135a7',
@@ -242,35 +242,6 @@ const dietDatabase = {
           'Tuna salad',
           'Chickpea salad'
         ]
-      },
-      {
-        name: 'Quinoa Buddha Bowl',
-        calories: 380,
-        protein: 15,
-        carbs: 45,
-        fats: 16,
-        portion: '1 bowl',
-        category: 'Vegetarian',
-        preparationTime: '15 mins',
-        cookingTime: '20 mins',
-        difficulty: 'medium' as const,
-        imageUrl: MEAL_IMAGES.lunch.quinoaBowl,
-        instructions: [
-          'Cook quinoa according to package',
-          'Roast vegetables',
-          'Assemble bowl with dressing'
-        ],
-        tips: [
-          'Prep ingredients in advance',
-          'Use seasonal vegetables',
-          'Add seeds for extra protein'
-        ],
-        allergens: [],
-        alternatives: [
-          'Brown rice bowl',
-          'Cauliflower rice bowl',
-          'Couscous bowl'
-        ]
       }
     ],
     dinner: [
@@ -382,6 +353,17 @@ const dietDatabase = {
           'Mix protein powder with pancake mix',
           'Cook on medium heat',
           'Top with maple syrup'
+        ],
+        tips: [
+          'Use whole grain pancake mix',
+          'Add banana for natural sweetness',
+          'Top with fresh berries'
+        ],
+        allergens: ['Gluten', 'Dairy'],
+        alternatives: [
+          'Protein oatmeal',
+          'Protein smoothie bowl',
+          'Egg white frittata'
         ]
       }
     ],
@@ -402,12 +384,23 @@ const dietDatabase = {
           'Cook brown rice',
           'Grill chicken breast',
           'Add vegetables and sauce'
+        ],
+        tips: [
+          'Use brown rice for more nutrients',
+          'Add avocado for healthy fats',
+          'Include colorful vegetables'
+        ],
+        allergens: [],
+        alternatives: [
+          'Turkey and quinoa bowl',
+          'Fish and rice bowl',
+          'Tofu and grain bowl'
         ]
       }
     ],
     dinner: [
       {
-        name: 'Steak and Sweet Potato',
+        name: 'Grilled Chicken with Sweet Potato',
         calories: 700,
         protein: 50,
         carbs: 45,
@@ -417,11 +410,51 @@ const dietDatabase = {
         preparationTime: '15 mins',
         cookingTime: '20 mins',
         difficulty: 'medium' as const,
-        imageUrl: MEAL_IMAGES.dinner.steak,
+        imageUrl: MEAL_IMAGES.dinner.grilledChicken,
         instructions: [
-          'Cook steak to desired doneness',
+          'Season and grill chicken breast',
           'Bake sweet potato',
-          'Serve with vegetables'
+          'Serve with steamed vegetables'
+        ],
+        tips: [
+          'Marinate chicken for extra flavor',
+          'Use herbs and spices instead of heavy sauces',
+          'Add olive oil for healthy fats'
+        ],
+        allergens: [],
+        alternatives: [
+          'Grilled fish',
+          'Turkey breast',
+          'Baked salmon'
+        ]
+      },
+      {
+        name: 'Baked Salmon with Quinoa',
+        calories: 650,
+        protein: 48,
+        carbs: 40,
+        fats: 28,
+        portion: '1 plate',
+        category: 'Fish',
+        preparationTime: '15 mins',
+        cookingTime: '20 mins',
+        difficulty: 'medium' as const,
+        imageUrl: MEAL_IMAGES.dinner.salmon,
+        instructions: [
+          'Season and bake salmon fillet',
+          'Cook quinoa with herbs',
+          'Serve with roasted vegetables'
+        ],
+        tips: [
+          'Choose wild-caught salmon when possible',
+          'Cook quinoa in vegetable broth for more flavor',
+          'Add leafy greens for extra nutrients'
+        ],
+        allergens: ['Fish'],
+        alternatives: [
+          'Grilled tuna',
+          'Baked cod',
+          'Grilled chicken'
         ]
       }
     ]
@@ -764,7 +797,7 @@ const mockDietPlans: DietPlan[] = [
     groceryList: [
       {
         category: 'Proteins',
-        items: ['Chicken breast', 'Salmon', 'Greek yogurt', 'Eggs']
+        items: ['Chicken breast', 'Turkey', 'Fish (salmon, cod)', 'Greek yogurt', 'Eggs', 'Tuna']
       },
       {
         category: 'Vegetables',

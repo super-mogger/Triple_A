@@ -180,260 +180,248 @@ const northIndianMeals = {
   breakfast: [
     {
       id: 1,
-      name: "Paneer Paratha with Curd",
-      calories: 350,
-      protein: 15,
+      name: "Oatmeal with Fruits",
+      calories: 280,
+      protein: 8,
       carbs: 45,
-      fats: 12,
-      portion: "2 parathas",
-      category: "North Indian",
-      imageUrl: "https://images.unsplash.com/photo-1565557623262-b51c2513a641",
-      preparationTime: "20 mins",
-      cookingTime: "15 mins",
-      difficulty: "medium" as const,
+      fats: 6,
+      portion: "1 bowl",
+      category: "Healthy",
+      imageUrl: "https://images.unsplash.com/photo-1517673400267-0251440c45dc",
+      preparationTime: "10 mins",
+      cookingTime: "5 mins",
+      difficulty: "easy" as const,
       instructions: [
-        "Knead whole wheat dough",
-        "Prepare paneer stuffing with spices",
-        "Roll out parathas and stuff with filling",
-        "Cook on tawa with ghee",
-        "Serve hot with curd"
+        "Boil water or milk",
+        "Add oats and cook for 3-5 minutes",
+        "Top with sliced fruits and nuts",
+        "Add honey if desired"
       ],
       tips: [
-        "Use fresh homemade paneer for best results",
-        "Add grated carrots for extra nutrition",
-        "Serve with mint chutney for added flavor"
+        "Use rolled oats for better texture",
+        "Add cinnamon for extra flavor",
+        "Use seasonal fruits"
       ],
-      alternatives: ["Aloo Paratha", "Gobi Paratha", "Mixed Veg Paratha"]
+      alternatives: ["Porridge", "Muesli", "Cornflakes"]
     },
     {
       id: 2,
-      name: "Masala Dosa with Sambar",
-      calories: 320,
-      protein: 10,
-      carbs: 52,
+      name: "Boiled Eggs with Toast",
+      calories: 240,
+      protein: 14,
+      carbs: 28,
       fats: 8,
-      portion: "1 dosa",
-      category: "South Indian",
-      imageUrl: "https://images.unsplash.com/photo-1630383249896-424e482df921",
-      preparationTime: "15 mins",
-      cookingTime: "10 mins",
+      portion: "2 eggs, 2 toasts",
+      category: "High Protein",
+      imageUrl: "https://images.unsplash.com/photo-1525351484163-7529414344d8",
+      preparationTime: "5 mins",
+      cookingTime: "8 mins",
       difficulty: "easy" as const,
       instructions: [
-        "Prepare potato masala filling",
-        "Heat dosa tawa",
-        "Spread batter and add oil",
-        "Add filling and fold",
-        "Serve with sambar and chutney"
+        "Boil eggs for 6-8 minutes",
+        "Toast bread slices",
+        "Season eggs with salt and pepper",
+        "Serve with toast"
       ],
       tips: [
-        "Use fermented batter for crispy dosas",
-        "Keep the filling warm",
-        "Serve immediately while crispy"
+        "Add vegetables on the side",
+        "Use whole grain bread for more fiber",
+        "Don't overcook the eggs"
       ],
-      alternatives: ["Plain Dosa", "Rava Dosa", "Onion Dosa"]
+      alternatives: ["Scrambled Eggs", "Egg Whites", "Omelette"]
     },
     {
       id: 3,
-      name: "Poha with Peanuts",
-      calories: 280,
-      protein: 8,
-      carbs: 48,
-      fats: 6,
-      portion: "1 bowl",
-      category: "North Indian",
-      imageUrl: "https://images.unsplash.com/photo-1567337710282-00832b415979",
+      name: "Vegetable Sandwich",
+      calories: 220,
+      protein: 6,
+      carbs: 35,
+      fats: 7,
+      portion: "2 sandwiches",
+      category: "Vegetarian",
+      imageUrl: "https://images.unsplash.com/photo-1528735602780-2552fd46c7af",
       preparationTime: "10 mins",
-      cookingTime: "15 mins",
+      cookingTime: "5 mins",
       difficulty: "easy" as const,
       instructions: [
-        "Wash and soak poha",
-        "Roast peanuts",
-        "Temper mustard seeds and curry leaves",
-        "Add vegetables and poha",
-        "Garnish with coriander and lemon"
+        "Slice vegetables",
+        "Toast bread slices",
+        "Spread sauce or chutney",
+        "Layer vegetables and assemble"
       ],
       tips: [
-        "Don't oversoak the poha",
-        "Add roasted peanuts for crunch",
-        "Serve hot with green chutney"
+        "Use fresh vegetables",
+        "Add cucumber for crunch",
+        "Toast bread for better texture"
       ],
-      alternatives: ["Upma", "Sabudana Khichdi", "Vermicelli Upma"]
+      alternatives: ["Grilled Sandwich", "Open Toast", "Wrap"]
     }
   ],
   lunch: [
     {
       id: 4,
-      name: "Dal Makhani with Jeera Rice",
-      calories: 450,
-      protein: 18,
+      name: "Rice with Dal and Vegetables",
+      calories: 380,
+      protein: 12,
       carbs: 65,
-      fats: 12,
-      portion: "1 bowl each",
-      category: "North Indian",
-      imageUrl: "https://images.unsplash.com/photo-1585937421612-70a008356fbe",
-      preparationTime: "30 mins",
-      cookingTime: "45 mins",
-      difficulty: "medium" as const,
+      fats: 6,
+      portion: "1 plate",
+      category: "Vegetarian",
+      imageUrl: "https://images.unsplash.com/photo-1546833999-b9f581a1996d",
+      preparationTime: "15 mins",
+      cookingTime: "20 mins",
+      difficulty: "easy" as const,
       instructions: [
-        "Soak black lentils overnight",
-        "Pressure cook with rajma",
-        "Prepare tadka with tomato gravy",
-        "Simmer with cream",
-        "Serve with jeera rice"
+        "Cook rice",
+        "Prepare yellow dal",
+        "Steam mixed vegetables",
+        "Serve together"
       ],
       tips: [
-        "Slow cook for better taste",
-        "Use fresh cream for richness",
-        "Garnish with butter and cream"
+        "Use seasonal vegetables",
+        "Add lemon for taste",
+        "Include green chilies for spice"
       ],
-      alternatives: ["Dal Tadka", "Rajma Chawal", "Chole Chawal"]
+      alternatives: ["Khichdi", "Rice Bowl", "Pulao"]
     },
     {
       id: 5,
-      name: "Butter Chicken with Naan",
-      calories: 550,
-      protein: 35,
-      carbs: 45,
-      fats: 22,
-      portion: "1 serving",
-      category: "North Indian",
-      imageUrl: "https://images.unsplash.com/photo-1603894584373-5ac82b2ae398",
-      preparationTime: "40 mins",
-      cookingTime: "30 mins",
+      name: "Chapati with Mixed Vegetables",
+      calories: 320,
+      protein: 10,
+      carbs: 48,
+      fats: 8,
+      portion: "2 chapatis with curry",
+      category: "Vegetarian",
+      imageUrl: "https://images.unsplash.com/photo-1505253758473-96b7015fcd40",
+      preparationTime: "20 mins",
+      cookingTime: "15 mins",
       difficulty: "medium" as const,
       instructions: [
-        "Marinate chicken in yogurt and spices",
-        "Prepare tomato-based gravy",
-        "Cook chicken in tandoor or oven",
-        "Simmer in gravy with butter and cream",
-        "Serve hot with naan"
+        "Make chapati dough",
+        "Cook mixed vegetables",
+        "Roll and cook chapatis",
+        "Serve hot"
       ],
       tips: [
-        "Use Kashmiri red chili for color",
-        "Smoke the gravy for authentic flavor",
-        "Use butter for glossy finish"
+        "Use whole wheat flour",
+        "Add ghee for softness",
+        "Make fresh chapatis"
       ],
-      alternatives: ["Chicken Tikka Masala", "Paneer Butter Masala", "Kadai Chicken"]
+      alternatives: ["Roti", "Paratha", "Rice"]
     }
   ],
   dinner: [
     {
       id: 6,
-      name: "Mixed Vegetable Curry with Roti",
-      calories: 380,
-      protein: 12,
-      carbs: 55,
-      fats: 14,
-      portion: "2 rotis with curry",
-      category: "North Indian",
-      imageUrl: "https://images.unsplash.com/photo-1505253758473-96b7015fcd40",
-      preparationTime: "20 mins",
-      cookingTime: "25 mins",
-      difficulty: "easy" as const,
+      name: "Grilled Chicken with Salad",
+      calories: 350,
+      protein: 32,
+      carbs: 15,
+      fats: 18,
+      portion: "200g chicken, 1 bowl salad",
+      category: "High Protein",
+      imageUrl: "https://images.unsplash.com/photo-1532550907401-a500c9a57435",
+      preparationTime: "15 mins",
+      cookingTime: "20 mins",
+      difficulty: "medium" as const,
       instructions: [
-        "Prepare fresh vegetables",
-        "Make onion-tomato gravy",
-        "Add spices and vegetables",
-        "Cook until tender",
-        "Serve with hot rotis"
+        "Marinate chicken",
+        "Prepare salad",
+        "Grill chicken",
+        "Serve with dressing"
       ],
       tips: [
-        "Use seasonal vegetables",
-        "Make fresh rotis",
-        "Add ghee for extra flavor"
+        "Use lean chicken breast",
+        "Add colorful vegetables",
+        "Make fresh dressing"
       ],
-      alternatives: ["Palak Paneer", "Bhindi Masala", "Aloo Gobi"]
+      alternatives: ["Baked Chicken", "Fish", "Tofu"]
     },
     {
       id: 7,
-      name: "Chicken Biryani",
-      calories: 480,
-      protein: 28,
-      carbs: 58,
-      fats: 16,
-      portion: "1 plate",
-      category: "North Indian",
-      imageUrl: "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8",
-      preparationTime: "45 mins",
-      cookingTime: "40 mins",
-      difficulty: "hard" as const,
+      name: "Vegetable Soup with Toast",
+      calories: 220,
+      protein: 8,
+      carbs: 35,
+      fats: 6,
+      portion: "1 bowl soup, 2 toasts",
+      category: "Light Meal",
+      imageUrl: "https://images.unsplash.com/photo-1547592166-23ac45744acd",
+      preparationTime: "15 mins",
+      cookingTime: "25 mins",
+      difficulty: "easy" as const,
       instructions: [
-        "Marinate chicken",
-        "Prepare rice with whole spices",
-        "Layer chicken and rice",
-        "Dum cook with saffron",
-        "Garnish and serve hot"
+        "Chop vegetables",
+        "Boil in vegetable stock",
+        "Season with herbs",
+        "Serve with toast"
       ],
       tips: [
-        "Use long grain basmati rice",
-        "Layer with fried onions",
-        "Add kewra water for aroma"
+        "Use fresh vegetables",
+        "Add herbs for flavor",
+        "Make extra for next day"
       ],
-      alternatives: ["Veg Biryani", "Pulao", "Jeera Rice"]
+      alternatives: ["Clear Soup", "Tomato Soup", "Mushroom Soup"]
     }
   ]
 };
 
-// Add Indian grocery categories
+// Add simple grocery categories
 const indianGroceryList = [
   {
-    category: "Dals & Legumes",
+    category: "Staples",
     items: [
-      "Toor Dal",
-      "Moong Dal",
-      "Masoor Dal",
-      "Urad Dal",
-      "Chana Dal",
-      "Rajma",
-      "Chole"
-    ]
-  },
-  {
-    category: "Spices & Masalas",
-    items: [
-      "Haldi (Turmeric)",
-      "Jeera (Cumin)",
-      "Dhania (Coriander)",
-      "Garam Masala",
-      "Red Chili Powder",
-      "Ginger Garlic Paste",
-      "Kitchen King Masala"
-    ]
-  },
-  {
-    category: "Atta & Grains",
-    items: [
-      "Whole Wheat Atta",
-      "Basmati Rice",
-      "Poha",
-      "Besan",
-      "Sooji (Semolina)",
-      "Rice Flour"
-    ]
-  },
-  {
-    category: "Fresh Produce",
-    items: [
-      "Onions",
-      "Tomatoes",
-      "Potatoes",
-      "Green Chilies",
-      "Ginger",
-      "Garlic",
-      "Coriander Leaves",
-      "Curry Leaves"
-    ]
-  },
-  {
-    category: "Dairy & Proteins",
-    items: [
-      "Paneer",
-      "Curd",
-      "Ghee",
-      "Milk",
-      "Fresh Cream",
-      "Butter",
+      "Rice",
+      "Whole Wheat Flour",
+      "Oats",
+      "Bread",
+      "Dal (Lentils)",
       "Eggs"
+    ]
+  },
+  {
+    category: "Fresh Vegetables",
+    items: [
+      "Tomatoes",
+      "Onions",
+      "Potatoes",
+      "Carrots",
+      "Green Leafy Vegetables",
+      "Bell Peppers",
+      "Cucumber"
+    ]
+  },
+  {
+    category: "Fruits",
+    items: [
+      "Apples",
+      "Bananas",
+      "Oranges",
+      "Seasonal Fruits",
+      "Lemons"
+    ]
+  },
+  {
+    category: "Protein Sources",
+    items: [
+      "Chicken Breast",
+      "Fish",
+      "Eggs",
+      "Tofu",
+      "Paneer",
+      "Lentils"
+    ]
+  },
+  {
+    category: "Basics & Condiments",
+    items: [
+      "Salt",
+      "Black Pepper",
+      "Cooking Oil",
+      "Milk",
+      "Curd",
+      "Butter"
     ]
   }
 ];

@@ -7,6 +7,7 @@ import Dashboard from './pages/Dashboard';
 import PrivateRoute from './components/PrivateRoute';
 import Progress from './pages/Progress';
 import DietPlan from './pages/DietPlan';
+import DietPlanDetails from './pages/DietPlanDetails';
 import Attendance from './pages/Attendance';
 import UserInfoForm from './pages/UserInfoForm';
 import Profile from './pages/Profile';
@@ -47,6 +48,7 @@ function App() {
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/workouts" element={<Workouts />} />
                 <Route path="/diet" element={<DietPlan />} />
+                <Route path="/diet/plan-details" element={<DietPlanDetails />} />
                 <Route path="/attendance" element={<Attendance />} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/profile/edit" element={<ProfileEdit />} />

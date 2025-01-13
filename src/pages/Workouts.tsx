@@ -335,15 +335,15 @@ export default function Workouts() {
 
     return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-        <div className="bg-[#1E1E1E] rounded-xl p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-          {/* Header */}
+        <div className="bg-white dark:bg-[#1E1E1E] rounded-xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+          {/* Modal Header */}
           <div className="flex justify-between items-start mb-6">
-            <h2 className="text-2xl font-semibold">{selectedExercise.name}</h2>
+            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">{selectedExercise.name}</h2>
             <button
               onClick={() => setSelectedExercise(null)}
-              className="p-2 hover:bg-[#282828] rounded-lg transition-colors"
+              className="p-2 hover:bg-gray-100 dark:hover:bg-[#282828] rounded-lg transition-colors"
             >
-              <X className="w-6 h-6" />
+              <X className="w-6 h-6 text-gray-500 dark:text-gray-400" />
             </button>
           </div>
 
@@ -360,10 +360,10 @@ export default function Workouts() {
           </div>
 
           {/* Muscle Targeting Chart */}
-          <div className="mb-8 bg-[#282828] p-4 rounded-lg">
+          <div className="mb-8 bg-gray-50 dark:bg-[#282828] p-6 rounded-lg">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">Muscle Activation Analysis</h3>
-              <div className="text-sm text-gray-400">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Muscle Activation Analysis</h3>
+              <div className="text-sm text-gray-500 dark:text-gray-400">
                 Hover over the chart for detailed percentages
               </div>
             </div>
@@ -374,13 +374,13 @@ export default function Workouts() {
           </div>
 
           {/* Exercise Info Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
             {/* Target Muscles */}
-            <div className="bg-[#282828] p-4 rounded-lg">
-              <h3 className="font-semibold mb-3">Primary Target Muscles</h3>
+            <div className="bg-gray-50 dark:bg-[#282828] p-4 rounded-lg">
+              <h3 className="font-semibold mb-3 text-gray-900 dark:text-white">Primary Target Muscles</h3>
               <div className="flex flex-wrap gap-2">
                 {selectedExercise.targetMuscles.map((muscle, index) => (
-                  <span key={index} className="bg-emerald-500/10 text-emerald-500 px-3 py-1 rounded-full text-sm">
+                  <span key={index} className="bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-3 py-1 rounded-full text-sm">
                     {muscle}
                   </span>
                 ))}
@@ -388,11 +388,11 @@ export default function Workouts() {
             </div>
 
             {/* Secondary Muscles */}
-            <div className="bg-[#282828] p-4 rounded-lg">
-              <h3 className="font-semibold mb-3">Secondary Muscles</h3>
+            <div className="bg-gray-50 dark:bg-[#282828] p-4 rounded-lg">
+              <h3 className="font-semibold mb-3 text-gray-900 dark:text-white">Secondary Muscles</h3>
               <div className="flex flex-wrap gap-2">
                 {selectedExercise.secondaryMuscles.map((muscle, index) => (
-                  <span key={index} className="bg-blue-500/10 text-blue-500 px-3 py-1 rounded-full text-sm">
+                  <span key={index} className="bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 px-3 py-1 rounded-full text-sm">
                     {muscle}
                   </span>
                 ))}
@@ -400,11 +400,11 @@ export default function Workouts() {
             </div>
 
             {/* Equipment */}
-            <div className="bg-[#282828] p-4 rounded-lg">
-              <h3 className="font-semibold mb-3">Required Equipment</h3>
+            <div className="bg-gray-50 dark:bg-[#282828] p-4 rounded-lg">
+              <h3 className="font-semibold mb-3 text-gray-900 dark:text-white">Required Equipment</h3>
               <div className="flex flex-wrap gap-2">
                 {selectedExercise.equipment.map((item, index) => (
-                  <span key={index} className="bg-purple-500/10 text-purple-500 px-3 py-1 rounded-full text-sm">
+                  <span key={index} className="bg-purple-50 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400 px-3 py-1 rounded-full text-sm">
                     {item}
                   </span>
                 ))}
@@ -412,16 +412,16 @@ export default function Workouts() {
             </div>
 
             {/* Difficulty & Category */}
-            <div className="bg-[#282828] p-4 rounded-lg">
-              <h3 className="font-semibold mb-3">Exercise Info</h3>
+            <div className="bg-gray-50 dark:bg-[#282828] p-4 rounded-lg">
+              <h3 className="font-semibold mb-3 text-gray-900 dark:text-white">Exercise Info</h3>
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-400">Difficulty:</span>
-                  <span className="text-orange-500">{selectedExercise.difficulty}</span>
+                  <span className="text-gray-600 dark:text-gray-400">Difficulty:</span>
+                  <span className="text-orange-600 dark:text-orange-400">{selectedExercise.difficulty}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-400">Category:</span>
-                  <span className="text-emerald-500">{selectedExercise.category}</span>
+                  <span className="text-gray-600 dark:text-gray-400">Category:</span>
+                  <span className="text-emerald-600 dark:text-emerald-400">{selectedExercise.category}</span>
                 </div>
               </div>
             </div>
@@ -429,27 +429,27 @@ export default function Workouts() {
 
           {/* Instructions */}
           <div className="mb-8">
-            <h3 className="text-xl font-semibold mb-4">Instructions</h3>
+            <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Instructions</h3>
             <div className="space-y-4">
               {selectedExercise.instructions.map((instruction, index) => (
                 <div key={index} className="flex gap-4">
-                  <div className="flex-shrink-0 w-8 h-8 bg-emerald-500/10 text-emerald-500 rounded-full flex items-center justify-center">
+                  <div className="flex-shrink-0 w-8 h-8 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-full flex items-center justify-center font-medium">
                     {index + 1}
                   </div>
-                  <p className="text-gray-300">{instruction}</p>
+                  <p className="text-gray-700 dark:text-gray-300">{instruction}</p>
                 </div>
               ))}
             </div>
           </div>
 
           {/* Tips */}
-          <div className="mb-6">
-            <h3 className="text-xl font-semibold mb-4">Pro Tips</h3>
-            <div className="bg-[#282828] rounded-lg p-4">
-              <ul className="space-y-2">
+          <div>
+            <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Pro Tips</h3>
+            <div className="bg-gray-50 dark:bg-[#282828] rounded-lg p-4">
+              <ul className="space-y-3">
                 {selectedExercise.tips.map((tip, index) => (
-                  <li key={index} className="flex items-start gap-2 text-gray-300">
-                    <div className="flex-shrink-0 w-5 h-5 bg-blue-500/10 text-blue-500 rounded-full flex items-center justify-center text-xs mt-0.5">
+                  <li key={index} className="flex items-start gap-3 text-gray-700 dark:text-gray-300">
+                    <div className="flex-shrink-0 w-5 h-5 bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center text-xs mt-0.5">
                       ✓
                     </div>
                     {tip}
@@ -562,7 +562,7 @@ export default function Workouts() {
 
     return (
       <>
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
+        <div className="min-h-screen bg-gray-50 dark:bg-[#121212] py-8">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             {/* Header Section */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
@@ -580,13 +580,13 @@ export default function Workouts() {
                         showSplitMenu: !selectedWorkout.showSplitMenu
                       });
                     }}
-                    className="w-full bg-white dark:bg-gray-800 text-sm px-4 py-2.5 rounded-lg flex items-center justify-between border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors text-gray-700 dark:text-gray-200"
+                    className="w-full bg-white dark:bg-[#1E1E1E] text-sm px-4 py-2.5 rounded-lg flex items-center justify-between border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-[#282828] transition-colors text-gray-700 dark:text-gray-200"
                   >
                     <span>Split: {splitTypes[selectedWorkout.splitType || 'bro-split'].name}</span>
                     <ChevronDown className="w-4 h-4 text-gray-500" />
                   </button>
                   {selectedWorkout.showSplitMenu && (
-                    <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                    <div className="absolute z-10 w-full mt-1 bg-white dark:bg-[#1E1E1E] rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
                       {Object.entries(splitTypes).map(([key, value]) => (
                         <button
                           key={key}
@@ -602,7 +602,7 @@ export default function Workouts() {
                             setSelectedWorkout(updatedWorkout);
                             localStorage.setItem('selectedWorkout', JSON.stringify(updatedWorkout));
                           }}
-                          className={`w-full px-4 py-2.5 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors ${
+                          className={`w-full px-4 py-2.5 text-left text-sm hover:bg-gray-50 dark:hover:bg-[#282828] transition-colors ${
                             selectedWorkout.splitType === key 
                               ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' 
                               : 'text-gray-700 dark:text-gray-200'
@@ -633,7 +633,7 @@ export default function Workouts() {
                   className={`p-4 rounded-lg text-center transition-all ${
                     currentDay === day.day
                       ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20'
-                      : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 border border-gray-200 dark:border-gray-700'
+                      : 'bg-white dark:bg-[#1E1E1E] text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-[#282828] border border-gray-200 dark:border-gray-700'
                   }`}
                 >
                   <div className="font-medium text-sm">{day.day.slice(0, 3)}</div>
@@ -644,12 +644,12 @@ export default function Workouts() {
 
             {/* Current Day Workout */}
             {currentDayWorkout && (
-              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+              <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
                 <div className="p-6 border-b border-gray-200 dark:border-gray-700">
                   <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                     <Calendar className="w-5 h-5 text-emerald-500" />
-                  {currentDayWorkout.focus}
-                </h2>
+                    {currentDayWorkout.focus}
+                  </h2>
                 </div>
 
                 <div className="p-6">
@@ -658,7 +658,7 @@ export default function Workouts() {
                       <button
                         key={index}
                         onClick={() => viewExerciseDetails(exercise)}
-                        className="w-full bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded-lg p-4 transition-colors text-left border border-gray-200 dark:border-gray-700"
+                        className="w-full bg-gray-50 dark:bg-[#282828] hover:bg-gray-100 dark:hover:bg-[#333333] rounded-lg p-4 transition-colors text-left border border-gray-200 dark:border-gray-700"
                       >
                         <div className="flex justify-between items-start gap-4">
                           <div>
@@ -693,13 +693,13 @@ export default function Workouts() {
         {/* Exercise Modal */}
         {selectedExercise && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div className="bg-white dark:bg-[#1E1E1E] rounded-xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
               {/* Modal Header */}
               <div className="flex justify-between items-start mb-6">
                 <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">{selectedExercise.name}</h2>
                 <button
                   onClick={() => setSelectedExercise(null)}
-                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                  className="p-2 hover:bg-gray-100 dark:hover:bg-[#282828] rounded-lg transition-colors"
                 >
                   <X className="w-6 h-6 text-gray-500 dark:text-gray-400" />
                 </button>
@@ -718,7 +718,7 @@ export default function Workouts() {
               </div>
 
               {/* Muscle Targeting Chart */}
-              <div className="mb-8 bg-gray-50 dark:bg-gray-900 p-6 rounded-lg">
+              <div className="mb-8 bg-gray-50 dark:bg-[#282828] p-6 rounded-lg">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Muscle Activation Analysis</h3>
                   <div className="text-sm text-gray-500 dark:text-gray-400">
@@ -734,7 +734,7 @@ export default function Workouts() {
               {/* Exercise Info Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
                 {/* Target Muscles */}
-                <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg">
+                <div className="bg-gray-50 dark:bg-[#282828] p-4 rounded-lg">
                   <h3 className="font-semibold mb-3 text-gray-900 dark:text-white">Primary Target Muscles</h3>
                   <div className="flex flex-wrap gap-2">
                     {selectedExercise.targetMuscles.map((muscle, index) => (
@@ -746,7 +746,7 @@ export default function Workouts() {
                 </div>
 
                 {/* Secondary Muscles */}
-                <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg">
+                <div className="bg-gray-50 dark:bg-[#282828] p-4 rounded-lg">
                   <h3 className="font-semibold mb-3 text-gray-900 dark:text-white">Secondary Muscles</h3>
                   <div className="flex flex-wrap gap-2">
                     {selectedExercise.secondaryMuscles.map((muscle, index) => (
@@ -758,7 +758,7 @@ export default function Workouts() {
                 </div>
 
                 {/* Equipment */}
-                <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg">
+                <div className="bg-gray-50 dark:bg-[#282828] p-4 rounded-lg">
                   <h3 className="font-semibold mb-3 text-gray-900 dark:text-white">Required Equipment</h3>
                   <div className="flex flex-wrap gap-2">
                     {selectedExercise.equipment.map((item, index) => (
@@ -770,7 +770,7 @@ export default function Workouts() {
                 </div>
 
                 {/* Difficulty & Category */}
-                <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg">
+                <div className="bg-gray-50 dark:bg-[#282828] p-4 rounded-lg">
                   <h3 className="font-semibold mb-3 text-gray-900 dark:text-white">Exercise Info</h3>
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
@@ -803,7 +803,7 @@ export default function Workouts() {
               {/* Tips */}
               <div>
                 <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Pro Tips</h3>
-                <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
+                <div className="bg-gray-50 dark:bg-[#282828] rounded-lg p-4">
                   <ul className="space-y-3">
                     {selectedExercise.tips.map((tip, index) => (
                       <li key={index} className="flex items-start gap-3 text-gray-700 dark:text-gray-300">
@@ -831,128 +831,57 @@ export default function Workouts() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Workout Plans</h1>
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-700 dark:text-gray-200"
-            >
-          <Filter className="w-4 h-4" />
-          Filter
-            </button>
-          </div>
-
-      {/* Filter Panel */}
-      {showFilters && (
-        <div className="mb-8 p-6 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Level</label>
-              <select
-                value={filters.level}
-                onChange={(e) => setFilters({ ...filters, level: e.target.value })}
-                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 focus:ring-2 focus:ring-orange-500 dark:focus:ring-orange-400"
-              >
-                <option value="">All Levels</option>
-                <option value="beginner">Beginner</option>
-                <option value="intermediate">Intermediate</option>
-                <option value="advanced">Advanced</option>
-              </select>
-              </div>
-            
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Duration</label>
-              <select
-                value={filters.duration}
-                onChange={(e) => setFilters({ ...filters, duration: e.target.value })}
-                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 focus:ring-2 focus:ring-orange-500 dark:focus:ring-orange-400"
-              >
-                <option value="">Any Duration</option>
-                <option value="4">4 Weeks</option>
-                <option value="8">8 Weeks</option>
-                <option value="12">12 Weeks</option>
-              </select>
-                    </div>
-
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Goal</label>
-              <select
-                value={filters.goal}
-                onChange={(e) => setFilters({ ...filters, goal: e.target.value })}
-                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 focus:ring-2 focus:ring-orange-500 dark:focus:ring-orange-400"
-              >
-                <option value="">Any Goal</option>
-                <option value="strength">Strength</option>
-                <option value="muscle">Muscle Gain</option>
-                <option value="endurance">Endurance</option>
-              </select>
-                        </div>
-
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Equipment</label>
-              <select
-                value={filters.equipment}
-                onChange={(e) => setFilters({ ...filters, equipment: e.target.value })}
-                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 focus:ring-2 focus:ring-orange-500 dark:focus:ring-orange-400"
-              >
-                <option value="">Any Equipment</option>
-                <option value="full">Full Gym</option>
-                <option value="minimal">Minimal</option>
-                <option value="bodyweight">Bodyweight</option>
-              </select>
-                    </div>
-                  </div>
-              </div>
-      )}
-              
-              {error && (
-                <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 mb-6">
-                  <p className="text-red-500">{error}</p>
-            </div>
-          )}
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredWorkouts.map((workout, index) => (
-          <div key={index} className="bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-sm hover:shadow-md dark:shadow-gray-900/30 transition-all border border-gray-200 dark:border-gray-700">
-                    <div className="relative h-48">
-                  <img
-                    src={workout.imageUrl}
-                    alt={workout.title}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-            <div className="p-6">
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">{workout.title}</h3>
-              <div className="space-y-3 text-sm mb-4">
-                <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
-                  <Clock className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                      <span>Duration: {workout.duration}</span>
-                    </div>
-                <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
-                  <Target className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                      <span>Goal: {workout.goal}</span>
-                    </div>
-                <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
-                  <Gauge className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                          <span>Level: {workout.level}</span>
-                        </div>
-                <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
-                  <Wrench className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                      <span>Equipment: {workout.equipment}</span>
-                    </div>
-                  </div>
-              <p className="text-gray-600 dark:text-gray-400 text-sm mb-6">{workout.description}</p>
-                      <button 
-                        onClick={() => selectWorkout(workout)}
-                className="w-full bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-3 rounded-lg transition-colors font-medium"
-                      >
-                        Start Workout Plan
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
+    <div className="min-h-screen bg-gray-50 dark:bg-[#121212] py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Workouts</h1>
         </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {workouts.map((workout, index) => (
+            <div 
+              key={index}
+              className="bg-white dark:bg-[#1E1E1E] rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow"
+            >
+              <div className="relative h-48">
+                <img
+                  src={workout.imageUrl}
+                  alt={workout.title}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <div className="p-6">
+                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">{workout.title}</h3>
+                <div className="space-y-3 text-sm mb-4">
+                  <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+                    <Clock className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                    <span>Duration: {workout.duration}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+                    <Target className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                    <span>Goal: {workout.goal}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+                    <Gauge className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                    <span>Level: {workout.level}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+                    <Wrench className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                    <span>Equipment: {workout.equipment}</span>
+                  </div>
+                </div>
+                <p className="text-gray-600 dark:text-gray-400 text-sm mb-6">{workout.description}</p>
+                <button 
+                  onClick={() => selectWorkout(workout)}
+                  className="w-full bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-3 rounded-lg transition-colors font-medium"
+                >
+                  Start Workout Plan
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 } 

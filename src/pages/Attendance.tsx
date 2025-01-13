@@ -110,20 +110,20 @@ export default function Attendance() {
   }
 
   return (
-    <div className="min-h-screen bg-[#121212] text-white py-8">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#121212] py-8">
       <div className="max-w-3xl mx-auto px-4">
         {/* Header with Scan Button */}
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-2xl font-semibold flex items-center gap-2">
+            <h1 className="text-2xl font-semibold flex items-center gap-2 text-gray-900 dark:text-white">
               <CalendarIcon className="w-6 h-6" />
               Attendance
             </h1>
-            <p className="text-gray-400 mt-1">Track your gym visits</p>
+            <p className="text-gray-600 dark:text-gray-400 mt-1">Track your gym visits</p>
           </div>
           <button
             onClick={() => setShowScanner(true)}
-            className="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition-colors flex items-center gap-2"
+            className="bg-emerald-500 text-white px-4 py-2 rounded-lg hover:bg-emerald-600 transition-colors flex items-center gap-2"
           >
             <QrCode className="w-5 h-5" />
             Scan QR
@@ -131,7 +131,7 @@ export default function Attendance() {
         </div>
 
         {/* Calendar */}
-        <div className="bg-[#1E1E1E] rounded-xl p-6 mb-6">
+        <div className="bg-white dark:bg-[#1E1E1E] rounded-xl p-6 mb-6 shadow-sm border border-gray-200 dark:border-gray-700">
           <Calendar
             className="attendance-calendar"
             tileClassName={tileClassName}
@@ -140,13 +140,13 @@ export default function Attendance() {
         </div>
 
         {/* Recent Activity */}
-        <div className="bg-[#1E1E1E] rounded-xl p-6">
-          <h2 className="text-xl font-semibold mb-4">Recent Activity</h2>
+        <div className="bg-white dark:bg-[#1E1E1E] rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
+          <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Recent Activity</h2>
           <div className="space-y-4">
             {attendanceRecords.slice(0, 5).map((record, index) => (
               <div
                 key={index}
-                className="flex items-center justify-between p-4 bg-[#282828] rounded-lg"
+                className="flex items-center justify-between p-4 bg-gray-50 dark:bg-[#282828] rounded-lg border border-gray-200 dark:border-gray-700"
               >
                 <div className="flex items-center gap-3">
                   {record.status === 'present' ? (
@@ -155,19 +155,19 @@ export default function Attendance() {
                     <XCircle className="w-5 h-5 text-red-500" />
                   )}
                   <div>
-                    <p className="font-medium">
+                    <p className="font-medium text-gray-900 dark:text-white">
                       {format(new Date(record.date), 'MMMM d, yyyy')}
                     </p>
                     {record.time && (
-                      <p className="text-sm text-gray-400">{record.time}</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">{record.time}</p>
                     )}
                   </div>
                 </div>
                 <span
                   className={`px-3 py-1 rounded-full text-sm ${
                     record.status === 'present'
-                      ? 'bg-emerald-500/20 text-emerald-500'
-                      : 'bg-red-500/20 text-red-500'
+                      ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                      : 'bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400'
                   }`}
                 >
                   {record.status === 'present' ? 'Present' : 'Absent'}
@@ -188,9 +188,9 @@ export default function Attendance() {
 
         {/* Success Message */}
         {scanResult && (
-          <div className="fixed bottom-4 right-4 bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-4 max-w-md">
-            <h3 className="text-emerald-500 font-medium mb-1">Attendance Marked!</h3>
-            <p className="text-gray-400 text-sm">
+          <div className="fixed bottom-4 right-4 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 rounded-lg p-4 max-w-md">
+            <h3 className="text-emerald-600 dark:text-emerald-400 font-medium mb-1">Attendance Marked!</h3>
+            <p className="text-gray-600 dark:text-gray-400 text-sm">
               Your attendance has been recorded successfully.
             </p>
           </div>
@@ -202,40 +202,113 @@ export default function Attendance() {
           width: 100%;
           background: transparent !important;
           border: none !important;
-          color: white !important;
+          font-family: inherit !important;
         }
+
         .attendance-calendar .react-calendar__tile {
-          color: white !important;
           padding: 1em 0.5em !important;
+          font-size: 0.95rem !important;
+          color: #111827 !important;
         }
+
+        .dark .attendance-calendar .react-calendar__tile {
+          color: #e5e7eb !important;
+        }
+
         .attendance-calendar .react-calendar__month-view__days__day--weekend {
           color: #ef4444 !important;
         }
+
+        .dark .attendance-calendar .react-calendar__month-view__days__day--weekend {
+          color: #f87171 !important;
+        }
+
         .attendance-calendar .react-calendar__tile--now {
+          background: #f3f4f6 !important;
+          font-weight: 600 !important;
+        }
+
+        .dark .attendance-calendar .react-calendar__tile--now {
           background: #374151 !important;
         }
+
         .attendance-calendar .react-calendar__tile--active {
-          background: #059669 !important;
-        }
-        .attendance-calendar .react-calendar__navigation button {
+          background: #10b981 !important;
           color: white !important;
         }
-        .attendance-calendar .react-calendar__navigation button:disabled {
-          color: #6b7280 !important;
+
+        .attendance-calendar .react-calendar__navigation {
+          margin-bottom: 1rem !important;
         }
+
+        .attendance-calendar .react-calendar__navigation button {
+          font-size: 1rem !important;
+          color: #111827 !important;
+          font-weight: 500 !important;
+        }
+
+        .dark .attendance-calendar .react-calendar__navigation button {
+          color: #e5e7eb !important;
+        }
+
+        .attendance-calendar .react-calendar__navigation button:disabled {
+          color: #9ca3af !important;
+        }
+
         .attendance-calendar .react-calendar__navigation button:enabled:hover,
         .attendance-calendar .react-calendar__navigation button:enabled:focus {
+          background-color: #f3f4f6 !important;
+        }
+
+        .dark .attendance-calendar .react-calendar__navigation button:enabled:hover,
+        .dark .attendance-calendar .react-calendar__navigation button:enabled:focus {
           background-color: #374151 !important;
         }
+
         .attendance-calendar .react-calendar__tile:enabled:hover,
         .attendance-calendar .react-calendar__tile:enabled:focus {
+          background-color: #f3f4f6 !important;
+        }
+
+        .dark .attendance-calendar .react-calendar__tile:enabled:hover,
+        .dark .attendance-calendar .react-calendar__tile:enabled:focus {
           background-color: #374151 !important;
         }
+
+        .attendance-calendar .react-calendar__month-view__weekdays {
+          font-weight: 600 !important;
+          font-size: 0.875rem !important;
+          color: #6b7280 !important;
+          text-transform: uppercase !important;
+          margin-bottom: 0.5rem !important;
+        }
+
+        .dark .attendance-calendar .react-calendar__month-view__weekdays {
+          color: #9ca3af !important;
+        }
+
+        .attendance-calendar .react-calendar__month-view__weekdays__weekday {
+          padding: 0.5rem !important;
+        }
+
+        .attendance-calendar .react-calendar__month-view__weekdays__weekday abbr {
+          text-decoration: none !important;
+        }
+
         .attendance-present {
           background-color: rgba(16, 185, 129, 0.1) !important;
         }
+
         .attendance-absent {
           background-color: rgba(239, 68, 68, 0.1) !important;
+        }
+
+        .dark .attendance-present {
+          background-color: rgba(16, 185, 129, 0.2) !important;
+        }
+
+        .dark .attendance-absent {
+          background-color: rgba(239, 68, 68, 0.2) !important;
         }
       `}</style>
     </div>

@@ -137,25 +137,25 @@ export default function Profile() {
   };
 
   return (
-    <div className="min-h-screen bg-[#121212] text-white">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#121212] text-gray-900 dark:text-white">
       <div className="max-w-3xl mx-auto px-4 py-4 pb-24">
         {/* User Info Card */}
-        <div className="bg-[#1E1E1E] rounded-xl shadow-sm mb-8">
+        <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 mb-8">
           <div className="p-6 flex items-center">
             <div className="w-16 h-16 bg-emerald-600 rounded-full flex items-center justify-center mr-4">
               {user?.photoURL ? (
                 <img src={user.photoURL} alt="Profile" className="w-full h-full rounded-full object-cover" />
               ) : (
-                <span className="text-2xl font-bold">{user?.email?.[0].toUpperCase()}</span>
+                <span className="text-2xl font-bold text-white">{user?.email?.[0].toUpperCase()}</span>
               )}
             </div>
             <div className="flex-1">
-              <h2 className="text-xl font-semibold">{user?.displayName || user?.email}</h2>
-              <p className="text-gray-400">Member since {new Date(user?.metadata?.creationTime || '').toLocaleDateString()}</p>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">{user?.displayName || user?.email}</h2>
+              <p className="text-gray-500 dark:text-gray-400">Member since {new Date(user?.metadata?.creationTime || '').toLocaleDateString()}</p>
             </div>
             <button
               onClick={() => navigate('/profile/edit')}
-              className="flex items-center gap-2 bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition-colors"
+              className="flex items-center gap-2 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-4 py-2 rounded-lg hover:bg-emerald-500/20 transition-colors"
             >
               <Edit className="w-4 h-4" />
               Edit
@@ -165,20 +165,20 @@ export default function Profile() {
 
         {/* Active Membership Card */}
         <div 
-          className="bg-[#1E1E1E] rounded-xl shadow-sm mb-8 cursor-pointer hover:bg-[#242424] transition-colors"
+          className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 mb-8 cursor-pointer hover:bg-gray-50 dark:hover:bg-[#242424] transition-colors"
           onClick={() => navigate('/membership')}
         >
-          <div className="px-6 py-5 border-b border-[#282828] flex items-center justify-between">
-            <h2 className="text-xl font-semibold flex items-center gap-2">
+          <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+            <h2 className="text-xl font-semibold flex items-center gap-2 text-gray-900 dark:text-white">
               <Crown className="w-5 h-5 text-yellow-500" />
               Active Membership
             </h2>
             {membership?.isActive ? (
-              <span className="bg-emerald-600/20 text-emerald-500 px-3 py-1 rounded-full text-sm">
+              <span className="bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-3 py-1 rounded-full text-sm font-medium">
                 Active
               </span>
             ) : (
-              <span className="bg-red-600/20 text-red-500 px-3 py-1 rounded-full text-sm">
+              <span className="bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 px-3 py-1 rounded-full text-sm font-medium">
                 Inactive
               </span>
             )}
@@ -188,19 +188,19 @@ export default function Profile() {
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
                   <div>
-                    <h3 className="text-lg font-medium">{plans.find(p => p.id === membership.planId)?.name}</h3>
-                    <p className="text-gray-400 text-sm">Valid until {new Date(membership.endDate).toLocaleDateString()}</p>
+                    <h3 className="text-lg font-medium text-gray-900 dark:text-white">{plans.find(p => p.id === membership.planId)?.name}</h3>
+                    <p className="text-gray-500 dark:text-gray-400 text-sm">Valid until {new Date(membership.endDate).toLocaleDateString()}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm text-gray-400">Days Remaining</p>
-                    <p className="text-2xl font-bold text-emerald-500">
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Days Remaining</p>
+                    <p className="text-2xl font-bold text-emerald-500 dark:text-emerald-400">
                       {Math.ceil((new Date(membership.endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))}
                     </p>
                   </div>
                 </div>
-                <div className="w-full bg-[#282828] rounded-full h-2">
+                <div className="w-full bg-gray-100 dark:bg-[#282828] rounded-full h-2">
                   <div 
-                    className="bg-emerald-600 h-2 rounded-full"
+                    className="bg-emerald-500 dark:bg-emerald-400 h-2 rounded-full transition-all duration-300 ease-in-out"
                     style={{
                       width: `${Math.max(0, Math.min(100, (new Date(membership.endDate).getTime() - new Date().getTime()) / 
                         (new Date(membership.endDate).getTime() - new Date(membership.startDate).getTime()) * 100))}%`
@@ -209,13 +209,17 @@ export default function Profile() {
                 </div>
               </div>
             ) : (
-              <div className="text-center py-8 space-y-4">
-                <div className="w-16 h-16 bg-red-600/10 rounded-full flex items-center justify-center mx-auto mb-4">
+              <div className="text-center py-8">
+                <div className="w-16 h-16 bg-red-50 dark:bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
                   <Crown className="w-8 h-8 text-red-500" />
                 </div>
-                <div>
-                  <p className="text-lg font-medium text-gray-300">No Active Membership</p>
-                  <p className="text-gray-500 mt-1">Get access to all gym facilities and features</p>
+                <div className="space-y-2">
+                  <p className="text-lg font-medium text-gray-900 dark:text-gray-300">No Active Membership</p>
+                  <p className="text-gray-500 dark:text-gray-400">Get access to all gym facilities and features</p>
+                  <button className="mt-4 bg-emerald-500 text-white px-6 py-2 rounded-lg hover:bg-emerald-600 transition-colors inline-flex items-center gap-2">
+                    <Crown className="w-4 h-4" />
+                    View Plans
+                  </button>
                 </div>
               </div>
             )}
@@ -223,22 +227,22 @@ export default function Profile() {
         </div>
 
         {/* Profile Information Card */}
-        <div className="bg-[#1E1E1E] rounded-xl shadow-sm">
-          <div className="px-6 py-5 border-b border-[#282828]">
-            <h2 className="text-xl font-semibold">Profile Information</h2>
+        <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-gray-200 dark:border-gray-800">
+          <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-800">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Profile Information</h2>
           </div>
 
           <div className="p-6 space-y-8">
             {/* BMR and Calorie Information */}
             <div>
-              <h3 className="text-lg font-medium mb-4">BMR & Calorie Information</h3>
-              <div className="bg-[#282828] rounded-xl p-6 space-y-6">
+              <h3 className="text-lg font-medium mb-4 text-gray-900 dark:text-white">BMR & Calorie Information</h3>
+              <div className="bg-gray-50 dark:bg-[#282828] rounded-xl p-6 space-y-6 border border-gray-100 dark:border-gray-700">
                 {profileData?.stats?.weight && profileData?.stats?.height && profileData?.personalInfo?.age ? (
                   <>
                     {/* BMR Calculation */}
                     <div>
                       <div className="flex justify-between items-center mb-2">
-                        <p className="text-sm text-gray-400">Basal Metabolic Rate (BMR)</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">Basal Metabolic Rate (BMR)</p>
                         <p className="text-lg font-semibold text-emerald-500">
                           {Math.round(
                             profileData.personalInfo.gender === 'male'
@@ -247,206 +251,42 @@ export default function Profile() {
                           )} kcal/day
                         </p>
                       </div>
-                      <p className="text-xs text-gray-500">Calories your body burns at complete rest</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Calories your body burns at complete rest</p>
                     </div>
 
-                    {/* BMI Indicator */}
-                    <div className="border-t border-[#363636] pt-6">
+                    {/* BMI Section */}
+                    <div>
                       <div className="flex justify-between items-center mb-2">
-                        <p className="text-sm text-gray-400">Body Mass Index (BMI)</p>
-                        {(() => {
-                          const heightInM = Number(profileData.stats.height) / 100;
-                          const weightInKg = Number(profileData.stats.weight);
-                          const bmi = weightInKg / (heightInM * heightInM);
-                          return (
-                            <p className={`text-lg font-semibold ${
-                              bmi < 18.5 ? 'text-blue-500' :
-                              bmi < 25 ? 'text-emerald-500' :
-                              bmi < 30 ? 'text-yellow-500' :
-                              'text-red-500'
-                            }`}>
-                              {bmi.toFixed(1)}
-                            </p>
-                          );
-                        })()}
-                      </div>
-
-                      {/* BMI Scale */}
-                      <div className="relative h-8 mt-4">
-                        {/* Background gradient */}
-                        <div className="absolute inset-0 rounded-lg overflow-hidden">
-                          <div className="h-full w-full bg-gradient-to-r from-blue-500 via-emerald-500 via-yellow-500 to-red-500" />
-                        </div>
-
-                        {/* BMI Categories */}
-                        <div className="absolute inset-0 flex text-[10px] text-white">
-                          <div className="w-[20%] border-r border-white/20 px-1">
-                            Underweight
-                            <br />
-                            (&lt;18.5)
-                          </div>
-                          <div className="w-[35%] border-r border-white/20 px-1">
-                            Normal
-                            <br />
-                            (18.5-24.9)
-                          </div>
-                          <div className="w-[25%] border-r border-white/20 px-1">
-                            Overweight
-                            <br />
-                            (25-29.9)
-                          </div>
-                          <div className="w-[20%] px-1">
-                            Obese
-                            <br />
-                            (≥30)
-                          </div>
-                        </div>
-
-                        {/* Current BMI Marker */}
-                        {(() => {
-                          const heightInM = Number(profileData.stats.height) / 100;
-                          const weightInKg = Number(profileData.stats.weight);
-                          const bmi = weightInKg / (heightInM * heightInM);
-                          // Calculate position (0-100%)
-                          let position = 0;
-                          if (bmi < 18.5) {
-                            position = (bmi / 18.5) * 20;
-                          } else if (bmi < 25) {
-                            position = 20 + ((bmi - 18.5) / 6.5) * 35;
-                          } else if (bmi < 30) {
-                            position = 55 + ((bmi - 25) / 5) * 25;
-                          } else {
-                            position = Math.min(100, 80 + ((bmi - 30) / 10) * 20);
-                          }
-                          
-                          return (
-                            <div 
-                              className="absolute w-0.5 h-10 bg-white shadow-lg transform -translate-x-1/2 -translate-y-1"
-                              style={{ left: `${position}%` }}
-                            />
-                          );
-                        })()}
-                      </div>
-
-                      <div className="mt-2">
-                        <p className="text-xs text-gray-500">
-                          {(() => {
-                            const heightInM = Number(profileData.stats.height) / 100;
-                            const weightInKg = Number(profileData.stats.weight);
-                            const bmi = weightInKg / (heightInM * heightInM);
-                            if (bmi < 18.5) return "You're in the underweight range. Consider consulting with a nutritionist for a healthy weight gain plan.";
-                            if (bmi < 25) return "You're in the healthy weight range. Keep maintaining a balanced diet and regular exercise.";
-                            if (bmi < 30) return "You're in the overweight range. Consider a moderate calorie deficit and increased physical activity.";
-                            return "You're in the obese range. Consider consulting with a healthcare provider for a personalized weight management plan.";
-                          })()}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* TDEE Calculation */}
-                    {profileData?.preferences?.activityLevel && (
-                      <div>
-                        <div className="flex justify-between items-center mb-2">
-                          <p className="text-sm text-gray-400">Total Daily Energy Expenditure (TDEE)</p>
-                          <p className="text-lg font-semibold text-emerald-500">
-                            {(() => {
-                              const bmr = profileData.personalInfo.gender === 'male'
-                                ? 88.362 + (13.397 * Number(profileData.stats.weight)) + (4.799 * Number(profileData.stats.height)) - (5.677 * Number(profileData.personalInfo.age))
-                                : 447.593 + (9.247 * Number(profileData.stats.weight)) + (3.098 * Number(profileData.stats.height)) - (4.330 * Number(profileData.personalInfo.age));
-                              
-                              const activityMultipliers = {
-                                sedentary: 1.2,
-                                'lightly-active': 1.375,
-                                'moderately-active': 1.55,
-                                'very-active': 1.725
-                              };
-                              
-                              const multiplier = activityMultipliers[profileData.preferences.activityLevel as keyof typeof activityMultipliers] || 1.2;
-                              return Math.round(bmr * multiplier);
-                            })()} kcal/day
-                          </p>
-                        </div>
-                        <p className="text-xs text-gray-500">Total calories burned based on your activity level</p>
-                      </div>
-                    )}
-
-                    {/* Recommended Calorie Targets */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-[#363636]">
-                      <div className="bg-[#1E1E1E] p-4 rounded-lg">
-                        <p className="text-sm text-gray-400 mb-2">Weight Loss Target</p>
-                        <p className="text-lg font-semibold text-red-500">
-                          {(() => {
-                            const bmr = profileData.personalInfo.gender === 'male'
-                              ? 88.362 + (13.397 * Number(profileData.stats.weight)) + (4.799 * Number(profileData.stats.height)) - (5.677 * Number(profileData.personalInfo.age))
-                              : 447.593 + (9.247 * Number(profileData.stats.weight)) + (3.098 * Number(profileData.stats.height)) - (4.330 * Number(profileData.personalInfo.age));
-                            
-                            const activityMultipliers = {
-                              sedentary: 1.2,
-                              'lightly-active': 1.375,
-                              'moderately-active': 1.55,
-                              'very-active': 1.725
-                            };
-                            
-                            const multiplier = activityMultipliers[profileData.preferences.activityLevel as keyof typeof activityMultipliers] || 1.2;
-                            return Math.round((bmr * multiplier) - 500);
-                          })()} kcal/day
-                        </p>
-                        <p className="text-xs text-gray-500 mt-1">500 calorie deficit</p>
-                      </div>
-
-                      <div className="bg-[#1E1E1E] p-4 rounded-lg">
-                        <p className="text-sm text-gray-400 mb-2">Maintenance Target</p>
-                        <p className="text-lg font-semibold text-yellow-500">
-                          {(() => {
-                            const bmr = profileData.personalInfo.gender === 'male'
-                              ? 88.362 + (13.397 * Number(profileData.stats.weight)) + (4.799 * Number(profileData.stats.height)) - (5.677 * Number(profileData.personalInfo.age))
-                              : 447.593 + (9.247 * Number(profileData.stats.weight)) + (3.098 * Number(profileData.stats.height)) - (4.330 * Number(profileData.personalInfo.age));
-                            
-                            const activityMultipliers = {
-                              sedentary: 1.2,
-                              'lightly-active': 1.375,
-                              'moderately-active': 1.55,
-                              'very-active': 1.725
-                            };
-                            
-                            const multiplier = activityMultipliers[profileData.preferences.activityLevel as keyof typeof activityMultipliers] || 1.2;
-                            return Math.round(bmr * multiplier);
-                          })()} kcal/day
-                        </p>
-                        <p className="text-xs text-gray-500 mt-1">Maintain current weight</p>
-                      </div>
-
-                      <div className="bg-[#1E1E1E] p-4 rounded-lg">
-                        <p className="text-sm text-gray-400 mb-2">Muscle Gain Target</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">Body Mass Index (BMI)</p>
                         <p className="text-lg font-semibold text-emerald-500">
-                          {(() => {
-                            const bmr = profileData.personalInfo.gender === 'male'
-                              ? 88.362 + (13.397 * Number(profileData.stats.weight)) + (4.799 * Number(profileData.stats.height)) - (5.677 * Number(profileData.personalInfo.age))
-                              : 447.593 + (9.247 * Number(profileData.stats.weight)) + (3.098 * Number(profileData.stats.height)) - (4.330 * Number(profileData.personalInfo.age));
-                            
-                            const activityMultipliers = {
-                              sedentary: 1.2,
-                              'lightly-active': 1.375,
-                              'moderately-active': 1.55,
-                              'very-active': 1.725
-                            };
-                            
-                            const multiplier = activityMultipliers[profileData.preferences.activityLevel as keyof typeof activityMultipliers] || 1.2;
-                            return Math.round((bmr * multiplier) + 500);
-                          })()} kcal/day
+                          {(Number(profileData.stats.weight) / Math.pow(Number(profileData.stats.height) / 100, 2)).toFixed(1)}
                         </p>
-                        <p className="text-xs text-gray-500 mt-1">500 calorie surplus</p>
+                      </div>
+                      <div className="h-2.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full transition-all duration-300 rounded-full"
+                          style={{
+                            width: '60%',
+                            background: 'linear-gradient(to right, #22c55e, #eab308, #ef4444)'
+                          }}
+                        />
+                      </div>
+                      <div className="flex justify-between text-xs mt-1">
+                        <span className="text-gray-500 dark:text-gray-400">Underweight</span>
+                        <span className="text-gray-500 dark:text-gray-400">Normal</span>
+                        <span className="text-gray-500 dark:text-gray-400">Overweight</span>
+                        <span className="text-gray-500 dark:text-gray-400">Obese</span>
                       </div>
                     </div>
                   </>
                 ) : (
                   <div className="text-center py-6">
-                    <p className="text-gray-400 mb-2">Complete your profile to see BMR calculations</p>
+                    <p className="text-gray-500 dark:text-gray-400">Complete your profile to see BMR and BMI calculations</p>
                     <button
                       onClick={() => navigate('/profile/edit')}
-                      className="text-emerald-500 hover:text-emerald-400 text-sm font-medium"
+                      className="mt-4 text-emerald-500 hover:text-emerald-600 font-medium"
                     >
-                      Update Profile
+                      Complete Profile
                     </button>
                   </div>
                 )}

@@ -99,11 +99,11 @@ export default function ProfileEdit() {
   };
 
   return (
-    <div className="min-h-screen bg-[#121212] text-white py-8">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#121212] text-gray-900 dark:text-white py-8">
       <div className="max-w-3xl mx-auto px-4">
         <button
           onClick={() => navigate('/profile')}
-          className="text-gray-400 hover:text-white mb-6 flex items-center gap-2"
+          className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white mb-6 flex items-center gap-2 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           Back to Profile
@@ -111,30 +111,30 @@ export default function ProfileEdit() {
 
         <form onSubmit={handleSubmit} className="space-y-8">
           {/* Personal Information */}
-          <div className="bg-[#1E1E1E] rounded-xl p-6">
-            <h2 className="text-xl font-semibold mb-6">Personal Information</h2>
+          <div className="bg-white dark:bg-[#1E1E1E] rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-800">
+            <h2 className="text-xl font-semibold mb-6 text-gray-900 dark:text-white">Personal Information</h2>
             <div className="grid grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm text-gray-400 mb-2">Age</label>
-                <p className="px-4 py-2 bg-[#282828] rounded-lg text-gray-400">
+                <label className="block text-sm text-gray-500 dark:text-gray-400 mb-2">Age</label>
+                <p className="px-4 py-2 bg-gray-50 dark:bg-[#282828] rounded-lg text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700">
                   {calculateAge(formData.personalInfo.dateOfBirth) || 'Will be calculated from DOB'}
                 </p>
               </div>
               <div>
-                <label className="block text-sm text-gray-400 mb-2">Date of Birth</label>
+                <label className="block text-sm text-gray-500 dark:text-gray-400 mb-2">Date of Birth</label>
                 <input
                   type="date"
                   value={formData.personalInfo.dateOfBirth}
                   onChange={(e) => handleChange('personalInfo', 'dateOfBirth', e.target.value)}
-                  className="w-full bg-[#282828] rounded-lg px-4 py-2 text-white border border-gray-700 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                  className="w-full bg-white dark:bg-[#282828] rounded-lg px-4 py-2 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
                 />
               </div>
               <div>
-                <label className="block text-sm text-gray-400 mb-2">Gender</label>
+                <label className="block text-sm text-gray-500 dark:text-gray-400 mb-2">Gender</label>
                 <select
                   value={formData.personalInfo.gender}
                   onChange={(e) => handleChange('personalInfo', 'gender', e.target.value)}
-                  className="w-full bg-[#282828] rounded-lg px-4 py-2 text-white border border-gray-700 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                  className="w-full bg-white dark:bg-[#282828] rounded-lg px-4 py-2 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
                 >
                   <option value="">Select Gender</option>
                   <option value="male">Male</option>
@@ -143,11 +143,11 @@ export default function ProfileEdit() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm text-gray-400 mb-2">Blood Type</label>
+                <label className="block text-sm text-gray-500 dark:text-gray-400 mb-2">Blood Type</label>
                 <select
                   value={formData.personalInfo.bloodType}
                   onChange={(e) => handleChange('personalInfo', 'bloodType', e.target.value)}
-                  className="w-full bg-[#282828] rounded-lg px-4 py-2 text-white border border-gray-700 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                  className="w-full bg-white dark:bg-[#282828] rounded-lg px-4 py-2 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
                 >
                   <option value="">Select Blood Type</option>
                   <option value="A+">A+</option>
@@ -164,22 +164,20 @@ export default function ProfileEdit() {
           </div>
 
           {/* Medical Information */}
-          <div className="bg-[#1E1E1E] rounded-xl p-6">
-            <h2 className="text-xl font-semibold mb-6">Medical Information</h2>
+          <div className="bg-white dark:bg-[#1E1E1E] rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-800">
+            <h2 className="text-xl font-semibold mb-6 text-gray-900 dark:text-white">Medical Information</h2>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm text-gray-400 mb-2">Do you have any medical conditions?</label>
+                <label className="block text-sm text-gray-500 dark:text-gray-400 mb-2">Do you have any medical conditions?</label>
                 <div className="flex gap-4">
                   <button
                     type="button"
-                    onClick={() => {
-                      handleChange('medicalInfo', 'conditions', '');
-                    }}
-                    className={`px-4 py-2 rounded-lg text-sm transition-colors
-                      ${!formData.medicalInfo.conditions || formData.medicalInfo.conditions === ''
-                        ? 'bg-emerald-600 text-white'
-                        : 'bg-[#282828] text-gray-300 hover:bg-[#333]'
-                      }`}
+                    onClick={() => handleChange('medicalInfo', 'conditions', '')}
+                    className={`px-4 py-2 rounded-lg text-sm transition-colors ${
+                      !formData.medicalInfo.conditions
+                        ? 'bg-emerald-500 text-white'
+                        : 'bg-gray-100 dark:bg-[#282828] text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-[#333]'
+                    }`}
                   >
                     No
                   </button>
@@ -190,11 +188,11 @@ export default function ProfileEdit() {
                         handleChange('medicalInfo', 'conditions', ' ');
                       }
                     }}
-                    className={`px-4 py-2 rounded-lg text-sm transition-colors
-                      ${formData.medicalInfo.conditions && formData.medicalInfo.conditions !== ''
-                        ? 'bg-emerald-600 text-white'
-                        : 'bg-[#282828] text-gray-300 hover:bg-[#333]'
-                      }`}
+                    className={`px-4 py-2 rounded-lg text-sm transition-colors ${
+                      formData.medicalInfo.conditions
+                        ? 'bg-emerald-500 text-white'
+                        : 'bg-gray-100 dark:bg-[#282828] text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-[#333]'
+                    }`}
                   >
                     Yes
                   </button>
@@ -202,11 +200,11 @@ export default function ProfileEdit() {
               </div>
               {formData.medicalInfo.conditions !== null && formData.medicalInfo.conditions !== undefined && (
                 <div className="mt-4">
-                  <label className="block text-sm text-gray-400 mb-2">Please list your medical conditions</label>
+                  <label className="block text-sm text-gray-500 dark:text-gray-400 mb-2">Please list your medical conditions</label>
                   <textarea
                     value={formData.medicalInfo.conditions}
                     onChange={(e) => handleChange('medicalInfo', 'conditions', e.target.value)}
-                    className="w-full bg-[#282828] rounded-lg px-4 py-2 text-white border border-gray-700 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 h-24"
+                    className="w-full bg-white dark:bg-[#282828] rounded-lg px-4 py-2 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 h-24"
                     placeholder="List any medical conditions or allergies..."
                   />
                 </div>
@@ -215,40 +213,40 @@ export default function ProfileEdit() {
           </div>
 
           {/* Physical Stats */}
-          <div className="bg-[#1E1E1E] rounded-xl p-6">
-            <h2 className="text-xl font-semibold mb-6">Physical Stats</h2>
+          <div className="bg-white dark:bg-[#1E1E1E] rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-800">
+            <h2 className="text-xl font-semibold mb-6 text-gray-900 dark:text-white">Physical Stats</h2>
             <div className="grid grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm text-gray-400 mb-2">Weight (kg)</label>
+                <label className="block text-sm text-gray-500 dark:text-gray-400 mb-2">Weight (kg)</label>
                 <input
                   type="number"
                   value={formData.stats.weight}
                   onChange={(e) => handleChange('stats', 'weight', e.target.value)}
-                  className="w-full bg-[#282828] rounded-lg px-4 py-2 text-white border border-gray-700 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                  className="w-full bg-white dark:bg-[#282828] rounded-lg px-4 py-2 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
                 />
               </div>
               <div>
-                <label className="block text-sm text-gray-400 mb-2">Height (cm)</label>
+                <label className="block text-sm text-gray-500 dark:text-gray-400 mb-2">Height (cm)</label>
                 <input
                   type="number"
                   value={formData.stats.height}
                   onChange={(e) => handleChange('stats', 'height', e.target.value)}
-                  className="w-full bg-[#282828] rounded-lg px-4 py-2 text-white border border-gray-700 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                  className="w-full bg-white dark:bg-[#282828] rounded-lg px-4 py-2 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
                 />
               </div>
             </div>
           </div>
 
           {/* Preferences */}
-          <div className="bg-[#1E1E1E] rounded-xl p-6">
-            <h2 className="text-xl font-semibold mb-6">Preferences</h2>
+          <div className="bg-white dark:bg-[#1E1E1E] rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-800">
+            <h2 className="text-xl font-semibold mb-6 text-gray-900 dark:text-white">Preferences</h2>
             <div className="space-y-6">
               <div>
-                <label className="block text-sm text-gray-400 mb-2">Fitness Level</label>
+                <label className="block text-sm text-gray-500 dark:text-gray-400 mb-2">Fitness Level</label>
                 <select
                   value={formData.preferences.fitnessLevel}
                   onChange={(e) => handleChange('preferences', 'fitnessLevel', e.target.value)}
-                  className="w-full bg-[#282828] rounded-lg px-4 py-2 text-white border border-gray-700 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                  className="w-full bg-white dark:bg-[#282828] rounded-lg px-4 py-2 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
                 >
                   <option value="">Select Fitness Level</option>
                   <option value="beginner">Beginner</option>
@@ -257,11 +255,11 @@ export default function ProfileEdit() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm text-gray-400 mb-2">Activity Level</label>
+                <label className="block text-sm text-gray-500 dark:text-gray-400 mb-2">Activity Level</label>
                 <select
                   value={formData.preferences.activityLevel}
                   onChange={(e) => handleChange('preferences', 'activityLevel', e.target.value)}
-                  className="w-full bg-[#282828] rounded-lg px-4 py-2 text-white border border-gray-700 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                  className="w-full bg-white dark:bg-[#282828] rounded-lg px-4 py-2 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
                 >
                   <option value="">Select Activity Level</option>
                   <option value="sedentary">Sedentary</option>
@@ -271,22 +269,19 @@ export default function ProfileEdit() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm text-gray-400 mb-2">Dietary Preferences</label>
-                <div className="flex flex-wrap gap-2 mb-4">
+                <label className="block text-sm text-gray-500 dark:text-gray-400 mb-2">Dietary Preferences</label>
+                <div className="grid grid-cols-2 gap-3">
                   {dietaryOptions.map((option) => (
                     <button
                       key={option}
                       type="button"
                       onClick={() => handleDietaryChange(option)}
-                      className={`px-4 py-2 rounded-lg text-sm transition-colors flex items-center gap-2
-                        ${formData.preferences.dietary.includes(option)
-                          ? 'bg-emerald-600 text-white'
-                          : 'bg-[#282828] text-gray-300 hover:bg-[#333]'
-                        }`}
+                      className={`px-4 py-2 rounded-lg text-sm transition-colors ${
+                        formData.preferences.dietary.includes(option)
+                          ? 'bg-emerald-500 text-white'
+                          : 'bg-gray-100 dark:bg-[#282828] text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-[#333]'
+                      }`}
                     >
-                      {formData.preferences.dietary.includes(option) && (
-                        <Check className="w-4 h-4" />
-                      )}
                       {option}
                     </button>
                   ))}
@@ -295,21 +290,14 @@ export default function ProfileEdit() {
             </div>
           </div>
 
-          <div className="flex justify-end gap-4">
-            <button
-              type="button"
-              onClick={() => navigate('/profile')}
-              className="px-6 py-2 rounded-lg text-gray-300 hover:text-white transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="bg-emerald-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-emerald-700 transition-colors"
-            >
-              Save Changes
-            </button>
-          </div>
+          {/* Save Button */}
+          <button
+            type="submit"
+            className="w-full bg-emerald-500 hover:bg-emerald-600 text-white py-3 rounded-xl font-medium transition-colors flex items-center justify-center gap-2"
+          >
+            <Check className="w-5 h-5" />
+            Save Changes
+          </button>
         </form>
       </div>
     </div>

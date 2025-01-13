@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, Clock, Scale, Target, X, Info } from 'lucide-react';
+import { Calendar, Clock, Scale, Target, X, Info, CalendarDays } from 'lucide-react';
 import { DietPlan as DietPlanType, Food, DailyMeal, WeeklyDietPlan } from '../services/DietService';
+import { useProfile } from '../context/ProfileContext';
 
 interface FoodModalProps {
   food: Food;
@@ -130,57 +131,79 @@ function FoodModal({ food, onClose }: FoodModalProps) {
 
 export default function DietPlanDetails() {
   const navigate = useNavigate();
+  const { profileData } = useProfile();
+  const savedPlan = localStorage.getItem('selectedDietPlan');
   const [selectedPlan, setSelectedPlan] = useState<DietPlanType | null>(null);
   const [currentDay, setCurrentDay] = useState(new Date().toLocaleDateString('en-US', { weekday: 'long' }));
   const [expandedMeal, setExpandedMeal] = useState<string | null>(null);
   const [selectedFood, setSelectedFood] = useState<Food | null>(null);
 
   useEffect(() => {
-    const savedPlan = localStorage.getItem('selectedDietPlan');
-    if (!savedPlan) {
+    if (savedPlan) {
+      const plan = JSON.parse(savedPlan);
+      
+      // Calculate BMR
+      if (profileData?.stats?.weight && profileData?.stats?.height && profileData?.personalInfo?.age) {
+        const bmr = profileData.personalInfo.gender === 'male'
+          ? 88.362 + (13.397 * Number(profileData.stats.weight)) + (4.799 * Number(profileData.stats.height)) - (5.677 * Number(profileData.personalInfo.age))
+          : 447.593 + (9.247 * Number(profileData.stats.weight)) + (3.098 * Number(profileData.stats.height)) - (4.330 * Number(profileData.personalInfo.age));
+
+        // Calculate activity multiplier
+        const activityMultipliers = {
+          sedentary: 1.2,
+          'lightly-active': 1.375,
+          'moderately-active': 1.55,
+          'very-active': 1.725
+        };
+        const multiplier = activityMultipliers[profileData.preferences?.activityLevel as keyof typeof activityMultipliers] || 1.2;
+        
+        // Calculate TDEE
+        const tdee = Math.round(bmr * multiplier);
+
+        // Calculate target calories based on goal
+        let targetCalories = tdee;
+        if (plan.goal === 'weight-loss') {
+          targetCalories = tdee - 500; // 500 calorie deficit
+        } else if (plan.goal === 'muscle-gain') {
+          targetCalories = tdee + 500; // 500 calorie surplus
+        }
+
+        // Calculate macros based on goal
+        let proteinPercentage = 30;
+        let carbsPercentage = 40;
+        let fatsPercentage = 30;
+
+        if (plan.goal === 'muscle-gain') {
+          proteinPercentage = 35;
+          carbsPercentage = 45;
+          fatsPercentage = 20;
+        } else if (plan.goal === 'weight-loss') {
+          proteinPercentage = 40;
+          carbsPercentage = 30;
+          fatsPercentage = 30;
+        }
+
+        // Update nutritional goals
+        plan.nutritionalGoals = {
+          dailyCalories: targetCalories,
+          proteinPercentage,
+          carbsPercentage,
+          fatsPercentage,
+          proteinGrams: Math.round((targetCalories * (proteinPercentage / 100)) / 4),
+          carbsGrams: Math.round((targetCalories * (carbsPercentage / 100)) / 4),
+          fatsGrams: Math.round((targetCalories * (fatsPercentage / 100)) / 9)
+        };
+
+        // Calculate water intake based on weight (in liters)
+        const waterIntake = Math.round((Number(profileData.stats.weight) * 0.033) * 10) / 10;
+        plan.waterIntake = waterIntake;
+      }
+
+      setSelectedPlan(plan);
+    } else {
       navigate('/diet');
-      return;
     }
-    const plan: DietPlanType = JSON.parse(savedPlan);
-    
-    // Calculate totals for each meal
-    if (plan.schedule?.days) {
-      plan.schedule.days = plan.schedule.days.map(day => {
-        day.meals = day.meals.map((meal: DailyMeal) => {
-          const totals = meal.foods.reduce((acc: DayTotals, food: Food) => ({
-            calories: acc.calories + food.calories,
-            protein: acc.protein + food.protein,
-            carbs: acc.carbs + food.carbs,
-            fats: acc.fats + food.fats
-          }), { calories: 0, protein: 0, carbs: 0, fats: 0 });
-
-          return {
-            ...meal,
-            totalCalories: totals.calories,
-            totalProtein: totals.protein,
-            totalCarbs: totals.carbs,
-            totalFats: totals.fats
-          };
-        });
-
-        // Calculate daily totals
-        day.totalDailyCalories = day.meals.reduce((acc: number, meal: DailyMeal) => acc + (meal.totalCalories || 0), 0);
-        return day;
-      });
-    }
-
-    // Set default nutritional goals if not present
-    if (!plan.nutritionalGoals) {
-      plan.nutritionalGoals = {
-        dailyCalories: plan.schedule?.days[0]?.totalDailyCalories || 2000,
-        proteinPercentage: 30,
-        carbsPercentage: 40,
-        fatsPercentage: 30
-      };
-    }
-
-    setSelectedPlan(plan);
-  }, [navigate]);
+  }, [navigate, savedPlan, profileData]);
 
   if (!selectedPlan) return null;
 
@@ -191,126 +214,122 @@ export default function DietPlanDetails() {
   const currentDayPlan = selectedPlan.schedule?.days.find(d => d.day === currentDay);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#121212] py-8">
+    <div className="min-h-screen bg-[#121212] py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{selectedPlan.title}</h1>
-            <p className="text-gray-600 dark:text-gray-400 mt-2">{selectedPlan.description}</p>
-          </div>
+          <h1 className="text-2xl font-bold text-white">{selectedPlan.title}</h1>
           <button
             onClick={() => navigate('/diet')}
-            className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg transition-colors"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-[#1E1E1E] border border-gray-800 hover:bg-[#252525] transition-colors text-gray-200"
           >
             Change Diet Plan
           </button>
         </div>
 
-        <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-6 mb-8">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">Plan Details</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="bg-gray-50 dark:bg-[#252525] rounded-lg p-4">
-              <div className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Daily Calories</div>
-              <div className="text-3xl font-bold text-emerald-600 dark:text-emerald-400">
-                {currentDayPlan?.totalDailyCalories || selectedPlan.nutritionalGoals?.dailyCalories} kcal
+        <div className="bg-[#1E1E1E] rounded-xl overflow-hidden shadow-sm mb-8">
+          <div className="p-6">
+            <h2 className="text-xl font-semibold text-white mb-6">Plan Details</h2>
+            
+            {/* Macro Distribution */}
+            <div className="grid grid-cols-4 gap-6 mb-8">
+              <div className="bg-[#252525] rounded-lg p-4">
+                <p className="text-sm text-gray-400 mb-1">Daily Calories</p>
+                <p className="text-2xl font-bold text-emerald-500">
+                  {selectedPlan.nutritionalGoals?.dailyCalories || 0}
+                  <span className="text-base font-normal text-emerald-600 ml-1">kcal</span>
+                </p>
+              </div>
+
+              <div className="bg-[#252525] rounded-lg p-4">
+                <p className="text-sm text-gray-400 mb-1">Protein</p>
+                <div>
+                  <p className="text-2xl font-bold text-blue-500">
+                    {selectedPlan.nutritionalGoals?.proteinPercentage || 0}
+                    <span className="text-base font-normal text-blue-600 ml-1">%</span>
+                  </p>
+                  <p className="text-sm text-blue-400">
+                    {selectedPlan.nutritionalGoals?.proteinGrams || 0}g
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-[#252525] rounded-lg p-4">
+                <p className="text-sm text-gray-400 mb-1">Carbs</p>
+                <div>
+                  <p className="text-2xl font-bold text-yellow-500">
+                    {selectedPlan.nutritionalGoals?.carbsPercentage || 0}
+                    <span className="text-base font-normal text-yellow-600 ml-1">%</span>
+                  </p>
+                  <p className="text-sm text-yellow-400">
+                    {selectedPlan.nutritionalGoals?.carbsGrams || 0}g
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-[#252525] rounded-lg p-4">
+                <p className="text-sm text-gray-400 mb-1">Fats</p>
+                <div>
+                  <p className="text-2xl font-bold text-purple-500">
+                    {selectedPlan.nutritionalGoals?.fatsPercentage || 0}
+                    <span className="text-base font-normal text-purple-600 ml-1">%</span>
+                  </p>
+                  <p className="text-sm text-purple-400">
+                    {selectedPlan.nutritionalGoals?.fatsGrams || 0}g
+                  </p>
+                </div>
               </div>
             </div>
 
-            <div className="bg-gray-50 dark:bg-[#252525] rounded-lg p-4">
-              <div className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Protein</div>
-              <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">
-                {selectedPlan.nutritionalGoals?.proteinPercentage}%
+            {/* Water Intake */}
+            <div className="mb-8">
+              <h3 className="text-lg font-medium text-white mb-4">Daily Water Intake</h3>
+              <div className="bg-[#252525] rounded-lg p-4">
+                <div className="flex items-center justify-between">
+                  <p className="text-gray-400">Recommended water intake</p>
+                  <p className="text-2xl font-bold text-blue-500">
+                    {selectedPlan.waterIntake || 0}
+                    <span className="text-base font-normal text-blue-600 ml-1">L</span>
+                  </p>
+                </div>
+                <p className="text-sm text-gray-500 mt-2">Based on your body weight and activity level</p>
               </div>
             </div>
 
-            <div className="bg-gray-50 dark:bg-[#252525] rounded-lg p-4">
-              <div className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Carbs</div>
-              <div className="text-3xl font-bold text-yellow-600 dark:text-yellow-400">
-                {selectedPlan.nutritionalGoals?.carbsPercentage}%
+            {/* Dietary Restrictions */}
+            <div className="mb-8">
+              <h3 className="text-lg font-medium text-white mb-4">Dietary Restrictions</h3>
+              <div className="flex flex-wrap gap-2">
+                {selectedPlan.restrictions?.map((restriction, index) => (
+                  <span
+                    key={index}
+                    className="px-3 py-1 bg-red-500/10 text-red-500 rounded-full text-sm"
+                  >
+                    {restriction}
+                  </span>
+                ))}
               </div>
             </div>
 
-            <div className="bg-gray-50 dark:bg-[#252525] rounded-lg p-4">
-              <div className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Fats</div>
-              <div className="text-3xl font-bold text-purple-600 dark:text-purple-400">
-                {selectedPlan.nutritionalGoals?.fatsPercentage}%
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-6 mb-8">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Dietary Restrictions</h2>
-          <div className="flex flex-wrap gap-2">
-            {selectedPlan.restrictions?.map((restriction, index) => (
-              <span
-                key={index}
-                className="px-3 py-1 rounded-full text-sm bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400"
-              >
-                {restriction}
-              </span>
-            ))}
-          </div>
-        </div>
-
-        {selectedPlan.supplementation && selectedPlan.supplementation.length > 0 && (
-          <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-6 mb-8">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">Recommended Supplements</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {selectedPlan.supplementation.map((supplement, index) => (
-                <div
-                  key={index}
-                  className="bg-gray-50 dark:bg-[#252525] rounded-lg p-4"
-                >
-                  <h3 className="text-lg font-medium text-emerald-600 dark:text-emerald-400 mb-2">
-                    {supplement.name}
-                  </h3>
-                  <div className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">Dosage:</span>
-                      <span>{supplement.dosage}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">Timing:</span>
-                      <span>{supplement.timing}</span>
-                    </div>
-                    {supplement.notes && (
-                      <div className="text-gray-500 dark:text-gray-500 mt-2">
-                        {supplement.notes}
+            {/* Supplementation */}
+            {selectedPlan.supplementation && selectedPlan.supplementation.length > 0 && (
+              <div className="mb-8">
+                <h3 className="text-lg font-medium text-white mb-4">Recommended Supplements</h3>
+                <div className="grid gap-4">
+                  {selectedPlan.supplementation.map((supplement, index) => (
+                    <div key={index} className="bg-[#252525] rounded-lg p-4">
+                      <div className="flex justify-between items-start mb-2">
+                        <h4 className="font-medium text-white">{supplement.name}</h4>
+                        <span className="text-sm text-emerald-500">{supplement.dosage}</span>
                       </div>
-                    )}
-                  </div>
+                      <p className="text-sm text-gray-400 mb-2">{supplement.timing}</p>
+                      <p className="text-sm text-gray-500">{supplement.notes}</p>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              </div>
+            )}
           </div>
-        )}
-
-        {selectedPlan.groceryList && selectedPlan.groceryList.length > 0 && (
-          <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-6 mb-8">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">Grocery List</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {selectedPlan.groceryList.map((category, index) => (
-                <div key={index}>
-                  <h3 className="text-lg font-medium text-emerald-600 dark:text-emerald-400 mb-3 capitalize">
-                    {category.category}
-                  </h3>
-                  <ul className="space-y-2">
-                    {category.items.map((item, itemIndex) => (
-                      <li
-                        key={itemIndex}
-                        className="flex items-center gap-2 text-gray-600 dark:text-gray-400"
-                      >
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                        {item}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+        </div>
 
         <div className="grid grid-cols-7 gap-2 mb-8">
           {selectedPlan.schedule?.days.map((day) => (
@@ -389,14 +408,14 @@ export default function DietPlanDetails() {
             </div>
           </div>
         ))}
-      </div>
 
-      {selectedFood && (
-        <FoodModal 
-          food={selectedFood} 
-          onClose={() => setSelectedFood(null)} 
-        />
-      )}
+        {selectedFood && (
+          <FoodModal 
+            food={selectedFood} 
+            onClose={() => setSelectedFood(null)} 
+          />
+        )}
+      </div>
     </div>
   );
 } 

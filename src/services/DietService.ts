@@ -45,36 +45,37 @@ export interface WeeklyDietPlan {
   }[];
 }
 
+export interface Supplement {
+  name: string;
+  dosage: string;
+  timing: string;
+  notes: string;
+  benefits?: string;
+  recommendations?: string;
+}
+
+export interface NutritionalGoals {
+  dailyCalories: number;
+  proteinPercentage: number;
+  carbsPercentage: number;
+  fatsPercentage: number;
+  proteinGrams: number;
+  carbsGrams: number;
+  fatsGrams: number;
+}
+
 export interface DietPlan {
-  id?: string;
+  id: string;
   title: string;
   description: string;
+  goal: 'weight-loss' | 'muscle-gain' | 'maintenance';
+  duration: number;
   level: string;
-  duration: string;
-  goal: string;
-  dietType: string;
-  imageUrl?: string;
   schedule?: WeeklyDietPlan;
+  nutritionalGoals?: NutritionalGoals;
   restrictions?: string[];
-  allergies?: string[];
-  isVegetarian?: boolean;
-  nutritionalGoals?: {
-    dailyCalories: number;
-    proteinPercentage: number;
-    carbsPercentage: number;
-    fatsPercentage: number;
-  };
-  supplementation?: {
-    name: string;
-    dosage: string;
-    timing: string;
-    notes: string;
-  }[];
-  mealPreparationTips?: string[];
-  groceryList?: {
-    category: string;
-    items: string[];
-  }[];
+  supplementation?: Supplement[];
+  waterIntake?: number;
 }
 
 interface SpoonacularMealPlan {
@@ -400,136 +401,342 @@ const supplementInfo = {
   ]
 };
 
-export async function generatePersonalizedDietPlan(profile: any): Promise<DietPlan> {
-  try {
-    // Calculate BMR using Harris-Benedict Equation
-    const bmr = profile.gender === 'male'
-      ? 88.362 + (13.397 * profile.weight) + (4.799 * profile.height) - (5.677 * profile.age)
-      : 447.593 + (9.247 * profile.weight) + (3.098 * profile.height) - (4.330 * profile.age);
+// Helper function to convert duration string to number
+export function parseDuration(duration: string): number {
+  const match = duration.match(/\d+/);
+  return match ? parseInt(match[0], 10) : 0;
+}
 
-    // Calculate activity multiplier
-    const activityMultipliers = {
-      sedentary: 1.2,      // Little or no exercise
-      light: 1.375,        // Light exercise/sports 1-3 days/week
-      moderate: 1.55,      // Moderate exercise/sports 3-5 days/week
-      active: 1.725,       // Hard exercise/sports 6-7 days/week
-      veryActive: 1.9      // Very hard exercise & physical job or training twice per day
-    };
-
-    const activityMultiplier = activityMultipliers[profile.activityLevel as keyof typeof activityMultipliers] || activityMultipliers.moderate;
-    
-    // Calculate TDEE (Total Daily Energy Expenditure)
-    const tdee = bmr * activityMultiplier;
-
-    // Calculate target calories based on goal
-    let targetCalories = profile.goal === 'weight-loss'
-      ? tdee - 500  // 500 calorie deficit for weight loss
-      : profile.goal === 'muscle-gain'
-      ? tdee + 500  // 500 calorie surplus for muscle gain
-      : tdee;       // Maintenance calories
-
-    // Round calories to nearest 50
-    targetCalories = Math.round(targetCalories / 50) * 50;
-
-    // Calculate water intake based on weight and activity level
-    // Base: 30ml per kg of body weight
-    let waterIntake = (profile.weight * 0.03);
-    
-    // Adjust for activity level
-    if (profile.activityLevel === 'active' || profile.activityLevel === 'veryActive') {
-      waterIntake += 0.7; // Add 700ml for high activity
-    } else if (profile.activityLevel === 'moderate') {
-      waterIntake += 0.5; // Add 500ml for moderate activity
-    }
-
-    // Adjust for climate if available
-    if (profile.climate === 'hot') {
-      waterIntake += 0.5; // Add 500ml for hot climate
-    }
-
-    // Round water intake to nearest 0.1L
-    waterIntake = Math.round(waterIntake * 10) / 10;
-
-    // Select meals based on target calories
-    const breakfast = proteinRichMeals.breakfast[Math.floor(Math.random() * proteinRichMeals.breakfast.length)];
-    const lunch = proteinRichMeals.lunch[Math.floor(Math.random() * proteinRichMeals.lunch.length)];
-    const dinner = proteinRichMeals.dinner[Math.floor(Math.random() * proteinRichMeals.dinner.length)];
-
-    // Scale meal portions to match target calories
-    const currentTotalCalories = breakfast.calories + lunch.calories + dinner.calories;
-    const scaleFactor = targetCalories / currentTotalCalories;
-
-    const scaledMeals: DailyMeal[] = [
-        {
-          type: 'breakfast',
-          time: '7:00 AM',
-        foods: [breakfast],
-        totalCalories: Math.round(breakfast.calories * scaleFactor),
-        totalProtein: Math.round(breakfast.protein * scaleFactor),
-        totalCarbs: Math.round(breakfast.carbs * scaleFactor),
-        totalFats: Math.round(breakfast.fats * scaleFactor)
-        },
-        {
-          type: 'lunch',
-          time: '12:30 PM',
-        foods: [lunch],
-        totalCalories: Math.round(lunch.calories * scaleFactor),
-        totalProtein: Math.round(lunch.protein * scaleFactor),
-        totalCarbs: Math.round(lunch.carbs * scaleFactor),
-        totalFats: Math.round(lunch.fats * scaleFactor)
-        },
-        {
-          type: 'dinner',
-          time: '7:00 PM',
-        foods: [dinner],
-        totalCalories: Math.round(dinner.calories * scaleFactor),
-        totalProtein: Math.round(dinner.protein * scaleFactor),
-        totalCarbs: Math.round(dinner.carbs * scaleFactor),
-        totalFats: Math.round(dinner.fats * scaleFactor)
-      }
-    ];
-
-    const totalCalories = scaledMeals.reduce((acc, meal) => acc + (meal.totalCalories || 0), 0);
-    const totalProtein = scaledMeals.reduce((acc, meal) => acc + (meal.totalProtein || 0), 0);
-    const totalCarbs = scaledMeals.reduce((acc, meal) => acc + (meal.totalCarbs || 0), 0);
-    const totalFats = scaledMeals.reduce((acc, meal) => acc + (meal.totalFats || 0), 0);
-
-    // Calculate macro percentages
-    const proteinCalories = totalProtein * 4;
-    const carbsCalories = totalCarbs * 4;
-    const fatCalories = totalFats * 9;
+// Helper function to convert nutritional goals
+export function convertNutritionalGoals(goals: any): NutritionalGoals {
+  const dailyCalories = Number(goals.dailyCalories) || 2000;
+  const proteinPercentage = Number(goals.proteinPercentage) || 30;
+  const carbsPercentage = Number(goals.carbsPercentage) || 40;
+  const fatsPercentage = Number(goals.fatsPercentage) || 30;
 
   return {
-      title: `${profile.goal.split('-').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')} Diet Plan`,
-      description: `A high-protein diet plan focused on ${profile.goal.replace('-', ' ')} through optimal protein intake and strategic supplementation.`,
-      level: 'Intermediate',
-      duration: profile.goal === 'maintenance' ? 'Ongoing' : '12 weeks',
-      goal: profile.goal,
-      dietType: 'High Protein',
-      schedule: {
-        days: [{
-          day: new Date().toLocaleDateString('en-US', { weekday: 'long' }),
-          meals: scaledMeals,
-          totalDailyCalories: totalCalories,
-          waterIntake: waterIntake,
-        }],
+    dailyCalories,
+    proteinPercentage,
+    carbsPercentage,
+    fatsPercentage,
+    proteinGrams: Math.round((dailyCalories * (proteinPercentage / 100)) / 4),
+    carbsGrams: Math.round((dailyCalories * (carbsPercentage / 100)) / 4),
+    fatsGrams: Math.round((dailyCalories * (fatsPercentage / 100)) / 9)
+  };
+}
+
+// Helper function to convert supplementation data
+export function convertSupplementation(supplementation: any[]): Supplement[] {
+  return supplementation.map(supp => ({
+    name: supp.name,
+    dosage: supp.dosage,
+    timing: supp.timing,
+    notes: supp.notes || `${supp.benefits || ''} ${supp.recommendations || ''}`.trim()
+  }));
+}
+
+export async function generatePersonalizedDietPlan(profile: any): Promise<DietPlan> {
+  // Mock data - replace with actual API call
+  const mockPlan = {
+    id: Math.random().toString(36).substring(7),
+    title: 'Muscle Gain Diet Plan',
+    description: 'A high-protein diet plan focused on muscle gain through optimal protein intake and strategic supplementation.',
+    goal: 'muscle-gain' as const,
+    duration: 12, // weeks
+    level: 'intermediate',
+    nutritionalGoals: convertNutritionalGoals({
+      dailyCalories: 2800,
+      proteinPercentage: 35,
+      carbsPercentage: 45,
+      fatsPercentage: 20
+    }),
+    restrictions: [
+      'No processed foods',
+      'Limited sugary foods',
+      'Adequate protein with each meal',
+      'Fresh ingredients only'
+    ],
+    supplementation: convertSupplementation([
+      {
+        name: 'Whey Protein',
+        dosage: '25-30g',
+        timing: 'Post-workout and between meals',
+        benefits: 'Supports muscle recovery and growth',
+        recommendations: 'Mix with water or milk'
       },
-    nutritionalGoals: {
-        dailyCalories: totalCalories,
-        proteinPercentage: Math.round((proteinCalories / totalCalories) * 100),
-        carbsPercentage: Math.round((carbsCalories / totalCalories) * 100),
-        fatsPercentage: Math.round((fatCalories / totalCalories) * 100),
+      {
+        name: 'Creatine Monohydrate',
+        dosage: '5g daily',
+        timing: 'Any time of day, consistent timing',
+        benefits: 'Enhances strength and muscle gains',
+        recommendations: 'Take with water, maintain consistent intake'
       },
-      restrictions: [
-        'No processed foods',
-        'Limited sugary foods',
-        'Adequate protein with each meal',
-        'Fresh ingredients only'
-      ],
-      supplementation: supplementInfo[profile.goal as keyof typeof supplementInfo] || supplementInfo.maintenance,
-    };
-  } catch (error) {
-    console.error('Error generating diet plan:', error);
-    throw error;
-  }
+      {
+        name: 'Mass Gainer',
+        dosage: '1 serving',
+        timing: 'Post-workout or between meals',
+        benefits: 'Additional calories and nutrients',
+        recommendations: 'Use when struggling to meet calorie goals'
+      }
+    ]),
+    waterIntake: 3.5, // liters
+    schedule: {
+      days: [
+        {
+          day: 'Monday',
+          meals: [
+            {
+              type: 'breakfast' as const,
+              time: '8:00 AM',
+              foods: [proteinRichMeals.breakfast[0]],
+              totalCalories: proteinRichMeals.breakfast[0].calories,
+              totalProtein: proteinRichMeals.breakfast[0].protein,
+              totalCarbs: proteinRichMeals.breakfast[0].carbs,
+              totalFats: proteinRichMeals.breakfast[0].fats
+            },
+            {
+              type: 'lunch' as const,
+              time: '1:00 PM',
+              foods: [proteinRichMeals.lunch[0]],
+              totalCalories: proteinRichMeals.lunch[0].calories,
+              totalProtein: proteinRichMeals.lunch[0].protein,
+              totalCarbs: proteinRichMeals.lunch[0].carbs,
+              totalFats: proteinRichMeals.lunch[0].fats
+            },
+            {
+              type: 'dinner' as const,
+              time: '7:00 PM',
+              foods: [proteinRichMeals.dinner[0]],
+              totalCalories: proteinRichMeals.dinner[0].calories,
+              totalProtein: proteinRichMeals.dinner[0].protein,
+              totalCarbs: proteinRichMeals.dinner[0].carbs,
+              totalFats: proteinRichMeals.dinner[0].fats
+            }
+          ],
+          totalDailyCalories: proteinRichMeals.breakfast[0].calories + 
+                             proteinRichMeals.lunch[0].calories + 
+                             proteinRichMeals.dinner[0].calories,
+          waterIntake: 3.5
+        },
+        {
+          day: 'Tuesday',
+          meals: [
+            {
+              type: 'breakfast' as const,
+              time: '8:00 AM',
+              foods: [proteinRichMeals.breakfast[1]],
+              totalCalories: proteinRichMeals.breakfast[1].calories,
+              totalProtein: proteinRichMeals.breakfast[1].protein,
+              totalCarbs: proteinRichMeals.breakfast[1].carbs,
+              totalFats: proteinRichMeals.breakfast[1].fats
+            },
+            {
+              type: 'lunch' as const,
+              time: '1:00 PM',
+              foods: [proteinRichMeals.lunch[1]],
+              totalCalories: proteinRichMeals.lunch[1].calories,
+              totalProtein: proteinRichMeals.lunch[1].protein,
+              totalCarbs: proteinRichMeals.lunch[1].carbs,
+              totalFats: proteinRichMeals.lunch[1].fats
+            },
+            {
+              type: 'dinner' as const,
+              time: '7:00 PM',
+              foods: [proteinRichMeals.dinner[1]],
+              totalCalories: proteinRichMeals.dinner[1].calories,
+              totalProtein: proteinRichMeals.dinner[1].protein,
+              totalCarbs: proteinRichMeals.dinner[1].carbs,
+              totalFats: proteinRichMeals.dinner[1].fats
+            }
+          ],
+          totalDailyCalories: proteinRichMeals.breakfast[1].calories + 
+                             proteinRichMeals.lunch[1].calories + 
+                             proteinRichMeals.dinner[1].calories,
+          waterIntake: 3.5
+        },
+        {
+          day: 'Wednesday',
+          meals: [
+            {
+              type: 'breakfast' as const,
+              time: '8:00 AM',
+              foods: [proteinRichMeals.breakfast[0]],
+              totalCalories: proteinRichMeals.breakfast[0].calories,
+              totalProtein: proteinRichMeals.breakfast[0].protein,
+              totalCarbs: proteinRichMeals.breakfast[0].carbs,
+              totalFats: proteinRichMeals.breakfast[0].fats
+            },
+            {
+              type: 'lunch' as const,
+              time: '1:00 PM',
+              foods: [proteinRichMeals.lunch[0]],
+              totalCalories: proteinRichMeals.lunch[0].calories,
+              totalProtein: proteinRichMeals.lunch[0].protein,
+              totalCarbs: proteinRichMeals.lunch[0].carbs,
+              totalFats: proteinRichMeals.lunch[0].fats
+            },
+            {
+              type: 'dinner' as const,
+              time: '7:00 PM',
+              foods: [proteinRichMeals.dinner[0]],
+              totalCalories: proteinRichMeals.dinner[0].calories,
+              totalProtein: proteinRichMeals.dinner[0].protein,
+              totalCarbs: proteinRichMeals.dinner[0].carbs,
+              totalFats: proteinRichMeals.dinner[0].fats
+            }
+          ],
+          totalDailyCalories: proteinRichMeals.breakfast[0].calories + 
+                             proteinRichMeals.lunch[0].calories + 
+                             proteinRichMeals.dinner[0].calories,
+          waterIntake: 3.5
+        },
+        {
+          day: 'Thursday',
+          meals: [
+            {
+              type: 'breakfast' as const,
+              time: '8:00 AM',
+              foods: [proteinRichMeals.breakfast[1]],
+              totalCalories: proteinRichMeals.breakfast[1].calories,
+              totalProtein: proteinRichMeals.breakfast[1].protein,
+              totalCarbs: proteinRichMeals.breakfast[1].carbs,
+              totalFats: proteinRichMeals.breakfast[1].fats
+            },
+            {
+              type: 'lunch' as const,
+              time: '1:00 PM',
+              foods: [proteinRichMeals.lunch[1]],
+              totalCalories: proteinRichMeals.lunch[1].calories,
+              totalProtein: proteinRichMeals.lunch[1].protein,
+              totalCarbs: proteinRichMeals.lunch[1].carbs,
+              totalFats: proteinRichMeals.lunch[1].fats
+            },
+            {
+              type: 'dinner' as const,
+              time: '7:00 PM',
+              foods: [proteinRichMeals.dinner[1]],
+              totalCalories: proteinRichMeals.dinner[1].calories,
+              totalProtein: proteinRichMeals.dinner[1].protein,
+              totalCarbs: proteinRichMeals.dinner[1].carbs,
+              totalFats: proteinRichMeals.dinner[1].fats
+            }
+          ],
+          totalDailyCalories: proteinRichMeals.breakfast[1].calories + 
+                             proteinRichMeals.lunch[1].calories + 
+                             proteinRichMeals.dinner[1].calories,
+          waterIntake: 3.5
+        },
+        {
+          day: 'Friday',
+          meals: [
+            {
+              type: 'breakfast' as const,
+              time: '8:00 AM',
+              foods: [proteinRichMeals.breakfast[0]],
+              totalCalories: proteinRichMeals.breakfast[0].calories,
+              totalProtein: proteinRichMeals.breakfast[0].protein,
+              totalCarbs: proteinRichMeals.breakfast[0].carbs,
+              totalFats: proteinRichMeals.breakfast[0].fats
+            },
+            {
+              type: 'lunch' as const,
+              time: '1:00 PM',
+              foods: [proteinRichMeals.lunch[0]],
+              totalCalories: proteinRichMeals.lunch[0].calories,
+              totalProtein: proteinRichMeals.lunch[0].protein,
+              totalCarbs: proteinRichMeals.lunch[0].carbs,
+              totalFats: proteinRichMeals.lunch[0].fats
+            },
+            {
+              type: 'dinner' as const,
+              time: '7:00 PM',
+              foods: [proteinRichMeals.dinner[0]],
+              totalCalories: proteinRichMeals.dinner[0].calories,
+              totalProtein: proteinRichMeals.dinner[0].protein,
+              totalCarbs: proteinRichMeals.dinner[0].carbs,
+              totalFats: proteinRichMeals.dinner[0].fats
+            }
+          ],
+          totalDailyCalories: proteinRichMeals.breakfast[0].calories + 
+                             proteinRichMeals.lunch[0].calories + 
+                             proteinRichMeals.dinner[0].calories,
+          waterIntake: 3.5
+        },
+        {
+          day: 'Saturday',
+          meals: [
+            {
+              type: 'breakfast' as const,
+              time: '8:00 AM',
+              foods: [proteinRichMeals.breakfast[1]],
+              totalCalories: proteinRichMeals.breakfast[1].calories,
+              totalProtein: proteinRichMeals.breakfast[1].protein,
+              totalCarbs: proteinRichMeals.breakfast[1].carbs,
+              totalFats: proteinRichMeals.breakfast[1].fats
+            },
+            {
+              type: 'lunch' as const,
+              time: '1:00 PM',
+              foods: [proteinRichMeals.lunch[1]],
+              totalCalories: proteinRichMeals.lunch[1].calories,
+              totalProtein: proteinRichMeals.lunch[1].protein,
+              totalCarbs: proteinRichMeals.lunch[1].carbs,
+              totalFats: proteinRichMeals.lunch[1].fats
+            },
+            {
+              type: 'dinner' as const,
+              time: '7:00 PM',
+              foods: [proteinRichMeals.dinner[1]],
+              totalCalories: proteinRichMeals.dinner[1].calories,
+              totalProtein: proteinRichMeals.dinner[1].protein,
+              totalCarbs: proteinRichMeals.dinner[1].carbs,
+              totalFats: proteinRichMeals.dinner[1].fats
+            }
+          ],
+          totalDailyCalories: proteinRichMeals.breakfast[1].calories + 
+                             proteinRichMeals.lunch[1].calories + 
+                             proteinRichMeals.dinner[1].calories,
+          waterIntake: 3.5
+        },
+        {
+          day: 'Sunday',
+          meals: [
+            {
+              type: 'breakfast' as const,
+              time: '8:00 AM',
+              foods: [proteinRichMeals.breakfast[0]],
+              totalCalories: proteinRichMeals.breakfast[0].calories,
+              totalProtein: proteinRichMeals.breakfast[0].protein,
+              totalCarbs: proteinRichMeals.breakfast[0].carbs,
+              totalFats: proteinRichMeals.breakfast[0].fats
+            },
+            {
+              type: 'lunch' as const,
+              time: '1:00 PM',
+              foods: [proteinRichMeals.lunch[0]],
+              totalCalories: proteinRichMeals.lunch[0].calories,
+              totalProtein: proteinRichMeals.lunch[0].protein,
+              totalCarbs: proteinRichMeals.lunch[0].carbs,
+              totalFats: proteinRichMeals.lunch[0].fats
+            },
+            {
+              type: 'dinner' as const,
+              time: '7:00 PM',
+              foods: [proteinRichMeals.dinner[0]],
+              totalCalories: proteinRichMeals.dinner[0].calories,
+              totalProtein: proteinRichMeals.dinner[0].protein,
+              totalCarbs: proteinRichMeals.dinner[0].carbs,
+              totalFats: proteinRichMeals.dinner[0].fats
+            }
+          ],
+          totalDailyCalories: proteinRichMeals.breakfast[0].calories + 
+                             proteinRichMeals.lunch[0].calories + 
+                             proteinRichMeals.dinner[0].calories,
+          waterIntake: 3.5
+        }
+      ]
+    }
+  };
+
+  return mockPlan;
 } 

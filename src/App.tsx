@@ -1,6 +1,9 @@
-import { Analytics } from "@vercel/analytics/react"
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { ProfileProvider } from './context/ProfileContext';
+import { PaymentProvider } from './context/PaymentContext';
+import { ThemeProvider } from './context/ThemeContext';
+import Layout from './components/Layout';
 import GetStarted from './pages/GetStarted';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -11,16 +14,12 @@ import DietPlanDetails from './pages/DietPlanDetails';
 import Attendance from './pages/Attendance';
 import UserInfoForm from './pages/UserInfoForm';
 import Profile from './pages/Profile';
-import Layout from './components/Layout';
 import SignUp from './pages/SignUp';
 import VerifyEmail from './pages/VerifyEmail';
-import { ThemeProvider } from './context/ThemeContext';
 import Workouts from './pages/Workouts';
 import ProfileEdit from './pages/ProfileEdit';
-import { ProfileProvider } from './context/ProfileContext';
 import MembershipDetails from './pages/MembershipDetails';
 import PaymentHistory from './pages/PaymentHistory';
-import { PaymentProvider } from './context/PaymentContext';
 import { PaymentPlans } from './components/PaymentPlans';
 import Achievements from './pages/Achievements';
 

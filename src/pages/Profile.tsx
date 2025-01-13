@@ -236,60 +236,44 @@ export default function Profile() {
             {/* BMR and Calorie Information */}
             <div>
               <h3 className="text-lg font-medium mb-4 text-gray-900 dark:text-white">BMR & Calorie Information</h3>
-              <div className="bg-gray-50 dark:bg-[#282828] rounded-xl p-6 space-y-6 border border-gray-100 dark:border-gray-700">
-                {profileData?.stats?.weight && profileData?.stats?.height && profileData?.personalInfo?.age ? (
-                  <>
-                    {/* BMR Calculation */}
+              <div className="bg-[#1E1E1E] rounded-xl p-6">
+                <h2 className="text-xl font-semibold mb-6">BMR & Calorie Information</h2>
+                
+                <div className="space-y-6">
+                  {/* BMR Display */}
+                  <div className="flex justify-between items-center">
                     <div>
-                      <div className="flex justify-between items-center mb-2">
-                        <p className="text-sm text-gray-600 dark:text-gray-400">Basal Metabolic Rate (BMR)</p>
-                        <p className="text-lg font-semibold text-emerald-500">
-                          {Math.round(
-                            profileData.personalInfo.gender === 'male'
-                              ? 88.362 + (13.397 * Number(profileData.stats.weight)) + (4.799 * Number(profileData.stats.height)) - (5.677 * Number(profileData.personalInfo.age))
-                              : 447.593 + (9.247 * Number(profileData.stats.weight)) + (3.098 * Number(profileData.stats.height)) - (4.330 * Number(profileData.personalInfo.age))
-                          )} kcal/day
-                        </p>
-                      </div>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">Calories your body burns at complete rest</p>
+                      <p className="text-sm text-gray-400">Basal Metabolic Rate (BMR)</p>
+                      <p className="text-xs text-gray-500">Calories your body burns at complete rest</p>
                     </div>
-
-                    {/* BMI Section */}
-                    <div>
-                      <div className="flex justify-between items-center mb-2">
-                        <p className="text-sm text-gray-600 dark:text-gray-400">Body Mass Index (BMI)</p>
-                        <p className="text-lg font-semibold text-emerald-500">
-                          {(Number(profileData.stats.weight) / Math.pow(Number(profileData.stats.height) / 100, 2)).toFixed(1)}
-                        </p>
-                      </div>
-                      <div className="h-2.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                        <div 
-                          className="h-full transition-all duration-300 rounded-full"
-                          style={{
-                            width: '60%',
-                            background: 'linear-gradient(to right, #22c55e, #eab308, #ef4444)'
-                          }}
-                        />
-                      </div>
-                      <div className="flex justify-between text-xs mt-1">
-                        <span className="text-gray-500 dark:text-gray-400">Underweight</span>
-                        <span className="text-gray-500 dark:text-gray-400">Normal</span>
-                        <span className="text-gray-500 dark:text-gray-400">Overweight</span>
-                        <span className="text-gray-500 dark:text-gray-400">Obese</span>
-                      </div>
-                    </div>
-                  </>
-                ) : (
-                  <div className="text-center py-6">
-                    <p className="text-gray-500 dark:text-gray-400">Complete your profile to see BMR and BMI calculations</p>
-                    <button
-                      onClick={() => navigate('/profile/edit')}
-                      className="mt-4 text-emerald-500 hover:text-emerald-600 font-medium"
-                    >
-                      Complete Profile
-                    </button>
+                    <p className="text-lg font-semibold text-emerald-500">1841 kcal/day</p>
                   </div>
-                )}
+
+                  {/* BMI Display */}
+                  <div>
+                    <div className="flex justify-between items-center mb-2">
+                      <p className="text-sm text-gray-400">Body Mass Index (BMI)</p>
+                      <p className="text-lg font-semibold text-emerald-500">21.6</p>
+                    </div>
+                    
+                    {/* BMI Scale */}
+                    <div className="relative h-2 rounded-full overflow-hidden mb-2" style={{ background: 'linear-gradient(to right, #3b82f6, #22c55e, #eab308, #ef4444)' }}>
+                      {/* BMI Indicator */}
+                      <div 
+                        className="absolute w-1 h-4 bg-white -top-1 transition-all duration-300"
+                        style={{ left: 'calc(21.6% * 2.5)', transform: 'translateX(-50%)' }}
+                      />
+                    </div>
+                    
+                    {/* BMI Categories */}
+                    <div className="flex justify-between text-xs text-gray-400">
+                      <span>Underweight</span>
+                      <span>Normal</span>
+                      <span>Overweight</span>
+                      <span>Obese</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, Clock, Scale, Target, X } from 'lucide-react';
+import { Calendar, Clock, Scale, Target, X, Info } from 'lucide-react';
 import { DietPlan as DietPlanType, Food, DailyMeal, WeeklyDietPlan } from '../services/DietService';
 
 interface FoodModalProps {
@@ -200,40 +200,118 @@ export default function DietPlanDetails() {
           </div>
           <button
             onClick={() => navigate('/diet')}
-            className="bg-white dark:bg-[#1E1E1E] text-gray-700 dark:text-gray-200 px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-[#252525] transition-colors"
+            className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg transition-colors"
           >
-            Change Plan
+            Change Diet Plan
           </button>
         </div>
 
-        {/* Plan Overview */}
         <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-6 mb-8">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">Plan Overview</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="space-y-2">
-              <div className="text-sm font-medium text-gray-500 dark:text-gray-400">Daily Calories</div>
-              <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">Plan Details</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="bg-gray-50 dark:bg-[#252525] rounded-lg p-4">
+              <div className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Daily Calories</div>
+              <div className="text-3xl font-bold text-emerald-600 dark:text-emerald-400">
                 {currentDayPlan?.totalDailyCalories || selectedPlan.nutritionalGoals?.dailyCalories} kcal
               </div>
             </div>
-            <div className="space-y-2">
-              <div className="text-sm font-medium text-gray-500 dark:text-gray-400">Macros Split</div>
-              <div className="flex gap-4">
-                <span className="text-blue-600 dark:text-blue-400">P: {selectedPlan.nutritionalGoals?.proteinPercentage}%</span>
-                <span className="text-yellow-600 dark:text-yellow-400">C: {selectedPlan.nutritionalGoals?.carbsPercentage}%</span>
-                <span className="text-purple-600 dark:text-purple-400">F: {selectedPlan.nutritionalGoals?.fatsPercentage}%</span>
+
+            <div className="bg-gray-50 dark:bg-[#252525] rounded-lg p-4">
+              <div className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Protein</div>
+              <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">
+                {selectedPlan.nutritionalGoals?.proteinPercentage}%
               </div>
             </div>
-            <div className="space-y-2">
-              <div className="text-sm font-medium text-gray-500 dark:text-gray-400">Water Intake</div>
-              <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                {currentDayPlan?.waterIntake || 2.5}L
+
+            <div className="bg-gray-50 dark:bg-[#252525] rounded-lg p-4">
+              <div className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Carbs</div>
+              <div className="text-3xl font-bold text-yellow-600 dark:text-yellow-400">
+                {selectedPlan.nutritionalGoals?.carbsPercentage}%
+              </div>
+            </div>
+
+            <div className="bg-gray-50 dark:bg-[#252525] rounded-lg p-4">
+              <div className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Fats</div>
+              <div className="text-3xl font-bold text-purple-600 dark:text-purple-400">
+                {selectedPlan.nutritionalGoals?.fatsPercentage}%
               </div>
             </div>
           </div>
         </div>
 
-        {/* Weekly Schedule */}
+        <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-6 mb-8">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Dietary Restrictions</h2>
+          <div className="flex flex-wrap gap-2">
+            {selectedPlan.restrictions?.map((restriction, index) => (
+              <span
+                key={index}
+                className="px-3 py-1 rounded-full text-sm bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400"
+              >
+                {restriction}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        {selectedPlan.supplementation && selectedPlan.supplementation.length > 0 && (
+          <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-6 mb-8">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">Recommended Supplements</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {selectedPlan.supplementation.map((supplement, index) => (
+                <div
+                  key={index}
+                  className="bg-gray-50 dark:bg-[#252525] rounded-lg p-4"
+                >
+                  <h3 className="text-lg font-medium text-emerald-600 dark:text-emerald-400 mb-2">
+                    {supplement.name}
+                  </h3>
+                  <div className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">Dosage:</span>
+                      <span>{supplement.dosage}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">Timing:</span>
+                      <span>{supplement.timing}</span>
+                    </div>
+                    {supplement.notes && (
+                      <div className="text-gray-500 dark:text-gray-500 mt-2">
+                        {supplement.notes}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {selectedPlan.groceryList && selectedPlan.groceryList.length > 0 && (
+          <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-6 mb-8">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">Grocery List</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {selectedPlan.groceryList.map((category, index) => (
+                <div key={index}>
+                  <h3 className="text-lg font-medium text-emerald-600 dark:text-emerald-400 mb-3 capitalize">
+                    {category.category}
+                  </h3>
+                  <ul className="space-y-2">
+                    {category.items.map((item, itemIndex) => (
+                      <li
+                        key={itemIndex}
+                        className="flex items-center gap-2 text-gray-600 dark:text-gray-400"
+                      >
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-7 gap-2 mb-8">
           {selectedPlan.schedule?.days.map((day) => (
             <button
@@ -241,56 +319,72 @@ export default function DietPlanDetails() {
               onClick={() => setCurrentDay(day.day)}
               className={`p-4 rounded-lg text-center transition-all ${
                 currentDay === day.day
-                  ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20'
-                  : 'bg-white dark:bg-[#1E1E1E] text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-[#252525] border border-gray-200 dark:border-gray-800'
+                  ? 'bg-emerald-500 text-white'
+                  : 'bg-[#1E1E1E] text-gray-400 hover:bg-[#252525]'
               }`}
             >
               <div className="font-medium text-sm">{day.day.slice(0, 3)}</div>
-              <div className="text-xs mt-1 opacity-80">{day.totalDailyCalories} kcal</div>
+              <div className="text-xs mt-1">{day.totalDailyCalories || 0} kcal</div>
             </button>
           ))}
         </div>
 
-        {/* Daily Meals */}
+        <div className="flex items-center gap-2 mb-6 text-white">
+          <Calendar className="w-5 h-5" />
+          <h2 className="text-xl font-semibold">{currentDay}'s Meals</h2>
+        </div>
+
         {currentDayPlan?.meals.map((meal, index) => (
           <div 
             key={index}
-            onClick={() => toggleMeal(meal.type)}
-            className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-6 mb-6 cursor-pointer hover:border-emerald-500 dark:hover:border-emerald-500 transition-colors"
+            className="bg-[#1E1E1E] rounded-xl mb-6 overflow-hidden"
           >
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white capitalize">{meal.type}</h3>
-              <span className="text-sm text-gray-500 dark:text-gray-400">{meal.time}</span>
+            <div className="flex justify-between items-center p-4 text-white">
+              <h3 className="text-lg font-semibold capitalize">{meal.type}</h3>
+              <span className="text-sm text-emerald-400">{meal.time}</span>
             </div>
-            <div className={`space-y-4 ${expandedMeal === meal.type ? 'block' : 'hidden'}`}>
+
+            <div className="space-y-px">
               {meal.foods.map((food, foodIndex) => (
                 <div 
                   key={foodIndex}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSelectedFood(food);
-                  }}
-                  className="flex justify-between items-start p-4 bg-gray-50 dark:bg-[#252525] rounded-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-[#2A2A2A] transition-colors"
+                  onClick={() => setSelectedFood(food)}
+                  className="flex justify-between items-start p-4 bg-[#252525] cursor-pointer hover:bg-[#2A2A2A] transition-colors"
                 >
                   <div>
-                    <div className="font-medium text-gray-900 dark:text-white">{food.name}</div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400">Portion: {food.portion}</div>
+                    <div className="flex items-center gap-2">
+                      <div className="font-medium text-white group-hover:text-emerald-400">{food.name}</div>
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedFood(food);
+                        }}
+                        className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-500 flex items-center justify-center hover:bg-emerald-500/30"
+                      >
+                        <Info className="w-3 h-3" />
+                      </button>
+                    </div>
+                    <div className="text-sm text-gray-400">Portion: {food.portion}</div>
                   </div>
                   <div className="text-right">
-                    <div className="font-medium text-emerald-600 dark:text-emerald-400">{food.calories} kcal</div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400">
+                    <div className="text-emerald-400">{food.calories} kcal</div>
+                    <div className="text-sm text-gray-400">
                       P: {food.protein}g | C: {food.carbs}g | F: {food.fats}g
                     </div>
                   </div>
                 </div>
               ))}
             </div>
-            <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-800">
+
+            <div className="p-4 border-t border-gray-800">
               <div className="flex justify-between text-sm">
-                <span className="text-gray-500 dark:text-gray-400">Total:</span>
-                <span className="font-medium text-emerald-600 dark:text-emerald-400">
-                  {meal.totalCalories} kcal
-                </span>
+                <span className="text-gray-400">Total:</span>
+                <div className="text-right">
+                  <span className="text-emerald-400">{meal.totalCalories} kcal</span>
+                  <span className="text-gray-400 ml-2">
+                    P: {meal.totalProtein}g | C: {meal.totalCarbs}g | F: {meal.totalFats}g
+                  </span>
+                </div>
               </div>
             </div>
           </div>

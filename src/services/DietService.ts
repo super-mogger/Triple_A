@@ -1,6 +1,10 @@
 import { useProfile } from '../context/ProfileContext';
 
+const SPOONACULAR_API_KEY = '3c97cc2a2fcf450fae17870b5558abc9';
+const BASE_URL = 'https://api.spoonacular.com';
+
 export interface Food {
+  id: number;
   name: string;
   calories: number;
   protein: number;
@@ -42,6 +46,7 @@ export interface WeeklyDietPlan {
 }
 
 export interface DietPlan {
+  id?: string;
   title: string;
   description: string;
   level: string;
@@ -72,780 +77,466 @@ export interface DietPlan {
   }[];
 }
 
-// Add meal-specific image constants
-const MEAL_IMAGES = {
-  breakfast: {
-    oatmeal: 'https://images.unsplash.com/photo-1505253716362-afaea1d3d1af',
-    yogurtParfait: 'https://images.unsplash.com/photo-1488477181946-6428a0291777',
-    smoothieBowl: 'https://images.unsplash.com/photo-1626074353765-517a681e40be',
-    proteinPancakes: 'https://images.unsplash.com/photo-1528207776546-365bb710ee93'
-  },
-  lunch: {
-    chickenSalad: 'https://images.unsplash.com/photo-1546793665-c74683f339c1',
-    quinoaBowl: 'https://images.unsplash.com/photo-1546007600-8e2e3fc7f785',
-    chickenRiceBowl: 'https://images.unsplash.com/photo-1512058564366-18510be2db19'
-  },
-  dinner: {
-    salmon: 'https://images.unsplash.com/photo-1467003909585-2f8a72700288',
-    turkeyMeatballs: 'https://images.unsplash.com/photo-1529042410759-befb1204b468',
-    grilledChicken: 'https://images.unsplash.com/photo-1532550907401-a500c9a57435'
-  },
-  snacks: {
-    appleAlmondButter: 'https://images.unsplash.com/photo-1479490382520-5e9f356135a7',
-    nuts: 'https://images.unsplash.com/photo-1525351326368-efbb5cb6814d',
-    fruits: 'https://images.unsplash.com/photo-1511688878353-3a2f5be94cd7'
-  },
-  dietPlans: {
-    weightLoss: 'https://images.unsplash.com/photo-1490645935967-10de6ba17061',
-    muscleGain: 'https://images.unsplash.com/photo-1532550907401-a500c9a57435',
-    keto: 'https://images.unsplash.com/photo-1498837167922-ddd27525d352',
-    balanced: 'https://images.unsplash.com/photo-1498837167922-ddd27525d352',
-    vegetarian: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd'
-  },
-  vegetarian: {
-    breakfast: {
-      overnightOats: 'https://images.unsplash.com/photo-1516714435131-44d6b64dc6a2',
-      avocadoToast: 'https://images.unsplash.com/photo-1588137378633-dea1336ce1e2',
-      tofuScramble: 'https://images.unsplash.com/photo-1543362905-f2423ef4e0f8'
-    },
-    lunch: {
-      buddahBowl: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd',
-      veggieBurger: 'https://images.unsplash.com/photo-1520072959219-c595dc870360',
-      quinoaSalad: 'https://images.unsplash.com/photo-1505576399279-565b52d4ac71'
-    },
-    dinner: {
-      stirFryTofu: 'https://images.unsplash.com/photo-1547592180-85f173990554',
-      lentilCurry: 'https://images.unsplash.com/photo-1546833998-877b37c2e604',
-      veggiePasta: 'https://images.unsplash.com/photo-1621996346565-e3dbc646d9a9'
-    }
-  }
-};
+interface SpoonacularMealPlan {
+  meals: SpoonacularMeal[];
+  nutrients: {
+    calories: number;
+    protein: number;
+    fat: number;
+    carbohydrates: number;
+  };
+}
 
-// Update the mock diet database with specific images
-const dietDatabase = {
-  weightLoss: {
-    breakfast: [
-      {
-        name: 'Oatmeal with Banana',
-        calories: 350,
-        protein: 12,
-        carbs: 65,
-        fats: 6,
-        portion: '1 bowl',
-        category: 'Whole Grains',
-        preparationTime: '5 mins',
-        cookingTime: '10 mins',
-        difficulty: 'easy' as const,
-        imageUrl: MEAL_IMAGES.breakfast.oatmeal,
-        instructions: [
-          'Cook oatmeal with water or low-fat milk',
-          'Add sliced banana',
-          'Optional: add cinnamon for taste'
-        ],
-        tips: [
-          'Use steel-cut oats for better nutrition',
-          'Add protein powder to increase protein content',
-          'Prepare overnight oats for convenience'
-        ],
-        allergens: ['Gluten'],
-        alternatives: [
-          'Quinoa porridge',
-          'Buckwheat porridge',
-          'Chia seed pudding'
-        ]
-      },
-      {
-        name: 'Greek Yogurt Parfait',
-        calories: 280,
-        protein: 20,
-        carbs: 30,
-        fats: 8,
-        portion: '1 cup',
-        category: 'Dairy',
-        preparationTime: '5 mins',
-        cookingTime: '0 mins',
-        difficulty: 'easy' as const,
-        imageUrl: MEAL_IMAGES.breakfast.yogurtParfait,
-        instructions: [
-          'Layer Greek yogurt with berries',
-          'Add honey for sweetness',
-          'Top with granola'
-        ],
-        tips: [
-          'Use 0% fat Greek yogurt to reduce calories',
-          'Make your own sugar-free granola',
-          'Add chia seeds for extra nutrients'
-        ],
-        allergens: ['Dairy', 'Nuts'],
-        alternatives: [
-          'Coconut yogurt parfait',
-          'Soy yogurt parfait',
-          'Smoothie bowl'
-        ]
-      },
-      {
-        name: 'Protein Smoothie Bowl',
-        calories: 320,
-        protein: 25,
-        carbs: 45,
-        fats: 7,
-        portion: '1 bowl',
-        category: 'Smoothies',
-        preparationTime: '10 mins',
-        cookingTime: '0 mins',
-        difficulty: 'easy' as const,
-        imageUrl: MEAL_IMAGES.breakfast.smoothieBowl,
-        instructions: [
-          'Blend protein powder with frozen fruits',
-          'Add almond milk and blend until smooth',
-          'Top with fresh fruits and seeds'
-        ],
-        tips: [
-          'Use frozen banana for creamier texture',
-          'Add spinach for extra nutrients',
-          'Top with low-calorie fruits'
-        ],
-        allergens: ['Dairy', 'Soy'],
-        alternatives: [
-          'Acai bowl',
-          'Green smoothie bowl',
-          'Protein pancakes'
-        ]
-      }
-    ],
-    lunch: [
-      {
-        name: 'Grilled Chicken Salad',
-        calories: 350,
-        protein: 35,
-        carbs: 15,
-        fats: 18,
-        portion: '1 plate',
-        category: 'Protein',
-        preparationTime: '15 mins',
-        cookingTime: '15 mins',
-        difficulty: 'medium' as const,
-        imageUrl: MEAL_IMAGES.lunch.chickenSalad,
-        instructions: [
-          'Grill chicken breast',
-          'Mix fresh vegetables',
-          'Add light dressing'
-        ],
-        tips: [
-          'Marinate chicken for better flavor',
-          'Use mixed greens for variety',
-          'Make your own healthy dressing'
-        ],
-        allergens: [],
-        alternatives: [
-          'Grilled tofu salad',
-          'Tuna salad',
-          'Chickpea salad'
-        ]
-      }
-    ],
-    dinner: [
-      {
-        name: 'Baked Salmon',
-        calories: 400,
-        protein: 46,
-        carbs: 0,
-        fats: 22,
-        portion: '200g',
-        category: 'Fish',
-        preparationTime: '10 mins',
-        cookingTime: '15 mins',
-        difficulty: 'medium' as const,
-        imageUrl: MEAL_IMAGES.dinner.salmon,
-        instructions: [
-          'Season salmon fillet',
-          'Bake at 400°F for 12-15 minutes',
-          'Serve with vegetables'
-        ],
-        tips: [
-          'Check for doneness at 12 minutes',
-          'Use fresh herbs for flavor',
-          'Pair with roasted vegetables'
-        ],
-        allergens: ['Fish'],
-        alternatives: [
-          'Baked cod',
-          'Grilled chicken breast',
-          'Baked tofu'
-        ]
-      },
-      {
-        name: 'Turkey Meatballs with Zucchini Noodles',
-        calories: 380,
-        protein: 35,
-        carbs: 12,
-        fats: 20,
-        portion: '1 plate',
-        category: 'Protein',
-        preparationTime: '20 mins',
-        cookingTime: '20 mins',
-        difficulty: 'medium' as const,
-        imageUrl: MEAL_IMAGES.dinner.turkeyMeatballs,
-        instructions: [
-          'Form and cook turkey meatballs',
-          'Spiralize zucchini',
-          'Combine with marinara sauce'
-        ],
-        tips: [
-          'Use lean turkey meat',
-          "Don't overcook zucchini noodles",
-          'Make extra for meal prep'
-        ],
-        allergens: ['Eggs'],
-        alternatives: [
-          'Chicken meatballs',
-          'Lentil meatballs',
-          'Regular pasta for non-low-carb'
-        ]
-      }
-    ],
-    snacks: [
-      {
-        name: 'Apple with Almond Butter',
-        calories: 200,
-        protein: 5,
-        carbs: 25,
-        fats: 12,
-        portion: '1 apple + 2 tbsp almond butter',
-        category: 'Snacks',
-        preparationTime: '2 mins',
-        cookingTime: '0 mins',
-        difficulty: 'easy' as const,
-        imageUrl: MEAL_IMAGES.snacks.appleAlmondButter,
-        instructions: [
-          'Slice apple',
-          'Serve with almond butter'
-        ],
-        tips: [
-          'Choose organic apples',
-          'Use natural almond butter',
-          'Portion control the nut butter'
-        ],
-        allergens: ['Nuts'],
-        alternatives: [
-          'Pear with peanut butter',
-          'Banana with sunflower seed butter',
-          'Celery with nut butter'
-        ]
-      }
-    ]
-  },
-  muscleGain: {
-    breakfast: [
-      {
-        name: 'Protein Pancakes',
-        calories: 450,
-        protein: 35,
-        carbs: 45,
-        fats: 12,
-        portion: '3 pancakes',
-        category: 'Breakfast',
-        preparationTime: '15 mins',
-        cookingTime: '10 mins',
-        difficulty: 'medium' as const,
-        imageUrl: MEAL_IMAGES.breakfast.proteinPancakes,
-        instructions: [
-          'Mix protein powder with pancake mix',
-          'Cook on medium heat',
-          'Top with maple syrup'
-        ],
-        tips: [
-          'Use whole grain pancake mix',
-          'Add banana for natural sweetness',
-          'Top with fresh berries'
-        ],
-        allergens: ['Gluten', 'Dairy'],
-        alternatives: [
-          'Protein oatmeal',
-          'Protein smoothie bowl',
-          'Egg white frittata'
-        ]
-      }
-    ],
-    lunch: [
-      {
-        name: 'Chicken Rice Bowl',
-        calories: 650,
-        protein: 45,
-        carbs: 75,
-        fats: 15,
-        portion: '1 bowl',
-        category: 'Protein',
-        preparationTime: '20 mins',
-        cookingTime: '25 mins',
-        difficulty: 'medium' as const,
-        imageUrl: MEAL_IMAGES.lunch.chickenRiceBowl,
-        instructions: [
-          'Cook brown rice',
-          'Grill chicken breast',
-          'Add vegetables and sauce'
-        ],
-        tips: [
-          'Use brown rice for more nutrients',
-          'Add avocado for healthy fats',
-          'Include colorful vegetables'
-        ],
-        allergens: [],
-        alternatives: [
-          'Turkey and quinoa bowl',
-          'Fish and rice bowl',
-          'Tofu and grain bowl'
-        ]
-      }
-    ],
-    dinner: [
-      {
-        name: 'Grilled Chicken with Sweet Potato',
-        calories: 700,
-        protein: 50,
-        carbs: 45,
-        fats: 25,
-        portion: '1 plate',
-        category: 'Protein',
-        preparationTime: '15 mins',
-        cookingTime: '20 mins',
-        difficulty: 'medium' as const,
-        imageUrl: MEAL_IMAGES.dinner.grilledChicken,
-        instructions: [
-          'Season and grill chicken breast',
-          'Bake sweet potato',
-          'Serve with steamed vegetables'
-        ],
-        tips: [
-          'Marinate chicken for extra flavor',
-          'Use herbs and spices instead of heavy sauces',
-          'Add olive oil for healthy fats'
-        ],
-        allergens: [],
-        alternatives: [
-          'Grilled fish',
-          'Turkey breast',
-          'Baked salmon'
-        ]
-      },
-      {
-        name: 'Baked Salmon with Quinoa',
-        calories: 650,
-        protein: 48,
-        carbs: 40,
-        fats: 28,
-        portion: '1 plate',
-        category: 'Fish',
-        preparationTime: '15 mins',
-        cookingTime: '20 mins',
-        difficulty: 'medium' as const,
-        imageUrl: MEAL_IMAGES.dinner.salmon,
-        instructions: [
-          'Season and bake salmon fillet',
-          'Cook quinoa with herbs',
-          'Serve with roasted vegetables'
-        ],
-        tips: [
-          'Choose wild-caught salmon when possible',
-          'Cook quinoa in vegetable broth for more flavor',
-          'Add leafy greens for extra nutrients'
-        ],
-        allergens: ['Fish'],
-        alternatives: [
-          'Grilled tuna',
-          'Baked cod',
-          'Grilled chicken'
-        ]
-      }
-    ]
-  }
-};
+interface SpoonacularMeal {
+  id: number;
+  title: string;
+  readyInMinutes: number;
+  servings: number;
+  sourceUrl: string;
+  image: string;
+  imageType: string;
+  nutrition?: {
+    nutrients: {
+      name: string;
+      amount: number;
+      unit: string;
+    }[];
+  };
+}
 
-// Add vegetarian alternatives to the diet database
-const vegetarianDatabase = {
-  weightLoss: {
-    breakfast: [
-      {
-        name: 'Overnight Oats with Berries',
-        calories: 320,
-        protein: 12,
-        carbs: 55,
-        fats: 8,
-        portion: '1 bowl',
-        category: 'Whole Grains',
-        preparationTime: '5 mins (plus overnight)',
-        cookingTime: '0 mins',
-        difficulty: 'easy' as const,
-        imageUrl: MEAL_IMAGES.vegetarian.breakfast.overnightOats,
-        instructions: [
-          'Mix oats with plant-based milk',
-          'Add chia seeds and berries',
-          'Refrigerate overnight'
-        ],
-        tips: [
-          'Use almond or soy milk for extra protein',
-          'Add nuts for healthy fats',
-          'Top with fresh fruits in the morning'
-        ],
-        allergens: ['Gluten'],
-        alternatives: [
-          'Chia pudding',
-          'Quinoa porridge',
-          'Muesli bowl'
-        ]
-      },
-      {
-        name: 'Avocado Toast with Chickpeas',
-        calories: 350,
-        protein: 15,
-        carbs: 40,
-        fats: 18,
-        portion: '2 slices',
-        category: 'Vegetarian',
-        preparationTime: '10 mins',
-        cookingTime: '0 mins',
-        difficulty: 'easy' as const,
-        imageUrl: MEAL_IMAGES.vegetarian.breakfast.avocadoToast,
-        instructions: [
-          'Mash avocado with lemon and seasonings',
-          'Toast whole grain bread',
-          'Top with mashed chickpeas and microgreens'
-        ],
-        tips: [
-          'Use sprouted bread for extra nutrients',
-          'Add nutritional yeast for B12',
-          'Season with turmeric for anti-inflammatory benefits'
-        ],
-        allergens: ['Gluten'],
-        alternatives: [
-          'Sweet potato toast',
-          'Gluten-free bread option',
-          'Rice cakes'
-        ]
-      }
-    ],
-    lunch: [
-      {
-        name: 'Buddha Bowl with Tofu',
-        calories: 380,
-        protein: 20,
-        carbs: 45,
-        fats: 16,
-        portion: '1 bowl',
-        category: 'Vegetarian',
-        preparationTime: '20 mins',
-        cookingTime: '15 mins',
-        difficulty: 'medium' as const,
-        imageUrl: MEAL_IMAGES.vegetarian.lunch.buddahBowl,
-        instructions: [
-          'Bake marinated tofu cubes',
-          'Cook quinoa and prepare vegetables',
-          'Assemble bowl with tahini dressing'
-        ],
-        tips: [
-          'Press tofu for better texture',
-          'Use colorful vegetables for nutrients',
-          'Make extra for meal prep'
-        ],
-        allergens: ['Soy', 'Sesame'],
-        alternatives: [
-          'Tempeh bowl',
-          'Chickpea bowl',
-          'Edamame bowl'
-        ]
-      }
-    ],
-    dinner: [
-      {
-        name: 'Lentil and Spinach Curry',
-        calories: 350,
-        protein: 18,
-        carbs: 45,
-        fats: 12,
-        portion: '1 bowl',
-        category: 'Vegetarian',
-        preparationTime: '15 mins',
-        cookingTime: '25 mins',
-        difficulty: 'medium' as const,
-        imageUrl: MEAL_IMAGES.vegetarian.dinner.lentilCurry,
-        instructions: [
-          'Cook red lentils with spices',
-          'Add spinach and coconut milk',
-          'Serve with brown rice or quinoa'
-        ],
-        tips: [
-          'Use fresh spices for better flavor',
-          'Add turmeric for anti-inflammatory benefits',
-          'Make extra for freezing'
-        ],
-        allergens: [],
-        alternatives: [
-          'Chickpea curry',
-          'Bean curry',
-          'Vegetable curry'
-        ]
-      }
-    ]
-  },
-  muscleGain: {
-    breakfast: [
-      {
-        name: 'Tofu Scramble with Vegetables',
-        calories: 400,
-        protein: 25,
-        carbs: 30,
-        fats: 20,
-        portion: '1 plate',
-        category: 'Vegetarian',
-        preparationTime: '10 mins',
-        cookingTime: '15 mins',
-        difficulty: 'medium' as const,
-        imageUrl: MEAL_IMAGES.vegetarian.breakfast.tofuScramble,
-        instructions: [
-          'Crumble and season tofu',
-          'Sauté vegetables',
-          'Combine with nutritional yeast'
-        ],
-        tips: [
-          'Use firm tofu for best texture',
-          'Add black salt for eggy flavor',
-          'Include protein-rich vegetables'
-        ],
-        allergens: ['Soy'],
-        alternatives: [
-          'Chickpea scramble',
-          'Tempeh scramble',
-          'Quinoa breakfast bowl'
-        ]
-      }
-    ],
-    lunch: [
-      {
-        name: 'High-Protein Quinoa Bowl',
-        calories: 550,
-        protein: 28,
-        carbs: 65,
-        fats: 22,
-        portion: '1 large bowl',
-        category: 'Vegetarian',
-        preparationTime: '15 mins',
-        cookingTime: '20 mins',
-        difficulty: 'medium' as const,
-        imageUrl: MEAL_IMAGES.vegetarian.lunch.buddahBowl,
-        instructions: [
-          'Cook quinoa with vegetable broth',
-          'Prepare tempeh or seitan',
-          'Add roasted vegetables and seeds'
-        ],
-        tips: [
-          'Use a mix of seeds for extra protein',
-          'Add nutritional yeast for B-vitamins',
-          'Include legumes for protein boost'
-        ],
-        allergens: ['Soy', 'Gluten'],
-        alternatives: [
-          'Brown rice bowl',
-          'Amaranth bowl',
-          'Buckwheat bowl'
-        ]
-      }
-    ],
-    dinner: [
-      {
-        name: 'Protein-Packed Stir-Fried Tofu',
-        calories: 600,
-        protein: 35,
-        carbs: 50,
-        fats: 25,
-        portion: '1 large plate',
-        category: 'Vegetarian',
-        preparationTime: '20 mins',
-        cookingTime: '15 mins',
-        difficulty: 'medium' as const,
-        imageUrl: MEAL_IMAGES.vegetarian.dinner.stirFryTofu,
-        instructions: [
-          'Press and marinate tofu',
-          'Stir-fry with high-protein vegetables',
-          'Serve with brown rice or quinoa'
-        ],
-        tips: [
-          'Use extra-firm tofu for best results',
-          'Add edamame for extra protein',
-          'Include seitan or tempeh for variety'
-        ],
-        allergens: ['Soy'],
-        alternatives: [
-          'Tempeh stir-fry',
-          'Seitan stir-fry',
-          'Legume and vegetable stir-fry'
-        ]
-      }
-    ]
-  }
-};
+interface SpoonacularRecipe extends SpoonacularMeal {
+  instructions: string;
+  analyzedInstructions: {
+    steps: {
+      number: number;
+      step: string;
+      ingredients: { name: string }[];
+      equipment: { name: string }[];
+    }[];
+  }[];
+  extendedIngredients: {
+    original: string;
+    name: string;
+    amount: number;
+    unit: string;
+    aisle: string;
+  }[];
+  diets: string[];
+  cuisines: string[];
+}
 
-// Modify the generateWeeklyDietPlan function to handle vegetarian option
-function generateWeeklyDietPlan(goal: string, dietType: string, isVegetarian: boolean = false): WeeklyDietPlan {
-  const meals = isVegetarian ? vegetarianDatabase[goal.toLowerCase().includes('muscle') ? 'muscleGain' : 'weightLoss'] 
-                            : dietDatabase[goal.toLowerCase().includes('muscle') ? 'muscleGain' : 'weightLoss'];
-  
-  const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+async function fetchMealPlan(targetCalories: number, diet?: string): Promise<SpoonacularMealPlan> {
+  const params = new URLSearchParams({
+    apiKey: SPOONACULAR_API_KEY,
+    targetCalories: targetCalories.toString(),
+    timeFrame: 'day',
+  });
+
+  if (diet) {
+    params.append('diet', diet);
+  }
+
+  const response = await fetch(`${BASE_URL}/mealplanner/generate?${params}`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch meal plan');
+  }
+  return response.json();
+}
+
+async function fetchRecipeDetails(id: number): Promise<SpoonacularRecipe> {
+  const params = new URLSearchParams({
+    apiKey: SPOONACULAR_API_KEY,
+  });
+
+  const response = await fetch(`${BASE_URL}/recipes/${id}/information?${params}`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch recipe details');
+  }
+  return response.json();
+}
+
+function convertSpoonacularMealToFood(meal: SpoonacularMeal, recipe: SpoonacularRecipe): Food {
+  const nutrients = recipe.nutrition?.nutrients || [];
   
   return {
-    days: days.map(day => ({
-      day,
-      meals: [
-        {
-          type: 'breakfast',
-          time: '7:00 AM',
-          foods: [meals.breakfast[Math.floor(Math.random() * meals.breakfast.length)]]
-        },
-        {
-          type: 'lunch',
-          time: '12:30 PM',
-          foods: [meals.lunch[Math.floor(Math.random() * meals.lunch.length)]]
-        },
-        {
-          type: 'dinner',
-          time: '7:00 PM',
-          foods: [meals.dinner[Math.floor(Math.random() * meals.dinner.length)]]
-        }
+    id: meal.id,
+    name: meal.title,
+    calories: nutrients.find(n => n.name === 'Calories')?.amount || 0,
+    protein: nutrients.find(n => n.name === 'Protein')?.amount || 0,
+    carbs: nutrients.find(n => n.name === 'Carbohydrates')?.amount || 0,
+    fats: nutrients.find(n => n.name === 'Fat')?.amount || 0,
+    portion: `${meal.servings} servings`,
+    category: recipe.cuisines[0] || recipe.diets[0] || 'General',
+    imageUrl: meal.image,
+    preparationTime: `${recipe.readyInMinutes} mins`,
+    difficulty: recipe.readyInMinutes <= 30 ? 'easy' : recipe.readyInMinutes <= 60 ? 'medium' : 'hard',
+    instructions: recipe.analyzedInstructions[0]?.steps.map(step => step.step),
+    alternatives: recipe.extendedIngredients.map(ing => ing.name),
+  };
+}
+
+// Add North Indian meal database
+const northIndianMeals = {
+  breakfast: [
+    {
+      id: 1,
+      name: "Paneer Paratha with Curd",
+      calories: 350,
+      protein: 15,
+      carbs: 45,
+      fats: 12,
+      portion: "2 parathas",
+      category: "North Indian",
+      imageUrl: "https://images.unsplash.com/photo-1565557623262-b51c2513a641",
+      preparationTime: "20 mins",
+      cookingTime: "15 mins",
+      difficulty: "medium" as const,
+      instructions: [
+        "Knead whole wheat dough",
+        "Prepare paneer stuffing with spices",
+        "Roll out parathas and stuff with filling",
+        "Cook on tawa with ghee",
+        "Serve hot with curd"
       ],
-      waterIntake: 2.5,
-      supplementRecommendations: isVegetarian ? [
-        'Vitamin B12 supplement',
-        'Plant-based protein powder',
-        'Iron supplement (if needed)',
-        'Vitamin D supplement'
-      ] : undefined
-    }))
-  };
-}
-
-// Update generatePersonalizedDietPlan to include vegetarian option
-export function generatePersonalizedDietPlan(profileData: any): DietPlan {
-  const { preferences } = profileData;
-  const goal = preferences?.goal || 'weight loss';
-  const dietType = preferences?.dietType || 'balanced';
-  const isVegetarian = preferences?.isVegetarian || false;
-
-  const schedule = generateWeeklyDietPlan(goal, dietType, isVegetarian);
-
-  return {
-    title: `${isVegetarian ? 'Vegetarian ' : ''}${goal.charAt(0).toUpperCase() + goal.slice(1)} Diet Plan`,
-    description: `Personalized ${isVegetarian ? 'vegetarian ' : ''}diet plan focused on ${goal} with ${dietType} meals.`,
-    level: preferences?.fitnessLevel || 'beginner',
-    duration: '4 weeks',
-    goal,
-    dietType,
-    isVegetarian,
-    imageUrl: isVegetarian ? MEAL_IMAGES.dietPlans.vegetarian : MEAL_IMAGES.dietPlans.weightLoss,
-    schedule,
-    supplementation: isVegetarian ? [
-      {
-        name: 'Vitamin B12',
-        dosage: '1000mcg',
-        timing: 'Daily with breakfast',
-        notes: 'Essential for vegetarians/vegans'
-      },
-      {
-        name: 'Iron',
-        dosage: '18mg',
-        timing: 'With vitamin C for better absorption',
-        notes: 'Monitor levels through blood tests'
-      }
-    ] : undefined
-  };
-}
-
-// Enhanced mock diet database
-const mockDietPlans: DietPlan[] = [
-  {
-    title: 'Weight Loss Diet Plan',
-    description: 'A balanced diet plan focused on sustainable weight loss through portion control and nutrient-rich foods.',
-    level: 'Beginner',
-    duration: '4 weeks',
-    goal: 'Weight Loss',
-    dietType: 'Balanced',
-    imageUrl: MEAL_IMAGES.dietPlans.weightLoss,
-    nutritionalGoals: {
-      dailyCalories: 1800,
-      proteinPercentage: 30,
-      carbsPercentage: 40,
-      fatsPercentage: 30
+      tips: [
+        "Use fresh homemade paneer for best results",
+        "Add grated carrots for extra nutrition",
+        "Serve with mint chutney for added flavor"
+      ],
+      alternatives: ["Aloo Paratha", "Gobi Paratha", "Mixed Veg Paratha"]
     },
-    restrictions: ['No processed foods', 'Limited sugar', 'No alcohol'],
-    supplementation: [
-      {
-        name: 'Multivitamin',
-        dosage: '1 tablet',
-        timing: 'Morning with breakfast',
-        notes: 'Helps fill potential nutritional gaps'
-      },
-      {
-        name: 'Omega-3',
-        dosage: '1000mg',
-        timing: 'With meals',
-        notes: 'Supports overall health and fat loss'
-      }
-    ],
-    mealPreparationTips: [
-      'Meal prep on Sundays',
-      'Use portion control containers',
-      'Keep healthy snacks ready'
-    ],
-    groceryList: [
-      {
-        category: 'Proteins',
-        items: ['Chicken breast', 'Turkey', 'Fish (salmon, cod)', 'Greek yogurt', 'Eggs', 'Tuna']
-      },
-      {
-        category: 'Vegetables',
-        items: ['Spinach', 'Broccoli', 'Bell peppers', 'Zucchini']
-      },
-      {
-        category: 'Fruits',
-        items: ['Apples', 'Berries', 'Bananas', 'Oranges']
-      },
-      {
-        category: 'Grains',
-        items: ['Quinoa', 'Oats', 'Brown rice']
-      }
+    {
+      id: 2,
+      name: "Masala Dosa with Sambar",
+      calories: 320,
+      protein: 10,
+      carbs: 52,
+      fats: 8,
+      portion: "1 dosa",
+      category: "South Indian",
+      imageUrl: "https://images.unsplash.com/photo-1630383249896-424e482df921",
+      preparationTime: "15 mins",
+      cookingTime: "10 mins",
+      difficulty: "easy" as const,
+      instructions: [
+        "Prepare potato masala filling",
+        "Heat dosa tawa",
+        "Spread batter and add oil",
+        "Add filling and fold",
+        "Serve with sambar and chutney"
+      ],
+      tips: [
+        "Use fermented batter for crispy dosas",
+        "Keep the filling warm",
+        "Serve immediately while crispy"
+      ],
+      alternatives: ["Plain Dosa", "Rava Dosa", "Onion Dosa"]
+    },
+    {
+      id: 3,
+      name: "Poha with Peanuts",
+      calories: 280,
+      protein: 8,
+      carbs: 48,
+      fats: 6,
+      portion: "1 bowl",
+      category: "North Indian",
+      imageUrl: "https://images.unsplash.com/photo-1567337710282-00832b415979",
+      preparationTime: "10 mins",
+      cookingTime: "15 mins",
+      difficulty: "easy" as const,
+      instructions: [
+        "Wash and soak poha",
+        "Roast peanuts",
+        "Temper mustard seeds and curry leaves",
+        "Add vegetables and poha",
+        "Garnish with coriander and lemon"
+      ],
+      tips: [
+        "Don't oversoak the poha",
+        "Add roasted peanuts for crunch",
+        "Serve hot with green chutney"
+      ],
+      alternatives: ["Upma", "Sabudana Khichdi", "Vermicelli Upma"]
+    }
+  ],
+  lunch: [
+    {
+      id: 4,
+      name: "Dal Makhani with Jeera Rice",
+      calories: 450,
+      protein: 18,
+      carbs: 65,
+      fats: 12,
+      portion: "1 bowl each",
+      category: "North Indian",
+      imageUrl: "https://images.unsplash.com/photo-1585937421612-70a008356fbe",
+      preparationTime: "30 mins",
+      cookingTime: "45 mins",
+      difficulty: "medium" as const,
+      instructions: [
+        "Soak black lentils overnight",
+        "Pressure cook with rajma",
+        "Prepare tadka with tomato gravy",
+        "Simmer with cream",
+        "Serve with jeera rice"
+      ],
+      tips: [
+        "Slow cook for better taste",
+        "Use fresh cream for richness",
+        "Garnish with butter and cream"
+      ],
+      alternatives: ["Dal Tadka", "Rajma Chawal", "Chole Chawal"]
+    },
+    {
+      id: 5,
+      name: "Butter Chicken with Naan",
+      calories: 550,
+      protein: 35,
+      carbs: 45,
+      fats: 22,
+      portion: "1 serving",
+      category: "North Indian",
+      imageUrl: "https://images.unsplash.com/photo-1603894584373-5ac82b2ae398",
+      preparationTime: "40 mins",
+      cookingTime: "30 mins",
+      difficulty: "medium" as const,
+      instructions: [
+        "Marinate chicken in yogurt and spices",
+        "Prepare tomato-based gravy",
+        "Cook chicken in tandoor or oven",
+        "Simmer in gravy with butter and cream",
+        "Serve hot with naan"
+      ],
+      tips: [
+        "Use Kashmiri red chili for color",
+        "Smoke the gravy for authentic flavor",
+        "Use butter for glossy finish"
+      ],
+      alternatives: ["Chicken Tikka Masala", "Paneer Butter Masala", "Kadai Chicken"]
+    }
+  ],
+  dinner: [
+    {
+      id: 6,
+      name: "Mixed Vegetable Curry with Roti",
+      calories: 380,
+      protein: 12,
+      carbs: 55,
+      fats: 14,
+      portion: "2 rotis with curry",
+      category: "North Indian",
+      imageUrl: "https://images.unsplash.com/photo-1505253758473-96b7015fcd40",
+      preparationTime: "20 mins",
+      cookingTime: "25 mins",
+      difficulty: "easy" as const,
+      instructions: [
+        "Prepare fresh vegetables",
+        "Make onion-tomato gravy",
+        "Add spices and vegetables",
+        "Cook until tender",
+        "Serve with hot rotis"
+      ],
+      tips: [
+        "Use seasonal vegetables",
+        "Make fresh rotis",
+        "Add ghee for extra flavor"
+      ],
+      alternatives: ["Palak Paneer", "Bhindi Masala", "Aloo Gobi"]
+    },
+    {
+      id: 7,
+      name: "Chicken Biryani",
+      calories: 480,
+      protein: 28,
+      carbs: 58,
+      fats: 16,
+      portion: "1 plate",
+      category: "North Indian",
+      imageUrl: "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8",
+      preparationTime: "45 mins",
+      cookingTime: "40 mins",
+      difficulty: "hard" as const,
+      instructions: [
+        "Marinate chicken",
+        "Prepare rice with whole spices",
+        "Layer chicken and rice",
+        "Dum cook with saffron",
+        "Garnish and serve hot"
+      ],
+      tips: [
+        "Use long grain basmati rice",
+        "Layer with fried onions",
+        "Add kewra water for aroma"
+      ],
+      alternatives: ["Veg Biryani", "Pulao", "Jeera Rice"]
+    }
+  ]
+};
+
+// Add Indian grocery categories
+const indianGroceryList = [
+  {
+    category: "Dals & Legumes",
+    items: [
+      "Toor Dal",
+      "Moong Dal",
+      "Masoor Dal",
+      "Urad Dal",
+      "Chana Dal",
+      "Rajma",
+      "Chole"
     ]
   },
   {
-    title: 'Muscle Building Diet Plan',
-    description: 'High-protein diet plan designed to support muscle growth and recovery.',
-    level: 'Intermediate',
-    duration: '8 weeks',
-    goal: 'Muscle Gain',
-    dietType: 'High Protein',
-    imageUrl: MEAL_IMAGES.dietPlans.muscleGain
+    category: "Spices & Masalas",
+    items: [
+      "Haldi (Turmeric)",
+      "Jeera (Cumin)",
+      "Dhania (Coriander)",
+      "Garam Masala",
+      "Red Chili Powder",
+      "Ginger Garlic Paste",
+      "Kitchen King Masala"
+    ]
   },
   {
-    title: 'Keto Diet Plan',
-    description: 'Low-carb, high-fat diet plan for efficient fat burning and energy optimization.',
-    level: 'Advanced',
-    duration: '12 weeks',
-    goal: 'Fat Loss',
-    dietType: 'Ketogenic',
-    imageUrl: MEAL_IMAGES.dietPlans.keto
+    category: "Atta & Grains",
+    items: [
+      "Whole Wheat Atta",
+      "Basmati Rice",
+      "Poha",
+      "Besan",
+      "Sooji (Semolina)",
+      "Rice Flour"
+    ]
+  },
+  {
+    category: "Fresh Produce",
+    items: [
+      "Onions",
+      "Tomatoes",
+      "Potatoes",
+      "Green Chilies",
+      "Ginger",
+      "Garlic",
+      "Coriander Leaves",
+      "Curry Leaves"
+    ]
+  },
+  {
+    category: "Dairy & Proteins",
+    items: [
+      "Paneer",
+      "Curd",
+      "Ghee",
+      "Milk",
+      "Fresh Cream",
+      "Butter",
+      "Eggs"
+    ]
   }
 ];
 
-export async function scrapeDietPlans(): Promise<DietPlan[]> {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve(mockDietPlans);
-    }, 1000);
-  });
-}
+export async function generatePersonalizedDietPlan(profile: any): Promise<DietPlan> {
+  try {
+    // Calculate target calories based on profile and goal
+    let targetCalories = profile.goal === 'weight-loss' 
+      ? 1800 
+      : profile.goal === 'muscle-gain'
+      ? 2500
+      : 2000;
 
-export const scrapeDietDetails = async (dietPlan: DietPlan): Promise<DietPlan> => {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      const schedule = generateWeeklyDietPlan(dietPlan.goal, dietPlan.dietType);
-      resolve({ ...dietPlan, schedule });
-    }, 500);
-  });
-}; 
+    // Select meals based on target calories
+    const breakfast = northIndianMeals.breakfast[Math.floor(Math.random() * northIndianMeals.breakfast.length)];
+    const lunch = northIndianMeals.lunch[Math.floor(Math.random() * northIndianMeals.lunch.length)];
+    const dinner = northIndianMeals.dinner[Math.floor(Math.random() * northIndianMeals.dinner.length)];
+
+    const meals: DailyMeal[] = [
+      {
+        type: 'breakfast',
+        time: '7:00 AM',
+        foods: [breakfast],
+        totalCalories: breakfast.calories,
+        totalProtein: breakfast.protein,
+        totalCarbs: breakfast.carbs,
+        totalFats: breakfast.fats
+      },
+      {
+        type: 'lunch',
+        time: '12:30 PM',
+        foods: [lunch],
+        totalCalories: lunch.calories,
+        totalProtein: lunch.protein,
+        totalCarbs: lunch.carbs,
+        totalFats: lunch.fats
+      },
+      {
+        type: 'dinner',
+        time: '7:00 PM',
+        foods: [dinner],
+        totalCalories: dinner.calories,
+        totalProtein: dinner.protein,
+        totalCarbs: dinner.carbs,
+        totalFats: dinner.fats
+      }
+    ];
+
+    const totalCalories = meals.reduce((acc, meal) => acc + (meal.totalCalories || 0), 0);
+    const totalProtein = meals.reduce((acc, meal) => acc + (meal.totalProtein || 0), 0);
+    const totalCarbs = meals.reduce((acc, meal) => acc + (meal.totalCarbs || 0), 0);
+    const totalFats = meals.reduce((acc, meal) => acc + (meal.totalFats || 0), 0);
+
+    // Calculate macro percentages
+    const proteinCalories = totalProtein * 4;
+    const carbsCalories = totalCarbs * 4;
+    const fatCalories = totalFats * 9;
+
+    return {
+      title: `${profile.goal.split('-').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')} Diet Plan`,
+      description: `A balanced North Indian diet plan focused on sustainable ${profile.goal.replace('-', ' ')} through portion control and nutrient-rich foods.`,
+      level: 'Intermediate',
+      duration: profile.goal === 'maintenance' ? 'Ongoing' : '8 weeks',
+      goal: profile.goal,
+      dietType: 'North Indian',
+      schedule: {
+        days: [{
+          day: new Date().toLocaleDateString('en-US', { weekday: 'long' }),
+          meals,
+          totalDailyCalories: totalCalories,
+          waterIntake: 2.5,
+        }],
+      },
+      nutritionalGoals: {
+        dailyCalories: totalCalories,
+        proteinPercentage: Math.round((proteinCalories / totalCalories) * 100),
+        carbsPercentage: Math.round((carbsCalories / totalCalories) * 100),
+        fatsPercentage: Math.round((fatCalories / totalCalories) * 100),
+      },
+      restrictions: [
+        'No processed foods',
+        'Limited sweets',
+        'No excessive oil',
+        'Fresh ingredients only'
+      ],
+      groceryList: indianGroceryList,
+      supplementation: [
+        {
+          name: 'Multivitamin',
+          dosage: '1 tablet',
+          timing: 'Morning with breakfast',
+          notes: 'Helps fill potential nutritional gaps',
+        },
+        {
+          name: 'Calcium with Vitamin D',
+          dosage: '500mg',
+          timing: 'Evening with dinner',
+          notes: 'Supports bone health and immunity',
+        },
+      ],
+    };
+  } catch (error) {
+    console.error('Error generating diet plan:', error);
+    throw error;
+  }
+} 

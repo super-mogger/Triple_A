@@ -581,13 +581,16 @@ export default function Workouts() {
                         showSplitMenu: !selectedWorkout.showSplitMenu
                       });
                     }}
-                    className="w-full bg-white dark:bg-[#1E1E1E] text-sm px-4 py-2.5 rounded-lg flex items-center justify-between border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-[#282828] transition-colors text-gray-700 dark:text-gray-200"
+                    className="w-full bg-white/80 dark:bg-[#1E1E1E]/80 backdrop-blur-sm text-sm px-4 py-2.5 rounded-lg flex items-center justify-between border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-[#282828] transition-colors text-gray-700 dark:text-gray-200"
                   >
-                    <span>Split: {splitTypes[selectedWorkout.splitType || 'bro-split'].name}</span>
+                    <span className="flex items-center gap-2">
+                      <BarChart className="w-4 h-4 text-emerald-500" />
+                      Split: {splitTypes[selectedWorkout.splitType || 'bro-split'].name}
+                    </span>
                     <ChevronDown className="w-4 h-4 text-gray-500" />
                   </button>
                   {selectedWorkout.showSplitMenu && (
-                    <div className="absolute z-10 w-full mt-1 bg-white dark:bg-[#1E1E1E] rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                    <div className="absolute z-10 w-full mt-1 bg-white/80 dark:bg-[#1E1E1E]/80 backdrop-blur-sm rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
                       {Object.entries(splitTypes).map(([key, value]) => (
                         <button
                           key={key}
@@ -618,8 +621,9 @@ export default function Workouts() {
                 </div>
                 <button
                   onClick={changeWorkoutPlan}
-                  className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2.5 rounded-lg transition-colors font-medium text-sm"
+                  className="bg-emerald-500/90 backdrop-blur-sm hover:bg-emerald-600 text-white px-4 py-2.5 rounded-lg transition-colors font-medium text-sm flex items-center justify-center gap-2"
                 >
+                  <Play className="w-4 h-4" />
                   Change Workout Plan
                 </button>
               </div>

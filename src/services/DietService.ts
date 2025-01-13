@@ -175,327 +175,346 @@ function convertSpoonacularMealToFood(meal: SpoonacularMeal, recipe: Spoonacular
   };
 }
 
-// Add North Indian meal database
-const northIndianMeals = {
-  breakfast: [
-    {
+// High protein meal database
+const proteinRichMeals = {
+    breakfast: [
+      {
       id: 1,
-      name: "Oatmeal with Fruits",
-      calories: 280,
-      protein: 8,
+      name: "Protein Oatmeal with Eggs",
+      calories: 450,
+      protein: 32,
       carbs: 45,
-      fats: 6,
-      portion: "1 bowl",
-      category: "Healthy",
+      fats: 14,
+      portion: "1 bowl oats + 3 egg whites",
+      category: "High Protein",
       imageUrl: "https://images.unsplash.com/photo-1517673400267-0251440c45dc",
       preparationTime: "10 mins",
-      cookingTime: "5 mins",
+      cookingTime: "10 mins",
       difficulty: "easy" as const,
-      instructions: [
-        "Boil water or milk",
-        "Add oats and cook for 3-5 minutes",
-        "Top with sliced fruits and nuts",
-        "Add honey if desired"
+        instructions: [
+        "Cook oats with milk",
+        "Add protein powder to oats",
+        "Cook egg whites separately",
+        "Top with nuts and fruits"
+        ],
+        tips: [
+        "Use whey protein for extra protein",
+        "Add chia seeds for omega-3",
+        "Use almond milk for fewer calories"
       ],
-      tips: [
-        "Use rolled oats for better texture",
-        "Add cinnamon for extra flavor",
-        "Use seasonal fruits"
-      ],
-      alternatives: ["Porridge", "Muesli", "Cornflakes"]
+      alternatives: ["Protein Smoothie Bowl", "Greek Yogurt Parfait"]
     },
     {
       id: 2,
-      name: "Boiled Eggs with Toast",
-      calories: 240,
-      protein: 14,
-      carbs: 28,
-      fats: 8,
-      portion: "2 eggs, 2 toasts",
+      name: "High Protein Toast",
+      calories: 380,
+      protein: 28,
+      carbs: 35,
+      fats: 12,
+      portion: "2 toasts + toppings",
       category: "High Protein",
       imageUrl: "https://images.unsplash.com/photo-1525351484163-7529414344d8",
-      preparationTime: "5 mins",
-      cookingTime: "8 mins",
-      difficulty: "easy" as const,
-      instructions: [
-        "Boil eggs for 6-8 minutes",
-        "Toast bread slices",
-        "Season eggs with salt and pepper",
-        "Serve with toast"
-      ],
-      tips: [
-        "Add vegetables on the side",
-        "Use whole grain bread for more fiber",
-        "Don't overcook the eggs"
-      ],
-      alternatives: ["Scrambled Eggs", "Egg Whites", "Omelette"]
-    },
-    {
-      id: 3,
-      name: "Vegetable Sandwich",
-      calories: 220,
-      protein: 6,
-      carbs: 35,
-      fats: 7,
-      portion: "2 sandwiches",
-      category: "Vegetarian",
-      imageUrl: "https://images.unsplash.com/photo-1528735602780-2552fd46c7af",
       preparationTime: "10 mins",
       cookingTime: "5 mins",
       difficulty: "easy" as const,
-      instructions: [
-        "Slice vegetables",
-        "Toast bread slices",
-        "Spread sauce or chutney",
-        "Layer vegetables and assemble"
+        instructions: [
+        "Toast whole grain bread",
+        "Scramble eggs with whites",
+        "Add cottage cheese",
+        "Top with seeds and herbs"
+        ],
+        tips: [
+        "Use whole grain bread for fiber",
+        "Add smoked chicken or tuna for variety",
+        "Include avocado for healthy fats"
       ],
-      tips: [
-        "Use fresh vegetables",
-        "Add cucumber for crunch",
-        "Toast bread for better texture"
-      ],
-      alternatives: ["Grilled Sandwich", "Open Toast", "Wrap"]
-    }
-  ],
-  lunch: [
-    {
-      id: 4,
-      name: "Rice with Dal and Vegetables",
-      calories: 380,
-      protein: 12,
-      carbs: 65,
-      fats: 6,
-      portion: "1 plate",
-      category: "Vegetarian",
+      alternatives: ["Protein Pancakes", "Egg White Muffins"]
+      }
+    ],
+    lunch: [
+      {
+      id: 3,
+      name: "Chicken Rice Bowl",
+      calories: 550,
+      protein: 45,
+      carbs: 55,
+      fats: 12,
+      portion: "300g chicken + 1 cup rice",
+      category: "High Protein",
       imageUrl: "https://images.unsplash.com/photo-1546833999-b9f581a1996d",
       preparationTime: "15 mins",
       cookingTime: "20 mins",
-      difficulty: "easy" as const,
-      instructions: [
-        "Cook rice",
-        "Prepare yellow dal",
-        "Steam mixed vegetables",
-        "Serve together"
+      difficulty: "medium" as const,
+        instructions: [
+        "Grill chicken breast",
+        "Cook brown rice",
+        "Steam vegetables",
+        "Assemble with sauce"
+        ],
+        tips: [
+        "Marinate chicken for better taste",
+        "Use brown rice for more nutrients",
+        "Add quinoa for extra protein"
       ],
-      tips: [
-        "Use seasonal vegetables",
-        "Add lemon for taste",
-        "Include green chilies for spice"
-      ],
-      alternatives: ["Khichdi", "Rice Bowl", "Pulao"]
+      alternatives: ["Turkey Bowl", "Fish Rice Bowl"]
     },
     {
-      id: 5,
-      name: "Chapati with Mixed Vegetables",
-      calories: 320,
-      protein: 10,
+      id: 4,
+      name: "Protein-Packed Dal",
+      calories: 420,
+      protein: 28,
       carbs: 48,
-      fats: 8,
-      portion: "2 chapatis with curry",
-      category: "Vegetarian",
+      fats: 10,
+      portion: "2 cups dal + sides",
+      category: "Vegetarian Protein",
       imageUrl: "https://images.unsplash.com/photo-1505253758473-96b7015fcd40",
-      preparationTime: "20 mins",
-      cookingTime: "15 mins",
-      difficulty: "medium" as const,
-      instructions: [
-        "Make chapati dough",
-        "Cook mixed vegetables",
-        "Roll and cook chapatis",
-        "Serve hot"
+      preparationTime: "15 mins",
+      cookingTime: "25 mins",
+      difficulty: "easy" as const,
+        instructions: [
+        "Cook mixed lentils",
+        "Add protein powder",
+        "Season with spices",
+        "Serve with egg whites"
+        ],
+        tips: [
+        "Mix different lentils for complete protein",
+        "Add tofu for extra protein",
+        "Include spinach for iron"
       ],
-      tips: [
-        "Use whole wheat flour",
-        "Add ghee for softness",
-        "Make fresh chapatis"
-      ],
-      alternatives: ["Roti", "Paratha", "Rice"]
-    }
-  ],
-  dinner: [
-    {
-      id: 6,
-      name: "Grilled Chicken with Salad",
-      calories: 350,
-      protein: 32,
-      carbs: 15,
+      alternatives: ["Chickpea Curry", "Quinoa Dal"]
+      }
+    ],
+    dinner: [
+      {
+      id: 5,
+      name: "Grilled Chicken Plate",
+      calories: 480,
+      protein: 52,
+      carbs: 20,
       fats: 18,
-      portion: "200g chicken, 1 bowl salad",
+      portion: "300g chicken + vegetables",
       category: "High Protein",
       imageUrl: "https://images.unsplash.com/photo-1532550907401-a500c9a57435",
       preparationTime: "15 mins",
       cookingTime: "20 mins",
       difficulty: "medium" as const,
-      instructions: [
-        "Marinate chicken",
+        instructions: [
+        "Marinate chicken breast",
+        "Grill or bake chicken",
         "Prepare salad",
-        "Grill chicken",
-        "Serve with dressing"
-      ],
-      tips: [
+        "Add healthy fats"
+        ],
+        tips: [
         "Use lean chicken breast",
-        "Add colorful vegetables",
-        "Make fresh dressing"
+        "Add olive oil for healthy fats",
+        "Include variety of vegetables"
       ],
-      alternatives: ["Baked Chicken", "Fish", "Tofu"]
+      alternatives: ["Fish Fillet", "Turkey Breast"]
     },
     {
-      id: 7,
-      name: "Vegetable Soup with Toast",
-      calories: 220,
-      protein: 8,
+      id: 6,
+      name: "Protein Power Bowl",
+      calories: 420,
+      protein: 38,
       carbs: 35,
-      fats: 6,
-      portion: "1 bowl soup, 2 toasts",
-      category: "Light Meal",
+      fats: 14,
+      portion: "1 large bowl",
+      category: "High Protein",
       imageUrl: "https://images.unsplash.com/photo-1547592166-23ac45744acd",
       preparationTime: "15 mins",
-      cookingTime: "25 mins",
+      cookingTime: "15 mins",
       difficulty: "easy" as const,
-      instructions: [
-        "Chop vegetables",
-        "Boil in vegetable stock",
-        "Season with herbs",
-        "Serve with toast"
+        instructions: [
+        "Cook quinoa",
+        "Prepare tofu/chicken",
+        "Add legumes",
+        "Mix with dressing"
+        ],
+        tips: [
+        "Combine plant and animal proteins",
+        "Add seeds for extra protein",
+        "Use Greek yogurt dressing"
       ],
-      tips: [
-        "Use fresh vegetables",
-        "Add herbs for flavor",
-        "Make extra for next day"
-      ],
-      alternatives: ["Clear Soup", "Tomato Soup", "Mushroom Soup"]
+      alternatives: ["Chickpea Bowl", "Lentil Bowl"]
     }
   ]
 };
 
-// Add simple grocery categories
-const indianGroceryList = [
-  {
-    category: "Staples",
-    items: [
-      "Rice",
-      "Whole Wheat Flour",
-      "Oats",
-      "Bread",
-      "Dal (Lentils)",
-      "Eggs"
-    ]
-  },
-  {
-    category: "Fresh Vegetables",
-    items: [
-      "Tomatoes",
-      "Onions",
-      "Potatoes",
-      "Carrots",
-      "Green Leafy Vegetables",
-      "Bell Peppers",
-      "Cucumber"
-    ]
-  },
-  {
-    category: "Fruits",
-    items: [
-      "Apples",
-      "Bananas",
-      "Oranges",
-      "Seasonal Fruits",
-      "Lemons"
-    ]
-  },
-  {
-    category: "Protein Sources",
-    items: [
-      "Chicken Breast",
-      "Fish",
-      "Eggs",
-      "Tofu",
-      "Paneer",
-      "Lentils"
-    ]
-  },
-  {
-    category: "Basics & Condiments",
-    items: [
-      "Salt",
-      "Black Pepper",
-      "Cooking Oil",
-      "Milk",
-      "Curd",
-      "Butter"
-    ]
-  }
-];
+// Supplement recommendations based on goals
+const supplementInfo = {
+  'weight-loss': [
+    {
+      name: 'Whey Protein Isolate',
+      dosage: '25-30g',
+      timing: 'Post-workout or between meals',
+      benefits: 'Helps preserve muscle while cutting calories, increases satiety',
+      recommendations: 'Choose low-carb variants, mix with water instead of milk'
+    },
+    {
+      name: 'L-Carnitine',
+      dosage: '1500-2000mg',
+      timing: 'Before cardio or with meals',
+      benefits: 'May help with fat metabolism, supports energy production',
+      recommendations: 'Best taken with carbohydrates for absorption'
+    }
+  ],
+  'muscle-gain': [
+    {
+      name: 'Whey Protein',
+      dosage: '25-30g',
+      timing: 'Post-workout and between meals',
+      benefits: 'Fast-absorbing protein for muscle recovery and growth',
+      recommendations: 'Can mix with milk for extra calories and nutrients'
+    },
+    {
+      name: 'Creatine Monohydrate',
+      dosage: '5g daily',
+      timing: 'Any time of day, consistent timing',
+      benefits: 'Increases strength, muscle volume, and workout performance',
+      recommendations: 'No loading phase needed, stay consistent daily'
+    },
+    {
+      name: 'Mass Gainer',
+      dosage: '1 serving',
+      timing: 'Post-workout or between meals',
+      benefits: 'Extra calories and protein for muscle gain',
+      recommendations: 'Use only if struggling to meet calorie needs through food'
+    }
+  ],
+  'maintenance': [
+    {
+      name: 'Whey Protein',
+      dosage: '20-25g',
+      timing: 'Post-workout or as needed',
+      benefits: 'Convenient protein source for muscle maintenance',
+      recommendations: 'Use as supplement to whole food protein sources'
+    },
+    {
+      name: 'Multivitamin',
+      dosage: '1 serving',
+      timing: 'With breakfast',
+      benefits: 'Fills potential nutritional gaps',
+      recommendations: 'Choose a high-quality brand with good absorption'
+    }
+  ]
+};
 
 export async function generatePersonalizedDietPlan(profile: any): Promise<DietPlan> {
   try {
-    // Calculate target calories based on profile and goal
-    let targetCalories = profile.goal === 'weight-loss' 
-      ? 1800 
+    // Calculate BMR using Harris-Benedict Equation
+    const bmr = profile.gender === 'male'
+      ? 88.362 + (13.397 * profile.weight) + (4.799 * profile.height) - (5.677 * profile.age)
+      : 447.593 + (9.247 * profile.weight) + (3.098 * profile.height) - (4.330 * profile.age);
+
+    // Calculate activity multiplier
+    const activityMultipliers = {
+      sedentary: 1.2,      // Little or no exercise
+      light: 1.375,        // Light exercise/sports 1-3 days/week
+      moderate: 1.55,      // Moderate exercise/sports 3-5 days/week
+      active: 1.725,       // Hard exercise/sports 6-7 days/week
+      veryActive: 1.9      // Very hard exercise & physical job or training twice per day
+    };
+
+    const activityMultiplier = activityMultipliers[profile.activityLevel as keyof typeof activityMultipliers] || activityMultipliers.moderate;
+    
+    // Calculate TDEE (Total Daily Energy Expenditure)
+    const tdee = bmr * activityMultiplier;
+
+    // Calculate target calories based on goal
+    let targetCalories = profile.goal === 'weight-loss'
+      ? tdee - 500  // 500 calorie deficit for weight loss
       : profile.goal === 'muscle-gain'
-      ? 2500
-      : 2000;
+      ? tdee + 500  // 500 calorie surplus for muscle gain
+      : tdee;       // Maintenance calories
+
+    // Round calories to nearest 50
+    targetCalories = Math.round(targetCalories / 50) * 50;
+
+    // Calculate water intake based on weight and activity level
+    // Base: 30ml per kg of body weight
+    let waterIntake = (profile.weight * 0.03);
+    
+    // Adjust for activity level
+    if (profile.activityLevel === 'active' || profile.activityLevel === 'veryActive') {
+      waterIntake += 0.7; // Add 700ml for high activity
+    } else if (profile.activityLevel === 'moderate') {
+      waterIntake += 0.5; // Add 500ml for moderate activity
+    }
+
+    // Adjust for climate if available
+    if (profile.climate === 'hot') {
+      waterIntake += 0.5; // Add 500ml for hot climate
+    }
+
+    // Round water intake to nearest 0.1L
+    waterIntake = Math.round(waterIntake * 10) / 10;
 
     // Select meals based on target calories
-    const breakfast = northIndianMeals.breakfast[Math.floor(Math.random() * northIndianMeals.breakfast.length)];
-    const lunch = northIndianMeals.lunch[Math.floor(Math.random() * northIndianMeals.lunch.length)];
-    const dinner = northIndianMeals.dinner[Math.floor(Math.random() * northIndianMeals.dinner.length)];
+    const breakfast = proteinRichMeals.breakfast[Math.floor(Math.random() * proteinRichMeals.breakfast.length)];
+    const lunch = proteinRichMeals.lunch[Math.floor(Math.random() * proteinRichMeals.lunch.length)];
+    const dinner = proteinRichMeals.dinner[Math.floor(Math.random() * proteinRichMeals.dinner.length)];
 
-    const meals: DailyMeal[] = [
-      {
-        type: 'breakfast',
-        time: '7:00 AM',
+    // Scale meal portions to match target calories
+    const currentTotalCalories = breakfast.calories + lunch.calories + dinner.calories;
+    const scaleFactor = targetCalories / currentTotalCalories;
+
+    const scaledMeals: DailyMeal[] = [
+        {
+          type: 'breakfast',
+          time: '7:00 AM',
         foods: [breakfast],
-        totalCalories: breakfast.calories,
-        totalProtein: breakfast.protein,
-        totalCarbs: breakfast.carbs,
-        totalFats: breakfast.fats
-      },
-      {
-        type: 'lunch',
-        time: '12:30 PM',
+        totalCalories: Math.round(breakfast.calories * scaleFactor),
+        totalProtein: Math.round(breakfast.protein * scaleFactor),
+        totalCarbs: Math.round(breakfast.carbs * scaleFactor),
+        totalFats: Math.round(breakfast.fats * scaleFactor)
+        },
+        {
+          type: 'lunch',
+          time: '12:30 PM',
         foods: [lunch],
-        totalCalories: lunch.calories,
-        totalProtein: lunch.protein,
-        totalCarbs: lunch.carbs,
-        totalFats: lunch.fats
-      },
-      {
-        type: 'dinner',
-        time: '7:00 PM',
+        totalCalories: Math.round(lunch.calories * scaleFactor),
+        totalProtein: Math.round(lunch.protein * scaleFactor),
+        totalCarbs: Math.round(lunch.carbs * scaleFactor),
+        totalFats: Math.round(lunch.fats * scaleFactor)
+        },
+        {
+          type: 'dinner',
+          time: '7:00 PM',
         foods: [dinner],
-        totalCalories: dinner.calories,
-        totalProtein: dinner.protein,
-        totalCarbs: dinner.carbs,
-        totalFats: dinner.fats
+        totalCalories: Math.round(dinner.calories * scaleFactor),
+        totalProtein: Math.round(dinner.protein * scaleFactor),
+        totalCarbs: Math.round(dinner.carbs * scaleFactor),
+        totalFats: Math.round(dinner.fats * scaleFactor)
       }
     ];
 
-    const totalCalories = meals.reduce((acc, meal) => acc + (meal.totalCalories || 0), 0);
-    const totalProtein = meals.reduce((acc, meal) => acc + (meal.totalProtein || 0), 0);
-    const totalCarbs = meals.reduce((acc, meal) => acc + (meal.totalCarbs || 0), 0);
-    const totalFats = meals.reduce((acc, meal) => acc + (meal.totalFats || 0), 0);
+    const totalCalories = scaledMeals.reduce((acc, meal) => acc + (meal.totalCalories || 0), 0);
+    const totalProtein = scaledMeals.reduce((acc, meal) => acc + (meal.totalProtein || 0), 0);
+    const totalCarbs = scaledMeals.reduce((acc, meal) => acc + (meal.totalCarbs || 0), 0);
+    const totalFats = scaledMeals.reduce((acc, meal) => acc + (meal.totalFats || 0), 0);
 
     // Calculate macro percentages
     const proteinCalories = totalProtein * 4;
     const carbsCalories = totalCarbs * 4;
     const fatCalories = totalFats * 9;
 
-    return {
+  return {
       title: `${profile.goal.split('-').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')} Diet Plan`,
-      description: `A balanced North Indian diet plan focused on sustainable ${profile.goal.replace('-', ' ')} through portion control and nutrient-rich foods.`,
+      description: `A high-protein diet plan focused on ${profile.goal.replace('-', ' ')} through optimal protein intake and strategic supplementation.`,
       level: 'Intermediate',
-      duration: profile.goal === 'maintenance' ? 'Ongoing' : '8 weeks',
+      duration: profile.goal === 'maintenance' ? 'Ongoing' : '12 weeks',
       goal: profile.goal,
-      dietType: 'North Indian',
+      dietType: 'High Protein',
       schedule: {
         days: [{
           day: new Date().toLocaleDateString('en-US', { weekday: 'long' }),
-          meals,
+          meals: scaledMeals,
           totalDailyCalories: totalCalories,
-          waterIntake: 2.5,
+          waterIntake: waterIntake,
         }],
       },
-      nutritionalGoals: {
+    nutritionalGoals: {
         dailyCalories: totalCalories,
         proteinPercentage: Math.round((proteinCalories / totalCalories) * 100),
         carbsPercentage: Math.round((carbsCalories / totalCalories) * 100),
@@ -503,25 +522,11 @@ export async function generatePersonalizedDietPlan(profile: any): Promise<DietPl
       },
       restrictions: [
         'No processed foods',
-        'Limited sweets',
-        'No excessive oil',
+        'Limited sugary foods',
+        'Adequate protein with each meal',
         'Fresh ingredients only'
       ],
-      groceryList: indianGroceryList,
-      supplementation: [
-        {
-          name: 'Multivitamin',
-          dosage: '1 tablet',
-          timing: 'Morning with breakfast',
-          notes: 'Helps fill potential nutritional gaps',
-        },
-        {
-          name: 'Calcium with Vitamin D',
-          dosage: '500mg',
-          timing: 'Evening with dinner',
-          notes: 'Supports bone health and immunity',
-        },
-      ],
+      supplementation: supplementInfo[profile.goal as keyof typeof supplementInfo] || supplementInfo.maintenance,
     };
   } catch (error) {
     console.error('Error generating diet plan:', error);

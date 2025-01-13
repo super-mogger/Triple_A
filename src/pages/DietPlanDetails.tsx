@@ -18,111 +18,150 @@ interface DayTotals {
 
 function FoodModal({ food, onClose }: FoodModalProps) {
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
-      <div className="bg-white dark:bg-[#1E1E1E] w-full max-w-2xl rounded-xl shadow-lg overflow-hidden">
-        <div className="relative">
-          {food.imageUrl && (
-            <img 
-              src={food.imageUrl} 
-              alt={food.name} 
-              className="w-full h-64 object-cover"
-            />
-          )}
-          <button
-            onClick={onClose}
-            className="absolute top-4 right-4 p-2 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors"
-          >
-            <X size={20} />
-          </button>
-        </div>
-        
-        <div className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">{food.name}</h2>
-            <div className="flex items-center gap-2">
-              <span className="px-2 py-1 text-xs rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400">
-                {food.category}
-              </span>
-              <span className="px-2 py-1 text-xs rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400">
-                {food.difficulty}
-              </span>
-            </div>
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-start justify-center overflow-y-auto">
+      <div className="relative w-full max-w-2xl mx-auto my-8 px-4">
+        <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-lg">
+          <div className="relative">
+            {food.imageUrl && (
+              <img 
+                src={food.imageUrl} 
+                alt={food.name} 
+                className="w-full h-64 object-cover rounded-t-xl"
+              />
+            )}
+            <button
+              onClick={onClose}
+              className="absolute top-4 right-4 p-2 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors"
+            >
+              <X size={20} />
+            </button>
           </div>
-
-          <div className="grid grid-cols-2 gap-4 mb-6">
-            <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-              <Clock size={16} />
-              <span>Prep: {food.preparationTime}</span>
-              <span>|</span>
-              <span>Cook: {food.cookingTime}</span>
+          
+          <div className="p-8">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{food.name}</h2>
+              <div className="flex items-center gap-2">
+                <span className="px-3 py-1.5 text-xs rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400">
+                  {food.category}
+                </span>
+                <span className="px-3 py-1.5 text-xs rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400">
+                  {food.difficulty}
+                </span>
+              </div>
             </div>
-            {food.allergens && food.allergens.length > 0 && (
-              <div className="text-sm text-amber-600 dark:text-amber-400">
-                Allergens: {food.allergens.join(', ')}
+
+            <div className="grid grid-cols-2 gap-4 mb-8">
+              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                <Clock size={16} />
+                <span>Prep: {food.preparationTime}</span>
+                <span>|</span>
+                <span>Cook: {food.cookingTime}</span>
+              </div>
+              {food.allergens && food.allergens.length > 0 && (
+                <div className="text-sm text-amber-600 dark:text-amber-400">
+                  Allergens: {food.allergens.join(', ')}
+                </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-8 mb-8">
+              <div>
+                <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-4">Nutrition Facts</h3>
+                <div className="space-y-3">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600 dark:text-gray-400">Calories:</span>
+                    <span className="font-medium text-gray-900 dark:text-white">{food.calories} kcal</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600 dark:text-gray-400">Protein:</span>
+                    <span className="font-medium text-blue-600 dark:text-blue-400">{food.protein}g</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600 dark:text-gray-400">Carbs:</span>
+                    <span className="font-medium text-yellow-600 dark:text-yellow-400">{food.carbs}g</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600 dark:text-gray-400">Fats:</span>
+                    <span className="font-medium text-purple-600 dark:text-purple-400">{food.fats}g</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div>
+                <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-4">Details</h3>
+                <div className="space-y-3">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600 dark:text-gray-400">Portion Size:</span>
+                    <span className="font-medium text-gray-900 dark:text-white">{food.portion}</span>
+                  </div>
+                  {food.alternatives && (
+                    <div className="text-sm text-gray-600 dark:text-gray-400">
+                      Available alternatives: Vegetarian, Gluten-Free, Lactose-Free
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {food.instructions && (
+              <div className="mb-8">
+                <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-4">Instructions</h3>
+                <ol className="list-decimal list-inside space-y-3">
+                  {food.instructions.map((instruction, index) => (
+                    <li key={index} className="text-gray-600 dark:text-gray-400 pl-2">{instruction}</li>
+                  ))}
+                </ol>
+              </div>
+            )}
+
+            {food.tips && (
+              <div className="mb-8">
+                <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-4">Pro Tips</h3>
+                <ul className="list-disc list-inside space-y-3">
+                  {food.tips.map((tip, index) => (
+                    <li key={index} className="text-gray-600 dark:text-gray-400 pl-2">{tip}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {food.alternatives && (
+              <div>
+                <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-4">Dietary Alternatives</h3>
+                <div className="space-y-4">
+                  <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                    <h4 className="font-medium text-green-700 dark:text-green-400 mb-2">
+                      Vegetarian Option: {food.alternatives.vegetarian.name}
+                    </h4>
+                    <p className="text-sm text-green-600 dark:text-green-500">
+                      {food.alternatives.vegetarian.changes}
+                      {food.alternatives.vegetarian.protein && (
+                        <span className="ml-2 font-medium">({food.alternatives.vegetarian.protein}g protein)</span>
+                      )}
+                    </p>
+                  </div>
+
+                  <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
+                    <h4 className="font-medium text-yellow-700 dark:text-yellow-400 mb-2">
+                      Gluten-Free Option: {food.alternatives.glutenFree.name}
+                    </h4>
+                    <p className="text-sm text-yellow-600 dark:text-yellow-500">
+                      {food.alternatives.glutenFree.changes}
+                    </p>
+                  </div>
+
+                  <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                    <h4 className="font-medium text-blue-700 dark:text-blue-400 mb-2">
+                      Lactose-Free Option: {food.alternatives.lactoseFree.name}
+                    </h4>
+                    <p className="text-sm text-blue-600 dark:text-blue-500">
+                      {food.alternatives.lactoseFree.changes}
+                    </p>
+                  </div>
+                </div>
               </div>
             )}
           </div>
-
-          <div className="grid grid-cols-2 gap-6 mb-6">
-            <div>
-              <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Nutrition Facts</h3>
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Calories:</span>
-                  <span className="font-medium text-gray-900 dark:text-white">{food.calories} kcal</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Protein:</span>
-                  <span className="font-medium text-blue-600 dark:text-blue-400">{food.protein}g</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Carbs:</span>
-                  <span className="font-medium text-yellow-600 dark:text-yellow-400">{food.carbs}g</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Fats:</span>
-                  <span className="font-medium text-purple-600 dark:text-purple-400">{food.fats}g</span>
-                </div>
-              </div>
-            </div>
-            
-            <div>
-              <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Details</h3>
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Portion Size:</span>
-                  <span className="font-medium text-gray-900 dark:text-white">{food.portion}</span>
-                </div>
-                {food.alternatives && (
-                  <div className="text-sm text-gray-600 dark:text-gray-400">
-                    Alternatives: {food.alternatives.join(', ')}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {food.instructions && (
-            <div className="mb-6">
-              <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Instructions</h3>
-              <ol className="list-decimal list-inside space-y-2">
-                {food.instructions.map((instruction, index) => (
-                  <li key={index} className="text-gray-600 dark:text-gray-400">{instruction}</li>
-                ))}
-              </ol>
-            </div>
-          )}
-
-          {food.tips && (
-            <div>
-              <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Pro Tips</h3>
-              <ul className="list-disc list-inside space-y-2">
-                {food.tips.map((tip, index) => (
-                  <li key={index} className="text-gray-600 dark:text-gray-400">{tip}</li>
-                ))}
-              </ul>
-            </div>
-          )}
         </div>
       </div>
     </div>

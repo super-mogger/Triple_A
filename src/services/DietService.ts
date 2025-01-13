@@ -3,6 +3,18 @@ import { useProfile } from '../context/ProfileContext';
 const SPOONACULAR_API_KEY = '3c97cc2a2fcf450fae17870b5558abc9';
 const BASE_URL = 'https://api.spoonacular.com';
 
+export interface DietaryAlternative {
+  name: string;
+  protein?: number;
+  changes: string;
+}
+
+export interface DietaryAlternatives {
+  vegetarian: DietaryAlternative;
+  glutenFree: DietaryAlternative;
+  lactoseFree: DietaryAlternative;
+}
+
 export interface Food {
   id: number;
   name: string;
@@ -14,7 +26,7 @@ export interface Food {
   instructions?: string[];
   tips?: string[];
   nutritionalInfo?: string[];
-  alternatives?: string[];
+  alternatives?: DietaryAlternatives;
   category?: string;
   allergens?: string[];
   preparationTime?: string;
@@ -98,7 +110,7 @@ interface SpoonacularMeal {
   imageType: string;
   nutrition?: {
     nutrients: {
-      name: string;
+    name: string;
       amount: number;
       unit: string;
     }[];
@@ -172,11 +184,24 @@ function convertSpoonacularMealToFood(meal: SpoonacularMeal, recipe: Spoonacular
     preparationTime: `${recipe.readyInMinutes} mins`,
     difficulty: recipe.readyInMinutes <= 30 ? 'easy' : recipe.readyInMinutes <= 60 ? 'medium' : 'hard',
     instructions: recipe.analyzedInstructions[0]?.steps.map(step => step.step),
-    alternatives: recipe.extendedIngredients.map(ing => ing.name),
+    alternatives: {
+  vegetarian: {
+        name: `Vegetarian ${meal.title}`,
+        changes: 'Replace meat with plant-based protein alternatives'
+      },
+      glutenFree: {
+        name: `Gluten-Free ${meal.title}`,
+        changes: 'Use gluten-free alternatives for any wheat-based ingredients'
+      },
+      lactoseFree: {
+        name: `Lactose-Free ${meal.title}`,
+        changes: 'Use dairy-free alternatives for any milk-based ingredients'
+      }
+    }
   };
 }
 
-// High protein meal database
+// High protein meal database with dietary alternatives
 const proteinRichMeals = {
     breakfast: [
       {
@@ -203,12 +228,26 @@ const proteinRichMeals = {
         "Add chia seeds for omega-3",
         "Use almond milk for fewer calories"
       ],
-      alternatives: ["Protein Smoothie Bowl", "Greek Yogurt Parfait"]
+      alternatives: {
+        vegetarian: {
+          name: "Tofu Scramble with Quinoa",
+          protein: 28,
+          changes: "Replace eggs with scrambled tofu, add nutritional yeast for B12"
+        },
+        glutenFree: {
+          name: "Gluten-Free Protein Bowl",
+          changes: "Use certified gluten-free oats or replace with quinoa"
+        },
+        lactoseFree: {
+          name: "Dairy-Free Protein Oats",
+          changes: "Use almond/soy milk and plant-based protein powder"
+        }
+      }
     },
     {
       id: 2,
       name: "High Protein Toast",
-      calories: 380,
+        calories: 380,
       protein: 28,
       carbs: 35,
       fats: 12,
@@ -229,17 +268,31 @@ const proteinRichMeals = {
         "Add smoked chicken or tuna for variety",
         "Include avocado for healthy fats"
       ],
-      alternatives: ["Protein Pancakes", "Egg White Muffins"]
+      alternatives: {
+        vegetarian: {
+          name: "Tempeh Toast",
+          protein: 24,
+          changes: "Replace eggs with marinated tempeh, add hummus"
+        },
+        glutenFree: {
+          name: "Sweet Potato Toast",
+          changes: "Replace bread with sliced sweet potato, top with protein"
+        },
+        lactoseFree: {
+          name: "Avocado Protein Toast",
+          changes: "Use dairy-free spread, replace cottage cheese with mashed avocado"
+        }
       }
-    ],
-    lunch: [
-      {
+    }
+  ],
+  lunch: [
+    {
       id: 3,
       name: "Chicken Rice Bowl",
       calories: 550,
       protein: 45,
       carbs: 55,
-      fats: 12,
+        fats: 12,
       portion: "300g chicken + 1 cup rice",
       category: "High Protein",
       imageUrl: "https://images.unsplash.com/photo-1546833999-b9f581a1996d",
@@ -257,7 +310,21 @@ const proteinRichMeals = {
         "Use brown rice for more nutrients",
         "Add quinoa for extra protein"
       ],
-      alternatives: ["Turkey Bowl", "Fish Rice Bowl"]
+      alternatives: {
+        vegetarian: {
+          name: "Chickpea Rice Bowl",
+          protein: 35,
+          changes: "Replace chicken with spiced chickpeas and grilled tofu"
+        },
+        glutenFree: {
+          name: "Cauliflower Rice Bowl",
+          changes: "Replace rice with cauliflower rice, ensure sauce is gluten-free"
+        },
+        lactoseFree: {
+          name: "Dairy-Free Rice Bowl",
+          changes: "Use coconut aminos for sauce, avoid cream-based dressings"
+        }
+      }
     },
     {
       id: 4,
@@ -283,7 +350,21 @@ const proteinRichMeals = {
         "Add tofu for extra protein",
         "Include spinach for iron"
       ],
-      alternatives: ["Chickpea Curry", "Quinoa Dal"]
+      alternatives: {
+        vegetarian: {
+          name: "Pure Veg Dal",
+          protein: 25,
+          changes: "Skip egg whites, add tempeh or extra lentils"
+        },
+        glutenFree: {
+          name: "Gluten-Free Dal",
+          changes: "Ensure all spices are certified gluten-free"
+        },
+        lactoseFree: {
+          name: "Coconut Dal",
+          changes: "Use coconut milk instead of regular dairy"
+        }
+      }
       }
     ],
     dinner: [
@@ -311,7 +392,21 @@ const proteinRichMeals = {
         "Add olive oil for healthy fats",
         "Include variety of vegetables"
       ],
-      alternatives: ["Fish Fillet", "Turkey Breast"]
+      alternatives: {
+        vegetarian: {
+          name: "Grilled Seitan Plate",
+          protein: 45,
+          changes: "Replace chicken with seitan or tempeh steak"
+        },
+        glutenFree: {
+          name: "Grilled Tofu Plate",
+          changes: "Use gluten-free marinades, replace seitan with tofu"
+        },
+        lactoseFree: {
+          name: "Dairy-Free Grilled Plate",
+          changes: "Use olive oil based dressings, avoid cream sauces"
+        }
+      }
     },
     {
       id: 6,
@@ -337,7 +432,21 @@ const proteinRichMeals = {
         "Add seeds for extra protein",
         "Use Greek yogurt dressing"
       ],
-      alternatives: ["Chickpea Bowl", "Lentil Bowl"]
+      alternatives: {
+        vegetarian: {
+          name: "Vegan Power Bowl",
+          protein: 32,
+          changes: "Use only plant-based proteins like tempeh, edamame, and quinoa"
+        },
+        glutenFree: {
+          name: "Gluten-Free Power Bowl",
+          changes: "Ensure all grains are certified gluten-free, check sauce ingredients"
+        },
+        lactoseFree: {
+          name: "Dairy-Free Power Bowl",
+          changes: "Use tahini or avocado-based dressing instead of yogurt"
+        }
+      }
     }
   ]
 };
@@ -413,7 +522,7 @@ export function convertNutritionalGoals(goals: any): NutritionalGoals {
   const proteinPercentage = Number(goals.proteinPercentage) || 30;
   const carbsPercentage = Number(goals.carbsPercentage) || 40;
   const fatsPercentage = Number(goals.fatsPercentage) || 30;
-
+  
   return {
     dailyCalories,
     proteinPercentage,
@@ -484,8 +593,8 @@ export async function generatePersonalizedDietPlan(profile: any): Promise<DietPl
       days: [
         {
           day: 'Monday',
-          meals: [
-            {
+      meals: [
+        {
               type: 'breakfast' as const,
               time: '8:00 AM',
               foods: [proteinRichMeals.breakfast[0]],
@@ -505,7 +614,7 @@ export async function generatePersonalizedDietPlan(profile: any): Promise<DietPl
             },
             {
               type: 'dinner' as const,
-              time: '7:00 PM',
+          time: '7:00 PM',
               foods: [proteinRichMeals.dinner[0]],
               totalCalories: proteinRichMeals.dinner[0].calories,
               totalProtein: proteinRichMeals.dinner[0].protein,
@@ -577,7 +686,7 @@ export async function generatePersonalizedDietPlan(profile: any): Promise<DietPl
             },
             {
               type: 'dinner' as const,
-              time: '7:00 PM',
+          time: '7:00 PM',
               foods: [proteinRichMeals.dinner[0]],
               totalCalories: proteinRichMeals.dinner[0].calories,
               totalProtein: proteinRichMeals.dinner[0].protein,

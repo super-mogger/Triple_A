@@ -648,8 +648,8 @@ export default function Workouts() {
                 <div className="p-6 border-b border-gray-200 dark:border-gray-700">
                   <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                     <Calendar className="w-5 h-5 text-emerald-500" />
-                    {currentDayWorkout.focus}
-                  </h2>
+                  {currentDayWorkout.focus}
+                </h2>
                 </div>
 
                 <div className="p-6">
@@ -834,14 +834,14 @@ export default function Workouts() {
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Workout Plans</h1>
-        <button
-          onClick={() => setShowFilters(!showFilters)}
+            <button
+              onClick={() => setShowFilters(!showFilters)}
           className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-700 dark:text-gray-200"
-        >
+            >
           <Filter className="w-4 h-4" />
           Filter
-        </button>
-      </div>
+            </button>
+          </div>
 
       {/* Filter Panel */}
       {showFilters && (
@@ -859,7 +859,7 @@ export default function Workouts() {
                 <option value="intermediate">Intermediate</option>
                 <option value="advanced">Advanced</option>
               </select>
-            </div>
+              </div>
             
             <div className="space-y-2">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Duration</label>
@@ -873,7 +873,7 @@ export default function Workouts() {
                 <option value="8">8 Weeks</option>
                 <option value="12">12 Weeks</option>
               </select>
-            </div>
+                    </div>
 
             <div className="space-y-2">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Goal</label>
@@ -887,7 +887,7 @@ export default function Workouts() {
                 <option value="muscle">Muscle Gain</option>
                 <option value="endurance">Endurance</option>
               </select>
-            </div>
+                        </div>
 
             <div className="space-y-2">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Equipment</label>
@@ -901,58 +901,58 @@ export default function Workouts() {
                 <option value="minimal">Minimal</option>
                 <option value="bodyweight">Bodyweight</option>
               </select>
+                    </div>
+                  </div>
+              </div>
+      )}
+              
+              {error && (
+                <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 mb-6">
+                  <p className="text-red-500">{error}</p>
             </div>
-          </div>
-        </div>
-      )}
+          )}
 
-      {error && (
-        <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 mb-6">
-          <p className="text-red-500">{error}</p>
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredWorkouts.map((workout, index) => (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredWorkouts.map((workout, index) => (
           <div key={index} className="bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-sm hover:shadow-md dark:shadow-gray-900/30 transition-all border border-gray-200 dark:border-gray-700">
-            <div className="relative h-48">
-              <img
-                src={workout.imageUrl}
-                alt={workout.title}
-                className="w-full h-full object-cover"
-              />
-            </div>
+                    <div className="relative h-48">
+                  <img
+                    src={workout.imageUrl}
+                    alt={workout.title}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
             <div className="p-6">
               <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">{workout.title}</h3>
               <div className="space-y-3 text-sm mb-4">
                 <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
                   <Clock className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                  <span>Duration: {workout.duration}</span>
-                </div>
+                      <span>Duration: {workout.duration}</span>
+                    </div>
                 <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
                   <Target className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                  <span>Goal: {workout.goal}</span>
-                </div>
+                      <span>Goal: {workout.goal}</span>
+                    </div>
                 <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
                   <Gauge className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                  <span>Level: {workout.level}</span>
-                </div>
+                          <span>Level: {workout.level}</span>
+                        </div>
                 <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
                   <Wrench className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                  <span>Equipment: {workout.equipment}</span>
-                </div>
-              </div>
+                      <span>Equipment: {workout.equipment}</span>
+                    </div>
+                  </div>
               <p className="text-gray-600 dark:text-gray-400 text-sm mb-6">{workout.description}</p>
-              <button
-                onClick={() => selectWorkout(workout)}
+                      <button 
+                        onClick={() => selectWorkout(workout)}
                 className="w-full bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-3 rounded-lg transition-colors font-medium"
-              >
-                Start Workout Plan
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
+                      >
+                        Start Workout Plan
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+        </div>
   );
 } 

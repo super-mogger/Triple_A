@@ -32,7 +32,7 @@ export default function DietPlan() {
     }
   };
 
-  return (
+    return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#121212] py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center mb-8">
@@ -100,12 +100,12 @@ export default function DietPlan() {
                 <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
                   <Target className="w-4 h-4 text-gray-400 dark:text-gray-500" />
                   <span>Goal: Muscle Gain</span>
-                </div>
+      </div>
               </div>
               <p className="text-gray-600 dark:text-gray-400 text-sm mb-6">
                 High-protein diet plan designed to support muscle growth and recovery.
               </p>
-              <button 
+              <button
                 onClick={() => handleStartDietPlan('muscle-gain')}
                 className="w-full bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-3 rounded-lg transition-colors font-medium"
               >

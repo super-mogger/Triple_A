@@ -66,25 +66,17 @@ export default function MembershipDetails() {
   };
 
   return (
-    <div className="min-h-screen bg-[#121212] text-white">
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => navigate('/profile')}
-              className="text-gray-400 hover:text-white transition-colors"
-            >
-              <ArrowLeft className="w-6 h-6" />
-            </button>
-            <h1 className="text-2xl font-semibold">Membership Details</h1>
-          </div>
+    <div className="min-h-screen bg-gray-50 dark:bg-[#121212] py-8">
+      <div className="max-w-7xl mx-auto px-4">
+        {/* Back Button with Title */}
+        <div className="flex items-center gap-3 mb-6">
           <button
-            onClick={() => navigate('/payment-history')}
-            className="text-gray-400 hover:text-white transition-colors text-sm"
+            onClick={() => navigate(-1)}
+            className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
           >
-            Payment History
+            <ArrowLeft className="w-6 h-6" />
           </button>
+          <h1 className="text-xl font-semibold text-gray-900 dark:text-white">Membership</h1>
         </div>
 
         {/* Active Membership */}

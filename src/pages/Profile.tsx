@@ -1,4 +1,4 @@
-import { Edit, Crown } from 'lucide-react';
+import { Edit, Crown, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useProfile } from '../context/ProfileContext';
 import { useAuth } from '../context/AuthContext';
@@ -137,8 +137,19 @@ export default function Profile() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#121212] text-gray-900 dark:text-white">
-      <div className="max-w-3xl mx-auto px-4 py-4 pb-24">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#121212] py-8">
+      <div className="max-w-7xl mx-auto px-4">
+        {/* Back Button with Title */}
+        <div className="flex items-center gap-3 mb-6">
+          <button
+            onClick={() => navigate(-1)}
+            className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+          >
+            <ArrowLeft className="w-6 h-6" />
+          </button>
+          <h1 className="text-xl font-semibold text-gray-900 dark:text-white">Profile</h1>
+        </div>
+
         {/* User Info Card */}
         <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 mb-8">
           <div className="p-6 flex items-center">

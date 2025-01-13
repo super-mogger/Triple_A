@@ -3,10 +3,10 @@ import { useTheme } from '../context/ThemeContext';
 import { useProfile } from '../context/ProfileContext';
 import { usePayment } from '../context/PaymentContext';
 import { useNavigate } from 'react-router-dom';
-import {
-  Apple,
-  Coffee,
-  Utensils,
+import { 
+  Apple, 
+  Coffee, 
+  Utensils, 
   Moon,
   Plus,
   ChevronDown,
@@ -159,12 +159,12 @@ export default function DietPlan() {
                     <Info className="w-4 h-4 text-emerald-500" />
                   </h4>
                   <p className="text-sm text-gray-400">Portion: {food.portion}</p>
-                </div>
+      </div>
                 <div className="text-right">
                   <p className="text-sm text-emerald-500">{food.calories} kcal</p>
                   <p className="text-xs text-gray-400">P: {food.protein}g | C: {food.carbs}g | F: {food.fats}g</p>
-                </div>
-              </div>
+      </div>
+    </div>
             </button>
           ))}
         </div>
@@ -172,7 +172,7 @@ export default function DietPlan() {
           <div className="flex justify-between text-sm">
             <span className="text-gray-400">Total:</span>
             <span className="text-emerald-500">{totalCalories} kcal | P: {totalProtein}g | C: {totalCarbs}g | F: {totalFats}g</span>
-          </div>
+      </div>
         </div>
       </div>
     );
@@ -180,8 +180,8 @@ export default function DietPlan() {
 
   const renderFoodModal = () => {
     if (!selectedFood) return null;
-
-    return (
+          
+          return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
         <div className="bg-[#1E1E1E] rounded-xl p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
           <div className="flex justify-between items-start mb-6">
@@ -427,9 +427,9 @@ export default function DietPlan() {
                 View Membership Plans
               </button>
             </div>
-          </div>
-        </div>
-      </div>
+                        </div>
+                        </div>
+                      </div>
     );
   }
 
@@ -516,8 +516,8 @@ export default function DietPlan() {
           )}
         </div>
         {selectedFood && renderFoodModal()}
-      </div>
-    );
+            </div>
+          );
   }
 
   return (

@@ -1,5 +1,6 @@
 import axios from 'axios';
 import * as cheerio from 'cheerio';
+import { workoutPlans } from '../data/workoutPlans';
 
 export interface Exercise {
   name: string;
@@ -47,261 +48,241 @@ export interface WorkoutPlan {
   description: string;
   imageUrl?: string;
   schedule?: WeeklySchedule;
+  splitType?: SplitType;
+  showSplitMenu?: boolean;
 }
 
 // Exercise database
 const exerciseDatabase = {
-  beginner: {
-    chest: [
-      { name: "Push-Ups", sets: "3", reps: "10-12", notes: "Keep body straight, lower chest to ground" },
-      { name: "Incline Dumbbell Press", sets: "3", reps: "12-15", notes: "Control the weight throughout" },
-      { name: "Machine Chest Press", sets: "3", reps: "12-15", notes: "Focus on chest contraction" }
-    ],
-    back: [
-      { name: "Assisted Pull-Ups", sets: "3", reps: "8-10", notes: "Use assistance machine if needed" },
-      { name: "Lat Pulldowns", sets: "3", reps: "12-15", notes: "Pull to upper chest" },
-      { name: "Seated Cable Rows", sets: "3", reps: "12-15", notes: "Keep back straight" }
-    ],
-    legs: [
-      { name: "Bodyweight Squats", sets: "3", reps: "15-20", notes: "Keep weight on heels" },
-      { name: "Leg Press", sets: "3", reps: "12-15", notes: "Don't lock knees at top" },
-      { name: "Walking Lunges", sets: "3", reps: "10 each leg", notes: "Step forward with control" }
-    ],
-    shoulders: [
-      { name: "Dumbbell Lateral Raises", sets: "3", reps: "12-15", notes: "Keep slight bend in elbows" },
-      { name: "Machine Shoulder Press", sets: "3", reps: "12-15", notes: "Don't lock elbows at top" }
-    ],
-    arms: [
-      { name: "Dumbbell Curls", sets: "3", reps: "12-15", notes: "Control the movement" },
-      { name: "Tricep Pushdowns", sets: "3", reps: "12-15", notes: "Keep elbows at sides" }
-    ],
-    core: [
-      { name: "Crunches", sets: "3", reps: "15-20", notes: "Focus on contraction" },
-      { name: "Plank", sets: "3", reps: "30 seconds", notes: "Keep body straight" }
-    ]
-  },
   intermediate: {
     chest: [
-      { name: "Barbell Bench Press", sets: "4", reps: "8-12", notes: "Control the weight" },
-      { name: "Incline Dumbbell Press", sets: "3", reps: "10-12", notes: "Full range of motion" },
-      { name: "Cable Flyes", sets: "3", reps: "12-15", notes: "Focus on squeeze" }
+      { name: "Barbell Bench Press", sets: "4", reps: "8-12", notes: "Control the weight throughout" },
+      { name: "Incline Dumbbell Press", sets: "3", reps: "10-12", notes: "Focus on upper chest" },
+      { name: "Decline Bench Press", sets: "3", reps: "10-12", notes: "Focus on lower chest" },
+      { name: "Dumbbell Flyes", sets: "3", reps: "12-15", notes: "Feel the stretch" },
+      { name: "Machine Chest Press", sets: "3", reps: "12-15", notes: "Focus on contraction" },
+      { name: "Push-Ups", sets: "3", reps: "12-15", notes: "Keep body straight" },
+      { name: "Cable Flyes", sets: "3", reps: "15-20", notes: "Constant tension" },
+      { name: "Dips", sets: "3", reps: "10-15", notes: "Lean forward for chest focus" }
     ],
     back: [
-      { name: "Pull-Ups", sets: "4", reps: "8-10", notes: "Full range of motion" },
-      { name: "Barbell Rows", sets: "4", reps: "10-12", notes: "Keep back straight" },
-      { name: "Face Pulls", sets: "3", reps: "12-15", notes: "Pull to forehead" }
+      { name: "Barbell Rows", sets: "4", reps: "8-12", notes: "Keep back straight" },
+      { name: "Lat Pulldowns", sets: "3", reps: "10-12", notes: "Wide grip" },
+      { name: "Deadlifts", sets: "4", reps: "8-10", notes: "Maintain neutral spine" },
+      { name: "Seated Cable Rows", sets: "3", reps: "12-15", notes: "Squeeze shoulder blades" },
+      { name: "Face Pulls", sets: "3", reps: "15-20", notes: "Pull to forehead" },
+      { name: "Single-Arm Dumbbell Rows", sets: "3", reps: "12-15", notes: "Full range of motion" },
+      { name: "Pull-Ups", sets: "3", reps: "8-12", notes: "Use assistance if needed" },
+      { name: "T-Bar Rows", sets: "3", reps: "10-12", notes: "Keep elbows close" }
     ],
     legs: [
-      { name: "Barbell Squats", sets: "4", reps: "8-12", notes: "Break parallel" },
-      { name: "Romanian Deadlifts", sets: "4", reps: "10-12", notes: "Feel hamstring stretch" },
-      { name: "Bulgarian Split Squats", sets: "3", reps: "10-12 each", notes: "Keep front knee stable" }
+      { name: "Barbell Squats", sets: "4", reps: "8-12", notes: "Keep chest up" },
+      { name: "Romanian Deadlifts", sets: "3", reps: "10-12", notes: "Feel hamstring stretch" },
+      { name: "Leg Press", sets: "3", reps: "12-15", notes: "Feet shoulder width" },
+      { name: "Walking Lunges", sets: "3", reps: "12 each leg", notes: "Keep torso upright" },
+      { name: "Leg Extensions", sets: "3", reps: "15-20", notes: "Focus on quad squeeze" },
+      { name: "Leg Curls", sets: "3", reps: "15-20", notes: "Control the movement" },
+      { name: "Calf Raises", sets: "4", reps: "15-20", notes: "Full range of motion" },
+      { name: "Bulgarian Split Squats", sets: "3", reps: "12 each leg", notes: "Keep front knee stable" }
     ],
     shoulders: [
-      { name: "Military Press", sets: "4", reps: "8-12", notes: "Press overhead with control" },
+      { name: "Military Press", sets: "4", reps: "8-12", notes: "Keep core tight" },
+      { name: "Lateral Raises", sets: "3", reps: "12-15", notes: "Control the movement" },
+      { name: "Front Raises", sets: "3", reps: "12-15", notes: "Alternate arms" },
+      { name: "Reverse Flyes", sets: "3", reps: "15-20", notes: "Focus on rear delts" },
+      { name: "Arnold Press", sets: "3", reps: "10-12", notes: "Rotate through press" },
       { name: "Upright Rows", sets: "3", reps: "12-15", notes: "Pull to chin level" },
-      { name: "Face Pulls", sets: "3", reps: "12-15", notes: "Focus on rear delts" }
+      { name: "Face Pulls", sets: "3", reps: "15-20", notes: "External rotation" },
+      { name: "Shrugs", sets: "3", reps: "12-15", notes: "Hold at top" }
     ],
     arms: [
-      { name: "EZ Bar Curls", sets: "4", reps: "10-12", notes: "Keep elbows steady" },
-      { name: "Skull Crushers", sets: "4", reps: "10-12", notes: "Lower to forehead" },
-      { name: "Hammer Curls", sets: "3", reps: "12-15", notes: "Neutral grip" }
+      { name: "Barbell Curls", sets: "4", reps: "8-12", notes: "Keep elbows still" },
+      { name: "Skull Crushers", sets: "3", reps: "10-12", notes: "Keep elbows in" },
+      { name: "Hammer Curls", sets: "3", reps: "12-15", notes: "Alternate arms" },
+      { name: "Tricep Pushdowns", sets: "3", reps: "12-15", notes: "Keep elbows at sides" },
+      { name: "Incline Curls", sets: "3", reps: "12-15", notes: "Full range of motion" },
+      { name: "Diamond Push-Ups", sets: "3", reps: "12-15", notes: "Elbows close to body" },
+      { name: "Preacher Curls", sets: "3", reps: "12-15", notes: "Full extension" },
+      { name: "Overhead Tricep Extension", sets: "3", reps: "12-15", notes: "Keep elbows close" }
     ],
     core: [
-      { name: "Hanging Leg Raises", sets: "3", reps: "12-15", notes: "Control the movement" },
-      { name: "Russian Twists", sets: "3", reps: "20 each side", notes: "Keep feet off ground" },
-      { name: "Cable Woodchoppers", sets: "3", reps: "12-15 each side", notes: "Rotate from core" }
-    ]
-  },
-  advanced: {
-    chest: [
-      { name: "Incline Barbell Press", sets: "4", reps: "6-8", notes: "Heavy weight, control descent" },
-      { name: "Weighted Dips", sets: "4", reps: "8-10", notes: "Lean forward for chest focus" },
-      { name: "Decline Bench Press", sets: "3", reps: "8-10", notes: "Full range of motion" }
-    ],
-    back: [
-      { name: "Weighted Pull-Ups", sets: "4", reps: "6-8", notes: "Add weight via belt" },
-      { name: "Pendlay Rows", sets: "4", reps: "6-8", notes: "Explosive concentric" },
-      { name: "Meadows Rows", sets: "3", reps: "8-10", notes: "Focus on contraction" }
-    ],
-    legs: [
-      { name: "Front Squats", sets: "4", reps: "6-8", notes: "Keep elbows high" },
-      { name: "Deadlifts", sets: "4", reps: "5-6", notes: "Maintain neutral spine" },
-      { name: "Walking Lunges", sets: "3", reps: "12 each leg", notes: "Hold dumbbells" }
-    ],
-    shoulders: [
-      { name: "Push Press", sets: "4", reps: "6-8", notes: "Use leg drive" },
-      { name: "Arnold Press", sets: "4", reps: "8-10", notes: "Rotate through movement" },
-      { name: "Lateral Raise Drop Sets", sets: "3", reps: "12-10-8", notes: "Drop weight each set" }
-    ],
-    arms: [
-      { name: "Close Grip Bench", sets: "4", reps: "6-8", notes: "Keep elbows tucked" },
-      { name: "Barbell 21s", sets: "3", reps: "21", notes: "7 lower, 7 upper, 7 full" },
-      { name: "Preacher Curls", sets: "4", reps: "8-10", notes: "Strict form" }
-    ],
-    core: [
-      { name: "Dragon Flags", sets: "3", reps: "8-10", notes: "Control throughout" },
-      { name: "Ab Wheel Rollouts", sets: "4", reps: "10-12", notes: "Full extension" },
-      { name: "Weighted Decline Crunches", sets: "3", reps: "12-15", notes: "Hold plate on chest" }
+      { name: "Planks", sets: "3", reps: "45-60 sec", notes: "Keep body straight" },
+      { name: "Russian Twists", sets: "3", reps: "20 each side", notes: "Control rotation" },
+      { name: "Hanging Leg Raises", sets: "3", reps: "12-15", notes: "No swinging" },
+      { name: "Cable Crunches", sets: "3", reps: "15-20", notes: "Round your back" },
+      { name: "Side Planks", sets: "3", reps: "30 sec each", notes: "Keep hips high" },
+      { name: "Ab Wheel Rollouts", sets: "3", reps: "10-12", notes: "Extend fully" },
+      { name: "Dragon Flags", sets: "3", reps: "8-12", notes: "Control descent" },
+      { name: "Woodchoppers", sets: "3", reps: "12-15 each side", notes: "Rotate from hips" }
     ]
   }
 };
 
-function generateWeeklySchedule(level: string, goal: string, equipment: string): DailyWorkout[] {
-  const exercises = exerciseDatabase[level as keyof typeof exerciseDatabase];
-  
-  // Different splits based on goals
-  if (goal.toLowerCase().includes('strength')) {
-    return [
-      {
-        day: "Monday",
-        focus: "Chest & Triceps",
-        exercises: [...exercises.chest, ...exercises.arms.filter(e => e.name.includes('Tricep'))]
+const splitTypes = {
+  'bro-split': {
+    name: "Bro Split",
+    schedule: [
+      { 
+        day: 'Monday', 
+        focus: 'Chest Day', 
+        exercises: exerciseDatabase.intermediate.chest
       },
-      {
-        day: "Tuesday",
-        focus: "Back & Biceps",
-        exercises: [...exercises.back, ...exercises.arms.filter(e => e.name.includes('Curl'))]
+      { 
+        day: 'Tuesday', 
+        focus: 'Back Day', 
+        exercises: exerciseDatabase.intermediate.back
       },
-      {
-        day: "Wednesday",
-        focus: "Rest & Recovery",
-        exercises: [],
-        notes: "Focus on stretching and mobility work"
+      { 
+        day: 'Wednesday', 
+        focus: 'Shoulders Day', 
+        exercises: exerciseDatabase.intermediate.shoulders
       },
-      {
-        day: "Thursday",
-        focus: "Legs",
-        exercises: exercises.legs
+      { 
+        day: 'Thursday', 
+        focus: 'Arms Day', 
+        exercises: exerciseDatabase.intermediate.arms
       },
-      {
-        day: "Friday",
-        focus: "Shoulders & Arms",
-        exercises: [...exercises.shoulders, ...exercises.arms]
+      { 
+        day: 'Friday', 
+        focus: 'Legs Day', 
+        exercises: exerciseDatabase.intermediate.legs
       },
-      {
-        day: "Saturday",
-        focus: "Core & Cardio",
-        exercises: [...exercises.core]
+      { 
+        day: 'Saturday', 
+        focus: 'Core & Cardio', 
+        exercises: exerciseDatabase.intermediate.core
       },
-      {
-        day: "Sunday",
-        focus: "Rest & Recovery",
-        exercises: [],
-        notes: "Light cardio and stretching optional"
-      }
-    ];
-  } else if (goal.toLowerCase().includes('muscle')) {
-    return [
-      {
-        day: "Monday",
-        focus: "Push (Chest, Shoulders, Triceps)",
-        exercises: [...exercises.chest, ...exercises.shoulders, ...exercises.arms.filter(e => e.name.includes('Tricep'))]
-      },
-      {
-        day: "Tuesday",
-        focus: "Pull (Back & Biceps)",
-        exercises: [...exercises.back, ...exercises.arms.filter(e => e.name.includes('Curl'))]
-      },
-      {
-        day: "Wednesday",
-        focus: "Legs & Core",
-        exercises: [...exercises.legs, ...exercises.core]
-      },
-      {
-        day: "Thursday",
-        focus: "Rest & Recovery",
-        exercises: [],
-        notes: "Focus on stretching and mobility work"
-      },
-      {
-        day: "Friday",
-        focus: "Push (Chest, Shoulders, Triceps)",
-        exercises: [...exercises.chest, ...exercises.shoulders, ...exercises.arms.filter(e => e.name.includes('Tricep'))]
-      },
-      {
-        day: "Saturday",
-        focus: "Pull (Back & Biceps)",
-        exercises: [...exercises.back, ...exercises.arms.filter(e => e.name.includes('Curl'))]
-      },
-      {
-        day: "Sunday",
-        focus: "Rest & Recovery",
-        exercises: [],
-        notes: "Light cardio and stretching optional"
-      }
-    ];
-  } else {
-    // Fat Loss - Full body workouts with more frequency
-    return [
-      {
-        day: "Monday",
-        focus: "Full Body + HIIT",
+      { day: 'Sunday', focus: 'Rest & Recovery', exercises: [] }
+    ]
+  },
+  'push-pull-legs': {
+    name: "Push/Pull/Legs",
+    schedule: [
+      { 
+        day: 'Monday', 
+        focus: 'Push Day', 
         exercises: [
-          exercises.chest[0],
-          exercises.back[0],
-          exercises.legs[0],
-          exercises.shoulders[0],
-          exercises.core[0]
+          ...exerciseDatabase.intermediate.chest.slice(0, 4),
+          ...exerciseDatabase.intermediate.shoulders.slice(0, 2),
+          ...exerciseDatabase.intermediate.arms.slice(1, 3)
         ]
       },
-      {
-        day: "Tuesday",
-        focus: "Cardio & Core",
-        exercises: exercises.core,
-        notes: "30 minutes moderate intensity cardio"
-      },
-      {
-        day: "Wednesday",
-        focus: "Full Body + HIIT",
+      { 
+        day: 'Tuesday', 
+        focus: 'Pull Day', 
         exercises: [
-          exercises.chest[1],
-          exercises.back[1],
-          exercises.legs[1],
-          exercises.shoulders[1],
-          exercises.core[1]
+          ...exerciseDatabase.intermediate.back.slice(0, 5),
+          ...exerciseDatabase.intermediate.arms.slice(0, 3)
         ]
       },
-      {
-        day: "Thursday",
-        focus: "Active Recovery",
-        exercises: [],
-        notes: "Light cardio and mobility work"
+      { 
+        day: 'Wednesday', 
+        focus: 'Legs Day', 
+        exercises: exerciseDatabase.intermediate.legs
       },
-      {
-        day: "Friday",
-        focus: "Full Body + HIIT",
+      { 
+        day: 'Thursday', 
+        focus: 'Push Day', 
         exercises: [
-          exercises.chest[2] || exercises.chest[0],
-          exercises.back[2] || exercises.back[0],
-          exercises.legs[2] || exercises.legs[0],
-          exercises.shoulders[0],
-          exercises.core[0]
+          ...exerciseDatabase.intermediate.chest.slice(4, 8),
+          ...exerciseDatabase.intermediate.shoulders.slice(2, 4),
+          ...exerciseDatabase.intermediate.arms.slice(3, 5)
         ]
       },
-      {
-        day: "Saturday",
-        focus: "Cardio & Core",
-        exercises: exercises.core,
-        notes: "30 minutes high intensity interval training"
+      { 
+        day: 'Friday', 
+        focus: 'Pull Day', 
+        exercises: [
+          ...exerciseDatabase.intermediate.back.slice(3, 8),
+          ...exerciseDatabase.intermediate.arms.slice(4, 7)
+        ]
       },
-      {
-        day: "Sunday",
-        focus: "Rest & Recovery",
-        exercises: [],
-        notes: "Complete rest or light stretching"
-      }
-    ];
+      { 
+        day: 'Saturday', 
+        focus: 'Legs Day', 
+        exercises: [
+          ...exerciseDatabase.intermediate.legs.slice(0, 6),
+          ...exerciseDatabase.intermediate.core.slice(0, 2)
+        ]
+      },
+      { day: 'Sunday', focus: 'Rest & Recovery', exercises: [] }
+    ]
+  },
+  'upper-lower': {
+    name: "Upper/Lower",
+    schedule: [
+      { 
+        day: 'Monday', 
+        focus: 'Upper Body', 
+        exercises: [
+          ...exerciseDatabase.intermediate.chest.slice(0, 3),
+          ...exerciseDatabase.intermediate.back.slice(0, 2),
+          ...exerciseDatabase.intermediate.shoulders.slice(0, 2),
+          ...exerciseDatabase.intermediate.arms.slice(0, 1)
+        ]
+      },
+      { 
+        day: 'Tuesday', 
+        focus: 'Lower Body', 
+        exercises: exerciseDatabase.intermediate.legs
+      },
+      { 
+        day: 'Wednesday', 
+        focus: 'Upper Body', 
+        exercises: [
+          ...exerciseDatabase.intermediate.chest.slice(3, 5),
+          ...exerciseDatabase.intermediate.back.slice(2, 4),
+          ...exerciseDatabase.intermediate.shoulders.slice(2, 4),
+          ...exerciseDatabase.intermediate.arms.slice(2, 4)
+        ]
+      },
+      { 
+        day: 'Thursday', 
+        focus: 'Lower Body', 
+        exercises: [
+          ...exerciseDatabase.intermediate.legs.slice(0, 6),
+          ...exerciseDatabase.intermediate.core.slice(0, 2)
+        ]
+      },
+      { 
+        day: 'Friday', 
+        focus: 'Upper Body', 
+        exercises: [
+          ...exerciseDatabase.intermediate.chest.slice(5, 7),
+          ...exerciseDatabase.intermediate.back.slice(4, 6),
+          ...exerciseDatabase.intermediate.shoulders.slice(4, 6),
+          ...exerciseDatabase.intermediate.arms.slice(4, 6)
+        ]
+      },
+      { 
+        day: 'Saturday', 
+        focus: 'Lower Body', 
+        exercises: [
+          ...exerciseDatabase.intermediate.legs.slice(2, 8),
+          ...exerciseDatabase.intermediate.core.slice(2, 4)
+        ]
+      },
+      { day: 'Sunday', focus: 'Rest & Recovery', exercises: [] }
+    ]
   }
+};
+
+type SplitType = 'bro-split' | 'push-pull-legs' | 'upper-lower';
+
+export function generateWeeklySchedule(level: string, goal: string, equipment: string, splitType: SplitType = 'bro-split'): DailyWorkout[] {
+  // Return the selected split type's schedule, defaulting to bro split if not found
+  return splitTypes[splitType]?.schedule || splitTypes['bro-split'].schedule;
 }
 
 export function generatePersonalizedWorkoutPlan(profileData: any): WorkoutPlan {
   const { preferences } = profileData;
   const level = preferences?.fitnessLevel || 'beginner';
   const goal = preferences?.goal || 'build muscle';
-  const equipment = 'full gym'; // Default to full gym, adjust based on preferences if needed
+  const equipment = 'full gym';
+  const splitType: SplitType = 'bro-split';
 
   const schedule = {
-    days: generateWeeklySchedule(level, goal, equipment)
+    days: generateWeeklySchedule(level, goal, equipment, splitType)
   };
 
   return {
@@ -313,7 +294,8 @@ export function generatePersonalizedWorkoutPlan(profileData: any): WorkoutPlan {
     equipment,
     description: `Personalized workout program based on your ${level} fitness level, focused on ${goal}.`,
     imageUrl: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80",
-    schedule
+    schedule,
+    splitType
   };
 }
 
@@ -427,14 +409,17 @@ const mockWorkoutDetails = {
   ]
 };
 
-export async function scrapeWorkoutPlans(): Promise<WorkoutPlan[]> {
-  // Return mock data instead of scraping
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve(mockWorkouts);
-    }, 1000);
-  });
-}
+export const scrapeWorkoutPlans = async (): Promise<WorkoutPlan[]> => {
+  // Return the predefined workout plans with split types
+  return workoutPlans.map(plan => ({
+    ...plan,
+    splitType: 'bro-split', // Default split type
+    showSplitMenu: false, // Initialize menu as closed
+    schedule: {
+      days: generateWeeklySchedule(plan.level, plan.goal, plan.equipment, 'bro-split')
+    }
+  }));
+};
 
 export const scrapeWorkoutDetails = async (url: string): Promise<Partial<WorkoutPlan>> => {
   // Instead of scraping, return mock data

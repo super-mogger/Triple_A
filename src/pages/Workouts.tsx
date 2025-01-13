@@ -204,8 +204,9 @@ export default function Workouts() {
       setError(null);
       const data = await scrapeWorkoutPlans();
       const personalPlan = generatePersonalizedWorkoutPlan(profileData);
-      setWorkouts([personalPlan, ...data]);
-      setFilteredWorkouts([personalPlan, ...data]);
+      const existingPlan = data.find(p => p.title === personalPlan.title);
+      setWorkouts(existingPlan ? data : [personalPlan, ...data]);
+      setFilteredWorkouts(existingPlan ? data : [personalPlan, ...data]);
     } catch (err) {
       setError('Failed to load workout plans. Please try again later.');
       setTimeout(() => setError(null), 5000);

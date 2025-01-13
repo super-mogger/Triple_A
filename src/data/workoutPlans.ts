@@ -2,7 +2,7 @@ export const workoutPlans = [
   {
     id: 'intermediate-build',
     title: 'Intermediate Build muscle Program',
-    description: 'Personalized workout program based on your intermediate fitness level, focused on building muscle mass.',
+    description: 'Personalized workout program based on your intermediate fitness level,focused on building muscle mass.',
     imageUrl: 'https://images.unsplash.com/photo-1576678927484-cc907957088c?q=80&w=1470&auto=format&fit=crop',
     level: 'Intermediate',
     duration: '12 Weeks',

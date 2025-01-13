@@ -1,15 +1,165 @@
 import React, { useState, useEffect } from 'react';
-import { scrapeWorkoutPlans, scrapeWorkoutDetails, generatePersonalizedWorkoutPlan, getExerciseDetails, WorkoutPlan, Exercise, DailyWorkout, WeeklySchedule, ExerciseDetails } from '../services/WorkoutService';
-import { Dumbbell, Filter, ChevronDown, X, Clock, Target, Gauge, Wrench, Calendar, Play, Info } from 'lucide-react';
+import { scrapeWorkoutPlans, scrapeWorkoutDetails, generatePersonalizedWorkoutPlan, getExerciseDetails, generateWeeklySchedule, WorkoutPlan, Exercise, DailyWorkout, WeeklySchedule, ExerciseDetails } from '../services/WorkoutService';
+import { Dumbbell, Filter, ChevronDown, X, Clock, Target, Gauge, Wrench, Calendar, Play, Info, BarChart } from 'lucide-react';
 import { usePayment } from '../context/PaymentContext';
 import { useProfile } from '../context/ProfileContext';
 import { useNavigate } from 'react-router-dom';
+import { MuscleRadarChart } from '../components/MuscleRadarChart';
+
+type SplitType = 'bro-split' | 'push-pull-legs' | 'upper-lower';
+
+const splitTypes = {
+  'bro-split': {
+    name: "Bro Split",
+    description: "Train one muscle group per day"
+  },
+  'push-pull-legs': {
+    name: "Push/Pull/Legs",
+    description: "Group muscles by movement pattern"
+  },
+  'upper-lower': {
+    name: "Upper/Lower",
+    description: "Alternate between upper and lower body"
+  }
+};
 
 interface Filters {
   level: string;
   duration: string;
   goal: string;
   equipment: string;
+}
+
+// Define the exercise mapping outside the function to keep it clean
+const exerciseToMuscleMap: { [key: string]: string[] } = {
+  // Chest Exercises
+  'Bench Press': ['Chest', 'Shoulders', 'Arms'],
+  'Incline Bench Press': ['Chest', 'Shoulders', 'Arms'],
+  'Decline Bench Press': ['Chest', 'Arms'],
+  'Push-Ups': ['Chest', 'Shoulders', 'Arms', 'Core'],
+  'Dumbbell Flyes': ['Chest'],
+  'Cable Flyes': ['Chest'],
+  'Dips': ['Chest', 'Arms'],
+
+  // Back Exercises
+  'Pull-Ups': ['Back', 'Arms'],
+  'Lat Pulldowns': ['Back', 'Arms'],
+  'Barbell Rows': ['Back', 'Arms'],
+  'Dumbbell Rows': ['Back', 'Arms'],
+  'Face Pulls': ['Back', 'Shoulders'],
+  'Deadlifts': ['Back', 'Legs', 'Core'],
+  'Romanian Deadlifts': ['Back', 'Legs'],
+
+  // Shoulder Exercises
+  'Shoulder Press': ['Shoulders', 'Arms'],
+  'Military Press': ['Shoulders', 'Arms'],
+  'Lateral Raises': ['Shoulders'],
+  'Front Raises': ['Shoulders'],
+  'Upright Rows': ['Shoulders', 'Back'],
+  'Arnold Press': ['Shoulders', 'Arms'],
+
+  // Arm Exercises
+  'Bicep Curls': ['Arms'],
+  'Hammer Curls': ['Arms'],
+  'Tricep Extensions': ['Arms'],
+  'Tricep Pushdowns': ['Arms'],
+  'Skull Crushers': ['Arms'],
+  'Preacher Curls': ['Arms'],
+  'Diamond Push-Ups': ['Arms', 'Chest'],
+
+  // Leg Exercises
+  'Squats': ['Legs', 'Core'],
+  'Front Squats': ['Legs', 'Core'],
+  'Leg Press': ['Legs'],
+  'Lunges': ['Legs', 'Core'],
+  'Bulgarian Split Squats': ['Legs'],
+  'Calf Raises': ['Legs'],
+  'Leg Extensions': ['Legs'],
+  'Leg Curls': ['Legs'],
+  'Hip Thrusts': ['Legs', 'Core'],
+
+  // Core Exercises
+  'Plank': ['Core'],
+  'Russian Twists': ['Core'],
+  'Crunches': ['Core'],
+  'Leg Raises': ['Core'],
+  'Mountain Climbers': ['Core'],
+  'Ab Wheel Rollouts': ['Core'],
+  'Wood Chops': ['Core'],
+  'Side Planks': ['Core'],
+  'Hanging Leg Raises': ['Core'],
+
+  // Compound Movements
+  'Clean and Press': ['Shoulders', 'Legs', 'Core', 'Back'],
+  'Kettlebell Swings': ['Legs', 'Core', 'Back'],
+  'Burpees': ['Legs', 'Chest', 'Core'],
+  'Thrusters': ['Legs', 'Shoulders', 'Core']
+};
+
+function calculateMuscleTargeting(exercise: Exercise | ExerciseDetails | Exercise[]): { muscle: string; value: number; }[] {
+  if (!Array.isArray(exercise) && 'targetMuscles' in exercise && exercise.targetMuscles) {
+    const muscleData: { muscle: string; value: number; }[] = [];
+
+    // Add primary target muscles with 100% activation
+    exercise.targetMuscles.forEach(muscle => {
+      muscleData.push({
+        muscle,
+        value: 100
+      });
+    });
+
+    // Add secondary muscles with 60% activation
+    if (exercise.secondaryMuscles) {
+      exercise.secondaryMuscles.forEach(muscle => {
+        if (!muscleData.some(m => m.muscle === muscle)) {
+          muscleData.push({
+            muscle,
+            value: 60
+          });
+        }
+      });
+    }
+
+    return muscleData.sort((a, b) => b.value - a.value);
+  }
+
+  // Fallback for array of exercises or other cases
+  const muscleGroups = {
+    'Chest': 0,
+    'Back': 0,
+    'Shoulders': 0,
+    'Arms': 0,
+    'Legs': 0,
+    'Core': 0
+  };
+
+  if (Array.isArray(exercise)) {
+    exercise.forEach(ex => {
+      const targetMuscles = exerciseToMuscleMap[ex.name] || [];
+      const contributionPerMuscle = 100 / (exercise.length * targetMuscles.length || 1);
+      
+      targetMuscles.forEach(muscle => {
+        if (muscle in muscleGroups) {
+          muscleGroups[muscle as keyof typeof muscleGroups] += contributionPerMuscle;
+        }
+      });
+    });
+  } else if ('name' in exercise) {
+    const targetMuscles = exerciseToMuscleMap[exercise.name] || [];
+    targetMuscles.forEach(muscle => {
+      if (muscle in muscleGroups) {
+        muscleGroups[muscle as keyof typeof muscleGroups] = 100;
+      }
+    });
+  }
+
+  return Object.entries(muscleGroups)
+    .map(([muscle, value]) => ({
+      muscle,
+      value: Math.round(value)
+    }))
+    .filter(item => item.value > 0)
+    .sort((a, b) => b.value - a.value);
 }
 
 export default function Workouts() {
@@ -209,11 +359,25 @@ export default function Workouts() {
             </div>
           </div>
 
+          {/* Muscle Targeting Chart */}
+          <div className="mb-8 bg-[#282828] p-4 rounded-lg">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Muscle Activation Analysis</h3>
+              <div className="text-sm text-gray-400">
+                Hover over the chart for detailed percentages
+              </div>
+            </div>
+            <MuscleRadarChart 
+              muscleData={calculateMuscleTargeting(selectedExercise)} 
+              detailedView={true}
+            />
+          </div>
+
           {/* Exercise Info Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
             {/* Target Muscles */}
             <div className="bg-[#282828] p-4 rounded-lg">
-              <h3 className="font-semibold mb-3">Target Muscles</h3>
+              <h3 className="font-semibold mb-3">Primary Target Muscles</h3>
               <div className="flex flex-wrap gap-2">
                 {selectedExercise.targetMuscles.map((muscle, index) => (
                   <span key={index} className="bg-emerald-500/10 text-emerald-500 px-3 py-1 rounded-full text-sm">
@@ -279,13 +443,13 @@ export default function Workouts() {
           </div>
 
           {/* Tips */}
-          <div className="mb-6 sm:mb-8">
-            <h3 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">Pro Tips</h3>
-            <div className="bg-[#282828] rounded-lg p-3 sm:p-4">
-              <ul className="space-y-2 sm:space-y-3">
+          <div className="mb-6">
+            <h3 className="text-xl font-semibold mb-4">Pro Tips</h3>
+            <div className="bg-[#282828] rounded-lg p-4">
+              <ul className="space-y-2">
                 {selectedExercise.tips.map((tip, index) => (
-                  <li key={index} className="flex items-start gap-2 sm:gap-3 text-gray-300 text-sm sm:text-base">
-                    <div className="flex-shrink-0 w-4 h-4 sm:w-5 sm:h-5 bg-blue-500/10 text-blue-500 rounded-full flex items-center justify-center text-[10px] sm:text-xs mt-0.5">
+                  <li key={index} className="flex items-start gap-2 text-gray-300">
+                    <div className="flex-shrink-0 w-5 h-5 bg-blue-500/10 text-blue-500 rounded-full flex items-center justify-center text-xs mt-0.5">
                       ✓
                     </div>
                     {tip}
@@ -294,7 +458,54 @@ export default function Workouts() {
               </ul>
             </div>
           </div>
-          <div className="h-4 sm:h-6"></div>
+        </div>
+      </div>
+    );
+  };
+
+  const selectWorkout = (workout: WorkoutPlan) => {
+    setSelectedWorkout(workout);
+    setShowWorkoutList(false);
+    localStorage.setItem('selectedWorkout', JSON.stringify(workout));
+  };
+
+  const renderWorkoutCard = (workout: WorkoutPlan) => {
+    return (
+      <div className="bg-[#1E1E1E] rounded-xl overflow-hidden">
+        <div className="relative h-48">
+          <img
+            src={workout.imageUrl}
+            alt={workout.title}
+            className="w-full h-full object-cover"
+          />
+        </div>
+        <div className="p-4">
+          <h3 className="text-xl font-semibold mb-2">{workout.title}</h3>
+          <div className="space-y-2 text-sm text-gray-400 mb-4">
+            <div className="flex items-center gap-2">
+              <Clock className="w-4 h-4" />
+              <span>Duration: {workout.duration}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Target className="w-4 h-4" />
+              <span>Goal: {workout.goal}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Gauge className="w-4 h-4" />
+              <span>Level: {workout.level}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Wrench className="w-4 h-4" />
+              <span>Equipment: {workout.equipment}</span>
+            </div>
+          </div>
+          <p className="text-gray-400 text-sm mb-4">{workout.description}</p>
+          <button
+            onClick={() => selectWorkout(workout)}
+            className="w-full bg-emerald-500 text-white px-4 py-2 rounded-lg hover:bg-emerald-600 transition-colors"
+          >
+            Start Workout Plan
+          </button>
         </div>
       </div>
     );
@@ -359,12 +570,55 @@ export default function Workouts() {
                 <h1 className="text-2xl sm:text-3xl font-bold">{selectedWorkout.title}</h1>
                 <p className="text-gray-400 mt-2 text-sm sm:text-base">{selectedWorkout.description}</p>
               </div>
-              <button
-                onClick={changeWorkoutPlan}
-                className="w-full sm:w-auto bg-emerald-500 text-white px-4 py-2 rounded-lg hover:bg-emerald-600 transition-colors"
-              >
-                Change Workout Plan
-              </button>
+              <div className="flex flex-col gap-2 w-full sm:w-auto">
+                {/* Split Selection */}
+                <div className="relative">
+                  <button
+                    onClick={() => {
+                      setSelectedWorkout({
+                        ...selectedWorkout,
+                        showSplitMenu: !selectedWorkout.showSplitMenu
+                      });
+                    }}
+                    className="w-full bg-[#282828] hover:bg-[#333] text-sm px-4 py-2 rounded-lg flex items-center justify-between"
+                  >
+                    <span>Split: {splitTypes[selectedWorkout.splitType || 'bro-split'].name}</span>
+                    <ChevronDown className="w-4 h-4" />
+                  </button>
+                  {selectedWorkout.showSplitMenu && (
+                    <div className="absolute z-10 w-full mt-1 bg-[#282828] rounded-lg shadow-lg overflow-hidden">
+                      {Object.entries(splitTypes).map(([key, value]) => (
+                        <button
+                          key={key}
+                          onClick={() => {
+                            const updatedWorkout = {
+                              ...selectedWorkout,
+                              splitType: key as SplitType,
+                              showSplitMenu: false,
+                              schedule: {
+                                days: generateWeeklySchedule(selectedWorkout.level, selectedWorkout.goal, selectedWorkout.equipment, key as SplitType)
+                              }
+                            };
+                            setSelectedWorkout(updatedWorkout);
+                            localStorage.setItem('selectedWorkout', JSON.stringify(updatedWorkout));
+                          }}
+                          className={`w-full px-4 py-2 text-left text-sm hover:bg-[#333] ${
+                            selectedWorkout.splitType === key ? 'bg-emerald-500/10 text-emerald-500' : ''
+                          }`}
+                        >
+                          {value.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <button
+                  onClick={changeWorkoutPlan}
+                  className="bg-emerald-500 text-white px-4 py-2 rounded-lg hover:bg-emerald-600 transition-colors"
+                >
+                  Change Workout Plan
+                </button>
+              </div>
             </div>
 
             {/* Day Selection - Scrollable on mobile */}
@@ -394,6 +648,7 @@ export default function Workouts() {
                   <Calendar className="w-5 h-5 sm:w-6 sm:h-6" />
                   {currentDayWorkout.focus}
                 </h2>
+
                 {renderDaySchedule(currentDayWorkout)}
               </div>
             )}
@@ -425,6 +680,20 @@ export default function Workouts() {
                     title={`${selectedExercise.name} demonstration`}
                   />
                 </div>
+              </div>
+
+              {/* Muscle Targeting Chart */}
+              <div className="mb-6 sm:mb-8 bg-[#282828] p-4 rounded-lg">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold">Muscle Activation Analysis</h3>
+                  <div className="text-sm text-gray-400">
+                    Hover over the chart for detailed percentages
+                  </div>
+                </div>
+                <MuscleRadarChart 
+                  muscleData={calculateMuscleTargeting(selectedExercise)} 
+                  detailedView={true}
+                />
               </div>
 
               {/* Exercise Info Grid */}
@@ -530,132 +799,129 @@ export default function Workouts() {
   return (
     <>
       <div className="min-h-screen bg-[#121212] text-white py-8">
-        <div className="max-w-6xl mx-auto px-4">
-          {/* Header */}
-          <div className="flex justify-between items-center mb-8">
-            <h1 className="text-3xl font-bold">Workout Plans</h1>
+        <div className="max-w-7xl mx-auto px-4">
+          {showWorkoutList ? (
+            <>
+              <div className="flex justify-between items-center mb-6">
+                <h1 className="text-2xl font-bold">Workout Plans</h1>
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className="flex items-center gap-2 px-4 py-2 bg-[#282828] rounded-lg hover:bg-[#333] transition-colors"
+                  className="flex items-center gap-2 bg-[#282828] px-4 py-2 rounded-lg hover:bg-[#333] transition-colors"
             >
               <Filter className="w-5 h-5" />
               <span>Filter</span>
-              <ChevronDown className={`w-4 h-4 transform transition-transform ${showFilters ? 'rotate-180' : ''}`} />
             </button>
           </div>
 
-          {/* Filters */}
-          {showFilters && (
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8 bg-[#1E1E1E] p-6 rounded-xl">
-              <div>
-                <label className="block text-sm text-gray-400 mb-2">Level</label>
-                <select
-                  value={filters.level}
-                  onChange={(e) => setFilters({ ...filters, level: e.target.value })}
-                  className="w-full bg-[#282828] rounded-lg px-4 py-2 text-white border border-gray-700"
-                >
-                  <option value="">All Levels</option>
-                  <option value="beginner">Beginner</option>
-                  <option value="intermediate">Intermediate</option>
-                  <option value="advanced">Advanced</option>
-                </select>
+              {error && (
+                <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 mb-6">
+                  <p className="text-red-500">{error}</p>
               </div>
-              <div>
-                <label className="block text-sm text-gray-400 mb-2">Goal</label>
-                <select
-                  value={filters.goal}
-                  onChange={(e) => setFilters({ ...filters, goal: e.target.value })}
-                  className="w-full bg-[#282828] rounded-lg px-4 py-2 text-white border border-gray-700"
-                >
-                  <option value="">All Goals</option>
-                  <option value="build muscle">Build Muscle</option>
-                  <option value="lose fat">Lose Fat</option>
-                  <option value="strength">Build Strength</option>
-                </select>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredWorkouts.map((workout, index) => (
+                  <div key={index} className="bg-[#1E1E1E] rounded-xl overflow-hidden">
+                    <div className="relative h-48">
+                      <img
+                        src={workout.imageUrl}
+                        alt={workout.title}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="p-4">
+                      <h3 className="text-xl font-semibold mb-2">{workout.title}</h3>
+                      <div className="space-y-2 text-sm text-gray-400 mb-4">
+                        <div className="flex items-center gap-2">
+                          <Clock className="w-4 h-4" />
+                          <span>Duration: {workout.duration}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Target className="w-4 h-4" />
+                          <span>Goal: {workout.goal}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Gauge className="w-4 h-4" />
+                          <span>Level: {workout.level}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Wrench className="w-4 h-4" />
+                          <span>Equipment: {workout.equipment}</span>
+                        </div>
+                      </div>
+                      <p className="text-gray-400 text-sm mb-4">{workout.description}</p>
+                      <button
+                        onClick={() => selectWorkout(workout)}
+                        className="w-full bg-emerald-500 text-white px-4 py-2 rounded-lg hover:bg-emerald-600 transition-colors"
+                      >
+                        Start Workout Plan
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
-              <div>
-                <label className="block text-sm text-gray-400 mb-2">Duration</label>
-                <select
-                  value={filters.duration}
-                  onChange={(e) => setFilters({ ...filters, duration: e.target.value })}
-                  className="w-full bg-[#282828] rounded-lg px-4 py-2 text-white border border-gray-700"
+            </>
+          ) : (
+            <>
+              <div className="flex justify-between items-center mb-6">
+                <h1 className="text-2xl font-bold">Workout Plans</h1>
+                <button
+                  onClick={() => setShowFilters(!showFilters)}
+                  className="flex items-center gap-2 bg-[#282828] px-4 py-2 rounded-lg hover:bg-[#333] transition-colors"
                 >
-                  <option value="">Any Duration</option>
-                  <option value="4 weeks">4 Weeks</option>
-                  <option value="8 weeks">8 Weeks</option>
-                  <option value="12 weeks">12 Weeks</option>
-                </select>
+                  <Filter className="w-5 h-5" />
+                  <span>Filter</span>
+                </button>
               </div>
-              <div>
-                <label className="block text-sm text-gray-400 mb-2">Equipment</label>
-                <select
-                  value={filters.equipment}
-                  onChange={(e) => setFilters({ ...filters, equipment: e.target.value })}
-                  className="w-full bg-[#282828] rounded-lg px-4 py-2 text-white border border-gray-700"
-                >
-                  <option value="">Any Equipment</option>
-                  <option value="full gym">Full Gym</option>
-                  <option value="dumbbells">Dumbbells</option>
-                  <option value="bodyweight">Bodyweight</option>
-                </select>
-              </div>
+              
+              {error && (
+                <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 mb-6">
+                  <p className="text-red-500">{error}</p>
             </div>
           )}
 
-          {/* Workout Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredWorkouts.map((workout, index) => (
-              <div
-                key={index}
-                className="bg-[#1E1E1E] rounded-xl overflow-hidden hover:ring-2 hover:ring-emerald-500 transition-all cursor-pointer"
-                onClick={() => selectWorkoutPlan(workout)}
-              >
-                {workout.imageUrl && (
+                  <div key={index} className="bg-[#1E1E1E] rounded-xl overflow-hidden">
+                    <div className="relative h-48">
                   <img
                     src={workout.imageUrl}
                     alt={workout.title}
-                    className="w-full h-48 object-cover"
-                  />
-                )}
-                <div className="p-6">
-                  <h3 className="text-lg font-semibold mb-2">{workout.title}</h3>
-                  <div className="space-y-2 mb-4">
-                    <div className="flex items-center gap-2 text-sm text-gray-400">
-                      <Gauge className="w-4 h-4" />
-                      <span>Level: {workout.level}</span>
+                        className="w-full h-full object-cover"
+                      />
                     </div>
-                    <div className="flex items-center gap-2 text-sm text-gray-400">
+                    <div className="p-4">
+                      <h3 className="text-xl font-semibold mb-2">{workout.title}</h3>
+                      <div className="space-y-2 text-sm text-gray-400 mb-4">
+                        <div className="flex items-center gap-2">
                       <Clock className="w-4 h-4" />
                       <span>Duration: {workout.duration}</span>
                     </div>
-                    <div className="flex items-center gap-2 text-sm text-gray-400">
+                        <div className="flex items-center gap-2">
                       <Target className="w-4 h-4" />
                       <span>Goal: {workout.goal}</span>
                     </div>
-                    <div className="flex items-center gap-2 text-sm text-gray-400">
+                        <div className="flex items-center gap-2">
+                          <Gauge className="w-4 h-4" />
+                          <span>Level: {workout.level}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
                       <Wrench className="w-4 h-4" />
                       <span>Equipment: {workout.equipment}</span>
                     </div>
                   </div>
-                  <p className="text-gray-400 text-sm line-clamp-2">{workout.description}</p>
-                </div>
+                      <p className="text-gray-400 text-sm mb-4">{workout.description}</p>
+                      <button 
+                        onClick={() => selectWorkout(workout)}
+                        className="w-full bg-emerald-500 text-white px-4 py-2 rounded-lg hover:bg-emerald-600 transition-colors"
+                      >
+                        Start Workout Plan
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-
-          {/* Error Message */}
-          {error && (
-            <div className="fixed bottom-4 right-4 bg-red-500/10 border border-red-500/20 rounded-lg p-4 max-w-md animate-fade-in">
-              <div className="flex items-center gap-2">
-                <h3 className="text-red-500 font-medium">{error}</h3>
-                <button 
-                  onClick={() => setError(null)}
-                  className="text-gray-400 hover:text-white ml-2"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
+            </>
           )}
         </div>
       </div>

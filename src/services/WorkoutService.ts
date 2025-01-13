@@ -56,64 +56,271 @@ export interface WorkoutPlan {
 const exerciseDatabase = {
   intermediate: {
     chest: [
-      { name: "Barbell Bench Press", sets: "4", reps: "8-12", notes: "Control the weight throughout" },
-      { name: "Incline Dumbbell Press", sets: "3", reps: "10-12", notes: "Focus on upper chest" },
-      { name: "Decline Bench Press", sets: "3", reps: "10-12", notes: "Focus on lower chest" },
-      { name: "Dumbbell Flyes", sets: "3", reps: "12-15", notes: "Feel the stretch" },
-      { name: "Machine Chest Press", sets: "3", reps: "12-15", notes: "Focus on contraction" },
-      { name: "Push-Ups", sets: "3", reps: "12-15", notes: "Keep body straight" },
-      { name: "Cable Flyes", sets: "3", reps: "15-20", notes: "Constant tension" },
-      { name: "Dips", sets: "3", reps: "10-15", notes: "Lean forward for chest focus" }
+      { 
+        name: "Barbell Bench Press",
+        sets: "4",
+        reps: "8-12",
+        notes: "Control the weight throughout",
+        targetMuscles: ["Chest", "Front Deltoids"],
+        secondaryMuscles: ["Triceps", "Core"],
+        videoUrl: "https://www.youtube.com/watch?v=rT7DgCr-3pg",
+        instructions: [
+          "Lie flat on bench with feet on ground",
+          "Grip bar slightly wider than shoulder width",
+          "Lower bar to mid-chest",
+          "Press bar up until arms are extended"
+        ]
+      },
+      { 
+        name: "Incline Dumbbell Press",
+        sets: "3",
+        reps: "10-12",
+        notes: "Focus on upper chest",
+        targetMuscles: ["Upper Chest", "Front Deltoids"],
+        secondaryMuscles: ["Triceps", "Core"],
+        videoUrl: "https://www.youtube.com/watch?v=8iPEnn-ltC8",
+        instructions: [
+          "Set bench to 30-45 degree angle",
+          "Press dumbbells up with palms facing forward",
+          "Lower dumbbells to chest level",
+          "Keep core tight throughout movement"
+        ]
+      },
+      { 
+        name: "Dips",
+        sets: "3",
+        reps: "10-15",
+        notes: "Lean forward for chest focus",
+        targetMuscles: ["Lower Chest", "Triceps"],
+        secondaryMuscles: ["Front Deltoids", "Core"],
+        videoUrl: "https://www.youtube.com/watch?v=2z8JmcrW-As",
+        instructions: [
+          "Grip parallel bars with straight arms",
+          "Lean forward slightly for chest focus",
+          "Lower body until upper arms are parallel to ground",
+          "Push back up to starting position"
+        ]
+      }
     ],
     back: [
-      { name: "Barbell Rows", sets: "4", reps: "8-12", notes: "Keep back straight" },
-      { name: "Lat Pulldowns", sets: "3", reps: "10-12", notes: "Wide grip" },
-      { name: "Deadlifts", sets: "4", reps: "8-10", notes: "Maintain neutral spine" },
-      { name: "Seated Cable Rows", sets: "3", reps: "12-15", notes: "Squeeze shoulder blades" },
-      { name: "Face Pulls", sets: "3", reps: "15-20", notes: "Pull to forehead" },
-      { name: "Single-Arm Dumbbell Rows", sets: "3", reps: "12-15", notes: "Full range of motion" },
-      { name: "Pull-Ups", sets: "3", reps: "8-12", notes: "Use assistance if needed" },
-      { name: "T-Bar Rows", sets: "3", reps: "10-12", notes: "Keep elbows close" }
+      { 
+        name: "Deadlifts",
+        sets: "4",
+        reps: "8-10",
+        notes: "Maintain neutral spine",
+        targetMuscles: ["Lower Back", "Hamstrings"],
+        secondaryMuscles: ["Upper Back", "Glutes", "Core"],
+        videoUrl: "https://www.youtube.com/watch?v=op9kVnSso6Q",
+        instructions: [
+          "Stand with feet hip-width apart",
+          "Bend at hips and knees to grip bar",
+          "Keep back straight and core tight",
+          "Drive through heels to stand up"
+        ]
+      },
+      { 
+        name: "Pull-Ups",
+        sets: "3",
+        reps: "8-12",
+        notes: "Use assistance if needed",
+        targetMuscles: ["Latissimus Dorsi", "Upper Back"],
+        secondaryMuscles: ["Biceps", "Core", "Forearms"],
+        videoUrl: "https://www.youtube.com/watch?v=eGo4IYlbE5g",
+        instructions: [
+          "Grip bar slightly wider than shoulders",
+          "Pull body up until chin over bar",
+          "Lower with control",
+          "Keep core engaged throughout"
+        ]
+      }
     ],
     legs: [
-      { name: "Barbell Squats", sets: "4", reps: "8-12", notes: "Keep chest up" },
-      { name: "Romanian Deadlifts", sets: "3", reps: "10-12", notes: "Feel hamstring stretch" },
-      { name: "Leg Press", sets: "3", reps: "12-15", notes: "Feet shoulder width" },
-      { name: "Walking Lunges", sets: "3", reps: "12 each leg", notes: "Keep torso upright" },
-      { name: "Leg Extensions", sets: "3", reps: "15-20", notes: "Focus on quad squeeze" },
-      { name: "Leg Curls", sets: "3", reps: "15-20", notes: "Control the movement" },
-      { name: "Calf Raises", sets: "4", reps: "15-20", notes: "Full range of motion" },
-      { name: "Bulgarian Split Squats", sets: "3", reps: "12 each leg", notes: "Keep front knee stable" }
+      { 
+        name: "Barbell Squats",
+        sets: "4",
+        reps: "8-12",
+        notes: "Keep chest up",
+        targetMuscles: ["Quadriceps", "Glutes"],
+        secondaryMuscles: ["Hamstrings", "Core", "Lower Back"],
+        videoUrl: "https://www.youtube.com/watch?v=1oed-UmAxFs",
+        instructions: [
+          "Position bar on upper back",
+          "Feet shoulder-width apart",
+          "Break at hips and knees simultaneously",
+          "Keep chest up and core tight"
+        ]
+      },
+      { 
+        name: "Romanian Deadlifts",
+        sets: "3",
+        reps: "10-12",
+        notes: "Feel hamstring stretch",
+        targetMuscles: ["Hamstrings", "Glutes"],
+        secondaryMuscles: ["Lower Back", "Core"],
+        videoUrl: "https://www.youtube.com/watch?v=JCXUYuzwNrM",
+        instructions: [
+          "Hold bar at hip level",
+          "Hinge at hips while keeping legs nearly straight",
+          "Lower bar along thighs",
+          "Feel stretch in hamstrings"
+        ]
+      },
+      { 
+        name: "Bulgarian Split Squats",
+        sets: "3",
+        reps: "12 each leg",
+        notes: "Keep front knee stable",
+        targetMuscles: ["Quadriceps", "Glutes"],
+        secondaryMuscles: ["Hamstrings", "Core", "Calves"],
+        videoUrl: "https://www.youtube.com/watch?v=2C-uNgKwPLE",
+        instructions: [
+          "Place rear foot on bench",
+          "Keep front foot forward",
+          "Lower until back knee nearly touches ground",
+          "Push through front heel to rise"
+        ]
+      }
     ],
     shoulders: [
-      { name: "Military Press", sets: "4", reps: "8-12", notes: "Keep core tight" },
-      { name: "Lateral Raises", sets: "3", reps: "12-15", notes: "Control the movement" },
-      { name: "Front Raises", sets: "3", reps: "12-15", notes: "Alternate arms" },
-      { name: "Reverse Flyes", sets: "3", reps: "15-20", notes: "Focus on rear delts" },
-      { name: "Arnold Press", sets: "3", reps: "10-12", notes: "Rotate through press" },
-      { name: "Upright Rows", sets: "3", reps: "12-15", notes: "Pull to chin level" },
-      { name: "Face Pulls", sets: "3", reps: "15-20", notes: "External rotation" },
-      { name: "Shrugs", sets: "3", reps: "12-15", notes: "Hold at top" }
+      { 
+        name: "Military Press",
+        sets: "4",
+        reps: "8-12",
+        notes: "Keep core tight",
+        targetMuscles: ["Front Deltoids", "Middle Deltoids"],
+        secondaryMuscles: ["Triceps", "Upper Chest", "Core"],
+        videoUrl: "https://www.youtube.com/watch?v=2yjwXTZQDDI",
+        instructions: [
+          "Stand with feet shoulder-width apart",
+          "Hold bar at shoulder level",
+          "Press bar overhead while keeping core tight",
+          "Lower bar with control"
+        ]
+      },
+      { 
+        name: "Lateral Raises",
+        sets: "3",
+        reps: "12-15",
+        notes: "Control the movement",
+        targetMuscles: ["Middle Deltoids"],
+        secondaryMuscles: ["Front Deltoids", "Traps"],
+        videoUrl: "https://www.youtube.com/watch?v=3VcKaXpzqRo",
+        instructions: [
+          "Stand with dumbbells at sides",
+          "Raise arms out to sides",
+          "Keep slight bend in elbows",
+          "Lower with control"
+        ]
+      },
+      { 
+        name: "Face Pulls",
+        sets: "3",
+        reps: "15-20",
+        notes: "External rotation",
+        targetMuscles: ["Rear Deltoids", "Upper Back"],
+        secondaryMuscles: ["Middle Deltoids", "Rotator Cuff"],
+        videoUrl: "https://www.youtube.com/watch?v=eIq5CB9JfKE",
+        instructions: [
+          "Set cable at head height",
+          "Pull rope to face level",
+          "Pull elbows high and back",
+          "Focus on rear deltoids"
+        ]
+      }
     ],
     arms: [
-      { name: "Barbell Curls", sets: "4", reps: "8-12", notes: "Keep elbows still" },
-      { name: "Skull Crushers", sets: "3", reps: "10-12", notes: "Keep elbows in" },
-      { name: "Hammer Curls", sets: "3", reps: "12-15", notes: "Alternate arms" },
-      { name: "Tricep Pushdowns", sets: "3", reps: "12-15", notes: "Keep elbows at sides" },
-      { name: "Incline Curls", sets: "3", reps: "12-15", notes: "Full range of motion" },
-      { name: "Diamond Push-Ups", sets: "3", reps: "12-15", notes: "Elbows close to body" },
-      { name: "Preacher Curls", sets: "3", reps: "12-15", notes: "Full extension" },
-      { name: "Overhead Tricep Extension", sets: "3", reps: "12-15", notes: "Keep elbows close" }
+      { 
+        name: "Barbell Curls",
+        sets: "4",
+        reps: "8-12",
+        notes: "Keep elbows still",
+        targetMuscles: ["Biceps"],
+        secondaryMuscles: ["Forearms"],
+        videoUrl: "https://www.youtube.com/watch?v=kwG2ipFRgfo",
+        instructions: [
+          "Stand with feet shoulder-width",
+          "Grip bar at shoulder width",
+          "Curl bar while keeping elbows still",
+          "Lower with control"
+        ]
+      },
+      { 
+        name: "Skull Crushers",
+        sets: "3",
+        reps: "10-12",
+        notes: "Keep elbows in",
+        targetMuscles: ["Triceps"],
+        secondaryMuscles: ["Forearms"],
+        videoUrl: "https://www.youtube.com/watch?v=d_KZxkY_0cM",
+        instructions: [
+          "Lie on bench with bar overhead",
+          "Keep upper arms vertical",
+          "Lower bar to forehead",
+          "Extend arms fully"
+        ]
+      },
+      { 
+        name: "Hammer Curls",
+        sets: "3",
+        reps: "12-15",
+        notes: "Alternate arms",
+        targetMuscles: ["Biceps", "Brachialis"],
+        secondaryMuscles: ["Forearms"],
+        videoUrl: "https://www.youtube.com/watch?v=zC3nLlEvin4",
+        instructions: [
+          "Stand with dumbbells at sides",
+          "Palms facing each other",
+          "Curl one dumbbell at a time",
+          "Keep elbows close to body"
+        ]
+      }
     ],
     core: [
-      { name: "Planks", sets: "3", reps: "45-60 sec", notes: "Keep body straight" },
-      { name: "Russian Twists", sets: "3", reps: "20 each side", notes: "Control rotation" },
-      { name: "Hanging Leg Raises", sets: "3", reps: "12-15", notes: "No swinging" },
-      { name: "Cable Crunches", sets: "3", reps: "15-20", notes: "Round your back" },
-      { name: "Side Planks", sets: "3", reps: "30 sec each", notes: "Keep hips high" },
-      { name: "Ab Wheel Rollouts", sets: "3", reps: "10-12", notes: "Extend fully" },
-      { name: "Dragon Flags", sets: "3", reps: "8-12", notes: "Control descent" },
-      { name: "Woodchoppers", sets: "3", reps: "12-15 each side", notes: "Rotate from hips" }
+      { 
+        name: "Planks",
+        sets: "3",
+        reps: "45-60 sec",
+        notes: "Keep body straight",
+        targetMuscles: ["Core", "Rectus Abdominis"],
+        secondaryMuscles: ["Lower Back", "Shoulders"],
+        videoUrl: "https://www.youtube.com/watch?v=ASdvN_XEl_c",
+        instructions: [
+          "Forearms and toes on ground",
+          "Keep body in straight line",
+          "Engage core throughout",
+          "Don't let hips sag"
+        ]
+      },
+      { 
+        name: "Hanging Leg Raises",
+        sets: "3",
+        reps: "12-15",
+        notes: "No swinging",
+        targetMuscles: ["Lower Abs", "Hip Flexors"],
+        secondaryMuscles: ["Upper Abs", "Obliques"],
+        videoUrl: "https://www.youtube.com/watch?v=Pr1ieGZ5atk",
+        instructions: [
+          "Hang from pull-up bar",
+          "Keep legs straight",
+          "Raise legs to horizontal",
+          "Lower with control"
+        ]
+      },
+      { 
+        name: "Russian Twists",
+        sets: "3",
+        reps: "20 each side",
+        notes: "Control rotation",
+        targetMuscles: ["Obliques", "Core"],
+        secondaryMuscles: ["Hip Flexors", "Lower Back"],
+        videoUrl: "https://www.youtube.com/watch?v=wkD8rjkodUI",
+        instructions: [
+          "Sit with knees bent",
+          "Lean back slightly",
+          "Rotate torso side to side",
+          "Keep feet off ground"
+        ]
+      }
     ]
   }
 };

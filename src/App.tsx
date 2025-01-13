@@ -21,6 +21,7 @@ import MembershipDetails from './pages/MembershipDetails';
 import PaymentHistory from './pages/PaymentHistory';
 import { PaymentProvider } from './context/PaymentContext';
 import { PaymentPlans } from './components/PaymentPlans';
+import Achievements from './pages/Achievements';
 
 function App() {
   return (
@@ -34,6 +35,7 @@ function App() {
               <Route path="/signup" element={<SignUp />} />
               <Route path="/user-info" element={<UserInfoForm />} />
               <Route path="/verify-email" element={<VerifyEmail />} />
+              <Route path="/plans" element={<PaymentPlans />} />
               <Route 
                 element={
                   <PrivateRoute>
@@ -50,8 +52,8 @@ function App() {
                 <Route path="/profile/edit" element={<ProfileEdit />} />
                 <Route path="/membership" element={<MembershipDetails />} />
                 <Route path="/payment-history" element={<PaymentHistory />} />
+                <Route path="/achievements" element={<Achievements />} />
               </Route>
-              <Route path="/plans" element={<PaymentPlans />} />
               <Route path="*" element={<Navigate to="/welcome" replace />} />
             </Routes>
           </PaymentProvider>

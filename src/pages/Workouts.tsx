@@ -162,6 +162,119 @@ function calculateMuscleTargeting(exercise: Exercise | ExerciseDetails | Exercis
     .sort((a, b) => b.value - a.value);
 }
 
+function WeekdaySchedule({ 
+  schedule, 
+  currentDay, 
+  setCurrentDay 
+}: { 
+  schedule: WeeklySchedule; 
+  currentDay: string; 
+  setCurrentDay: (day: string) => void;
+}) {
+  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const today = days[new Date().getDay() === 0 ? 6 : new Date().getDay() - 1];
+  const scrollRef = React.useRef<HTMLDivElement>(null);
+
+  const dayMap: { [key: string]: string } = {
+    'Mon': 'Monday',
+    'Tue': 'Tuesday',
+    'Wed': 'Wednesday',
+    'Thu': 'Thursday',
+    'Fri': 'Friday',
+    'Sat': 'Saturday',
+    'Sun': 'Sunday'
+  };
+
+  const workoutTypeMap: { [key: string]: string } = {
+    'Chest': 'Chest',
+    'Back': 'Back',
+    'Shoulders': 'Shoulders',
+    'Arms': 'Arms',
+    'Legs': 'Legs',
+    'Core': 'Core',
+    'Rest': 'Rest',
+    'Push': 'Push',
+    'Pull': 'Pull'
+  };
+
+  const getWorkoutType = (daySchedule: DailyWorkout | undefined): string => {
+    if (!daySchedule || !daySchedule.exercises || daySchedule.exercises.length === 0) {
+      return 'Rest';
+    }
+    // Get the primary muscle group from the first exercise
+    const muscleGroup = daySchedule.exercises[0].targetMuscles?.[0] || 'Rest';
+    return muscleGroup;
+  };
+
+  // Scroll to active day when it changes
+  React.useEffect(() => {
+    if (scrollRef.current) {
+      const activeButton = scrollRef.current.querySelector('[data-active="true"]');
+      if (activeButton) {
+        const container = scrollRef.current;
+        const scrollLeft = activeButton.getBoundingClientRect().left + 
+          container.scrollLeft - 
+          container.getBoundingClientRect().left - 
+          (container.offsetWidth - (activeButton as HTMLElement).offsetWidth) / 2;
+        
+        container.scrollTo({
+          left: scrollLeft,
+          behavior: 'smooth'
+        });
+      }
+    }
+  }, [currentDay]);
+
+  return (
+    <div className="relative mb-6">
+      <div 
+        ref={scrollRef}
+        className="flex overflow-x-auto scrollbar-none snap-x snap-mandatory scroll-smooth hide-scrollbar"
+        style={{ 
+          WebkitOverflowScrolling: 'touch',
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none'
+        }}
+      >
+        <div className="flex space-x-1 px-4">
+          {days.map((day) => {
+            const fullDay = dayMap[day];
+            const isActive = currentDay === fullDay;
+            const isToday = day === today;
+            const daySchedule = schedule?.days.find(d => d.day === fullDay);
+            const workoutType = getWorkoutType(daySchedule);
+            const shortWorkoutType = workoutTypeMap[workoutType] || workoutType;
+            
+            return (
+              <button
+                key={day}
+                data-active={isActive}
+                onClick={() => setCurrentDay(fullDay)}
+                className={`flex-none w-[calc(25%-3px)] flex flex-col items-center py-1.5 px-1 rounded transition-all snap-center ${
+                  isActive
+                    ? 'bg-emerald-500'
+                    : 'bg-[#1E1E1E]'
+                }`}
+              >
+                <span className={`text-[11px] font-medium ${
+                  isActive ? 'text-white' : 'text-gray-400'
+                }`}>
+                  {day}
+                </span>
+                <span className={`text-[10px] truncate w-full text-center mt-0.5 ${
+                  isActive ? 'text-white/90' : 'text-gray-500'
+                }`}>
+                  {shortWorkoutType}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Workouts() {
   const [workouts, setWorkouts] = useState<WorkoutPlan[]>([]);
   const [filteredWorkouts, setFilteredWorkouts] = useState<WorkoutPlan[]>([]);

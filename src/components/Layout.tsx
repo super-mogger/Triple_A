@@ -17,10 +17,14 @@ export default function Layout() {
       isDarkMode ? 'bg-dark-bg text-dark-text' : 'bg-gray-50 text-gray-900'
     }`}>
       {showHeaderAndNav && <Header />}
-      <main className={`flex-1 ${showHeaderAndNav ? 'pb-24 pt-16' : ''}`}>
+      <main className={`flex-1 ${showHeaderAndNav ? 'pb-24 pt-16 px-4 md:px-6 lg:px-8' : ''} max-w-7xl mx-auto w-full`}>
         <Outlet />
       </main>
-      {showHeaderAndNav && <Navigation onLogout={logout} />}
+      {showHeaderAndNav && (
+        <div className="fixed bottom-0 left-0 right-0 pb-safe">
+          <Navigation onLogout={logout} />
+        </div>
+      )}
     </div>
   );
 }

@@ -136,13 +136,49 @@ export default function Profile() {
     return preferences.join(', ');
   };
 
+  // Calculate BMI
+  const calculateBMI = () => {
+    if (!profileData?.stats?.weight || !profileData?.stats?.height) return null;
+    const weight = Number(profileData.stats.weight);
+    const heightInMeters = Number(profileData.stats.height) / 100;
+    return (weight / (heightInMeters * heightInMeters)).toFixed(1);
+  };
+
+  // Get BMI category and position
+  const getBMIInfo = (bmi: number) => {
+    if (bmi < 18.5) return { category: 'Underweight', position: '10%' };
+    if (bmi < 25) return { category: 'Normal', position: '35%' };
+    if (bmi < 30) return { category: 'Overweight', position: '60%' };
+    return { category: 'Obese', position: '85%' };
+  };
+
+  // Calculate BMR using Mifflin-St Jeor Equation
+  const calculateBMR = () => {
+    if (!profileData?.stats?.weight || !profileData?.stats?.height || !profileData?.personalInfo?.age) return null;
+    
+    const weight = Number(profileData.stats.weight);
+    const height = Number(profileData.stats.height);
+    const age = Number(profileData.personalInfo.age);
+    const gender = profileData.personalInfo.gender;
+
+    // BMR Formula:
+    // For men: BMR = 10W + 6.25H - 5A + 5
+    // For women: BMR = 10W + 6.25H - 5A - 161
+    const bmr = (10 * weight) + (6.25 * height) - (5 * age);
+    return gender === 'male' ? Math.round(bmr + 5) : Math.round(bmr - 161);
+  };
+
+  const bmr = calculateBMR();
+  const bmi = calculateBMI();
+  const bmiInfo = bmi ? getBMIInfo(Number(bmi)) : null;
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#121212] py-8">
       <div className="max-w-7xl mx-auto px-4">
         {/* Back Button with Title */}
         <div className="flex items-center gap-3 mb-6">
           <button
-            onClick={() => navigate(-1)}
+            onClick={() => navigate('/')}
             className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
           >
             <ArrowLeft className="w-6 h-6" />
@@ -257,32 +293,37 @@ export default function Profile() {
                       <p className="text-sm text-gray-400">Basal Metabolic Rate (BMR)</p>
                       <p className="text-xs text-gray-500">Calories your body burns at complete rest</p>
                     </div>
-                    <p className="text-lg font-semibold text-emerald-500">1841 kcal/day</p>
+                    <p className="text-lg font-semibold text-emerald-500">{bmr ? `${bmr} kcal/day` : 'N/A'}</p>
                   </div>
 
                   {/* BMI Display */}
                   <div>
                     <div className="flex justify-between items-center mb-2">
                       <p className="text-sm text-gray-400">Body Mass Index (BMI)</p>
-                      <p className="text-lg font-semibold text-emerald-500">21.6</p>
+                      <p className="text-lg font-semibold text-emerald-500">{bmi || 'N/A'}</p>
                     </div>
                     
-                    {/* BMI Scale */}
-                    <div className="relative h-2 rounded-full overflow-hidden mb-2" style={{ background: 'linear-gradient(to right, #3b82f6, #22c55e, #eab308, #ef4444)' }}>
-                      {/* BMI Indicator */}
-                      <div 
-                        className="absolute w-1 h-4 bg-white -top-1 transition-all duration-300"
-                        style={{ left: 'calc(21.6% * 2.5)', transform: 'translateX(-50%)' }}
-                      />
-                    </div>
-                    
-                    {/* BMI Categories */}
-                    <div className="flex justify-between text-xs text-gray-400">
-                      <span>Underweight</span>
-                      <span>Normal</span>
-                      <span>Overweight</span>
-                      <span>Obese</span>
-                    </div>
+                    {bmi && (
+                      <>
+                        <div className="relative h-2 rounded-full overflow-hidden mb-2" 
+                          style={{ background: 'linear-gradient(to right, #3b82f6, #22c55e, #eab308, #ef4444)' }}
+                        >
+                          {/* BMI Indicator */}
+                          <div 
+                            className="absolute w-1 h-4 bg-white -top-1 transition-all duration-300"
+                            style={{ left: bmiInfo?.position, transform: 'translateX(-50%)' }}
+                          />
+                        </div>
+                        
+                        {/* BMI Categories */}
+                        <div className="flex justify-between text-xs text-gray-400">
+                          <span>Underweight</span>
+                          <span>Normal</span>
+                          <span>Overweight</span>
+                          <span>Obese</span>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>

@@ -10,7 +10,9 @@ export default function Layout() {
   const { isDarkMode } = useTheme();
   const { pathname } = useLocation();
 
-  const showHeaderAndNav = pathname !== '/profile' && pathname !== '/membership' && pathname !== '/achievements';
+  const showHeaderAndNav = !['profile', 'membership', 'achievements', 'profile/edit'].some(path => 
+    pathname.endsWith(path)
+  );
 
   return (
     <div className={`min-h-screen flex flex-col ${

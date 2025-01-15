@@ -766,8 +766,8 @@ export default function Workouts() {
                 <div className="p-6 border-b border-gray-200 dark:border-gray-700">
                   <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                     <Calendar className="w-5 h-5 text-emerald-500" />
-                    {currentDayWorkout.focus}
-                  </h2>
+                  {currentDayWorkout.focus}
+                </h2>
                 </div>
 
                 <div className="p-6">
@@ -953,53 +953,53 @@ export default function Workouts() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Workouts</h1>
-        </div>
+          </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {workouts.map((workout, index) => (
             <div 
               key={index}
               className="bg-white dark:bg-[#1E1E1E] rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow"
             >
-              <div className="relative h-48">
-                <img
-                  src={workout.imageUrl}
-                  alt={workout.title}
-                  className="w-full h-full object-cover"
-                />
-              </div>
+                    <div className="relative h-48">
+                  <img
+                    src={workout.imageUrl}
+                    alt={workout.title}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
               <div className="p-6">
                 <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">{workout.title}</h3>
                 <div className="space-y-3 text-sm mb-4">
                   <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
                     <Clock className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                    <span>Duration: {workout.duration}</span>
-                  </div>
+                      <span>Duration: {workout.duration}</span>
+                    </div>
                   <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
                     <Target className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                    <span>Goal: {workout.goal}</span>
-                  </div>
+                      <span>Goal: {workout.goal}</span>
+                    </div>
                   <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
                     <Gauge className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                    <span>Level: {workout.level}</span>
-                  </div>
+                          <span>Level: {workout.level}</span>
+                        </div>
                   <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
                     <Wrench className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                    <span>Equipment: {workout.equipment}</span>
+                      <span>Equipment: {workout.equipment}</span>
+                    </div>
                   </div>
-                </div>
                 <p className="text-gray-600 dark:text-gray-400 text-sm mb-6">{workout.description}</p>
-                <button 
-                  onClick={() => selectWorkout(workout)}
+                      <button 
+                        onClick={() => selectWorkout(workout)}
                   className="w-full bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-3 rounded-lg transition-colors font-medium"
-                >
-                  Start Workout Plan
-                </button>
+                      >
+                        Start Workout Plan
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
-            </div>
-          ))}
         </div>
       </div>
-    </div>
   );
 } 

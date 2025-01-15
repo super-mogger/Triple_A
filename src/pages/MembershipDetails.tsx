@@ -1,6 +1,7 @@
 import React from 'react';
 import { ArrowLeft, Crown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { usePayment } from '../context/PaymentContext';
 
 interface Plan {
   id: string;
@@ -58,12 +59,20 @@ const plans: Plan[] = [
 
 export default function MembershipDetails() {
   const navigate = useNavigate();
-  const activePlan = {
-    name: 'Monthly Plan',
-    validUntil: '2/10/2025',
-    daysRemaining: 28,
-    totalDays: 30
-  };
+  const { membership } = usePayment();
+
+  // Calculate days remaining
+  const daysRemaining = membership?.endDate 
+    ? Math.ceil((new Date(membership.endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
+    : 0;
+
+  // Calculate total days
+  const totalDays = membership?.startDate && membership?.endDate
+    ? Math.ceil((new Date(membership.endDate).getTime() - new Date(membership.startDate).getTime()) / (1000 * 60 * 60 * 24))
+    : 30;
+
+  // Get active plan details
+  const activePlan = membership?.planId ? plans.find(p => p.id === membership.planId) : null;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#121212] py-8">
@@ -86,32 +95,40 @@ export default function MembershipDetails() {
               <Crown className="w-5 h-5 text-yellow-500" />
               <h2 className="text-lg font-semibold">Active Membership</h2>
             </div>
-            <span className="px-3 py-1 bg-emerald-500/10 text-emerald-500 text-sm rounded-full">
-              Active
+            <span className={`px-3 py-1 ${
+              membership?.isActive 
+                ? 'bg-emerald-500/10 text-emerald-500'
+                : 'bg-red-500/10 text-red-500'
+            } text-sm rounded-full`}>
+              {membership?.isActive ? 'Active' : 'Inactive'}
             </span>
           </div>
 
           <div className="mb-4">
-            <h3 className="text-lg font-medium">{activePlan.name}</h3>
-            <p className="text-sm text-gray-400">Valid until {activePlan.validUntil}</p>
+            <h3 className="text-lg font-medium">{activePlan?.name || 'No Active Plan'}</h3>
+            <p className="text-sm text-gray-400">
+              {membership?.endDate ? `Valid until ${new Date(membership.endDate).toLocaleDateString()}` : 'Not subscribed'}
+            </p>
           </div>
 
-          <div className="relative pt-1">
-            <div className="flex items-center justify-between mb-2">
-              <div className="text-right">
-                <span className="text-sm font-semibold text-emerald-500">
-                  {activePlan.daysRemaining} days
-                </span>
-                <span className="text-sm text-gray-400"> remaining</span>
+          {membership?.isActive && (
+            <div className="relative pt-1">
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-right">
+                  <span className="text-sm font-semibold text-emerald-500">
+                    {daysRemaining} days
+                  </span>
+                  <span className="text-sm text-gray-400"> remaining</span>
+                </div>
+              </div>
+              <div className="overflow-hidden h-2 text-xs flex rounded bg-[#282828]">
+                <div
+                  style={{ width: `${(daysRemaining / totalDays) * 100}%` }}
+                  className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-emerald-500"
+                ></div>
               </div>
             </div>
-            <div className="overflow-hidden h-2 text-xs flex rounded bg-[#282828]">
-              <div
-                style={{ width: `${(activePlan.daysRemaining / activePlan.totalDays) * 100}%` }}
-                className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-emerald-500"
-              ></div>
-            </div>
-          </div>
+          )}
         </div>
 
         {/* Available Plans */}
@@ -121,7 +138,11 @@ export default function MembershipDetails() {
             {plans.map((plan) => (
               <div
                 key={plan.id}
-                className="bg-[#1E1E1E] rounded-xl p-6 border border-gray-800 hover:border-gray-700 transition-colors"
+                className={`bg-[#1E1E1E] rounded-xl p-6 border ${
+                  membership?.planId === plan.id
+                    ? 'border-emerald-500'
+                    : 'border-gray-800 hover:border-gray-700'
+                } transition-colors`}
               >
                 <h3 className="text-lg font-medium mb-2">{plan.name}</h3>
                 <div className="flex items-baseline gap-1 mb-4">
@@ -139,8 +160,15 @@ export default function MembershipDetails() {
                     </li>
                   ))}
                 </ul>
-                <button className="w-full bg-emerald-500 hover:bg-emerald-600 text-white py-2 rounded-lg font-medium transition-colors">
-                  Choose Plan
+                <button 
+                  className={`w-full ${
+                    membership?.planId === plan.id
+                      ? 'bg-emerald-500/20 text-emerald-500 cursor-default'
+                      : 'bg-emerald-500 hover:bg-emerald-600 text-white'
+                  } py-2 rounded-lg font-medium transition-colors`}
+                  disabled={membership?.planId === plan.id}
+                >
+                  {membership?.planId === plan.id ? 'Current Plan' : 'Choose Plan'}
                 </button>
               </div>
             ))}

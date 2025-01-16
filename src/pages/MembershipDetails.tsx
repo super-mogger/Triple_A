@@ -101,15 +101,15 @@ export default function MembershipDetails() {
                 : 'bg-red-500/10 text-red-500'
             } text-sm rounded-full`}>
               {membership?.isActive ? 'Active' : 'Inactive'}
-            </span>
+              </span>
           </div>
 
           <div className="mb-4">
             <h3 className="text-lg font-medium">{activePlan?.name || 'No Active Plan'}</h3>
             <p className="text-sm text-gray-400">
               {membership?.endDate ? `Valid until ${new Date(membership.endDate).toLocaleDateString()}` : 'Not subscribed'}
-            </p>
-          </div>
+                    </p>
+                  </div>
 
           {membership?.isActive && (
             <div className="relative pt-1">
@@ -127,17 +127,17 @@ export default function MembershipDetails() {
                   className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-emerald-500"
                 ></div>
               </div>
-            </div>
-          )}
+              </div>
+            )}
         </div>
 
         {/* Available Plans */}
         <div>
           <h2 className="text-xl font-semibold mb-6">Available Plans</h2>
           <div className="grid md:grid-cols-3 gap-6">
-            {plans.map((plan) => (
-              <div
-                key={plan.id}
+              {plans.map((plan) => (
+                <div
+                  key={plan.id}
                 className={`bg-[#1E1E1E] rounded-xl p-6 border ${
                   membership?.planId === plan.id
                     ? 'border-emerald-500'
@@ -148,19 +148,19 @@ export default function MembershipDetails() {
                 <div className="flex items-baseline gap-1 mb-4">
                   <span className="text-2xl font-bold">₹{plan.price}</span>
                   <span className="text-gray-400">/{plan.duration}</span>
-                </div>
-                <p className="text-sm text-gray-400 mb-4">
-                  Just ₹{plan.pricePerMonth} per month
-                </p>
-                <ul className="space-y-3 mb-6">
-                  {plan.features.map((feature, index) => (
+                  </div>
+                  <p className="text-sm text-gray-400 mb-4">
+                    Just ₹{plan.pricePerMonth} per month
+                  </p>
+                  <ul className="space-y-3 mb-6">
+                    {plan.features.map((feature, index) => (
                     <li key={index} className="flex items-start gap-2 text-sm text-gray-300">
                       <span className="text-emerald-500">•</span>
                       {feature}
-                    </li>
-                  ))}
-                </ul>
-                <button 
+                      </li>
+                    ))}
+                  </ul>
+                  <button
                   className={`w-full ${
                     membership?.planId === plan.id
                       ? 'bg-emerald-500/20 text-emerald-500 cursor-default'
@@ -169,9 +169,9 @@ export default function MembershipDetails() {
                   disabled={membership?.planId === plan.id}
                 >
                   {membership?.planId === plan.id ? 'Current Plan' : 'Choose Plan'}
-                </button>
-              </div>
-            ))}
+                  </button>
+                </div>
+              ))}
           </div>
         </div>
       </div>

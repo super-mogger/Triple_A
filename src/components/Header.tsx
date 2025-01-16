@@ -47,9 +47,9 @@ export default function Header() {
             isDarkMode 
               ? 'from-emerald-400 to-blue-400' 
               : 'from-emerald-600 to-blue-600'
-          }`}>
-            Triple A
-          </h1>
+        }`}>
+          Triple A
+        </h1>
         </button>
 
         {user && (
@@ -68,12 +68,12 @@ export default function Header() {
                 {user.displayName || user.email}
               </span>
               <div className="w-8 h-8 rounded-full overflow-hidden ring-2 ring-emerald-500/20">
-                <img
-                  src={user.photoURL || 'https://via.placeholder.com/40'}
-                  alt="Profile"
+              <img
+                src={user.photoURL || 'https://via.placeholder.com/40'}
+                alt="Profile"
                   className="w-full h-full object-cover"
-                />
-              </div>
+              />
+            </div>
             </button>
 
             {isMenuOpen && (

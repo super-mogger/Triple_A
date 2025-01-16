@@ -257,18 +257,18 @@ export default function DietPlanDetails() {
       return null;
     }
 
-    const bmr = profileData.personalInfo.gender === 'male'
-      ? 88.362 + (13.397 * Number(profileData.stats.weight)) + (4.799 * Number(profileData.stats.height)) - (5.677 * Number(profileData.personalInfo.age))
-      : 447.593 + (9.247 * Number(profileData.stats.weight)) + (3.098 * Number(profileData.stats.height)) - (4.330 * Number(profileData.personalInfo.age));
+        const bmr = profileData.personalInfo.gender === 'male'
+          ? 88.362 + (13.397 * Number(profileData.stats.weight)) + (4.799 * Number(profileData.stats.height)) - (5.677 * Number(profileData.personalInfo.age))
+          : 447.593 + (9.247 * Number(profileData.stats.weight)) + (3.098 * Number(profileData.stats.height)) - (4.330 * Number(profileData.personalInfo.age));
 
-    const activityMultipliers = {
-      sedentary: 1.2,
-      'lightly-active': 1.375,
-      'moderately-active': 1.55,
-      'very-active': 1.725
-    };
-    const multiplier = activityMultipliers[profileData.preferences?.activityLevel as keyof typeof activityMultipliers] || 1.2;
-    
+        const activityMultipliers = {
+          sedentary: 1.2,
+          'lightly-active': 1.375,
+          'moderately-active': 1.55,
+          'very-active': 1.725
+        };
+        const multiplier = activityMultipliers[profileData.preferences?.activityLevel as keyof typeof activityMultipliers] || 1.2;
+        
     return {
       bmr,
       tdee: Math.round(bmr * multiplier),
@@ -285,16 +285,16 @@ export default function DietPlanDetails() {
     const savedPlan = localStorage.getItem('selectedDietPlan');
     if (savedPlan && nutritionalCalculations) {
       const plan = JSON.parse(savedPlan);
-      
-      // Calculate target calories based on goal
-      let targetCalories = nutritionalCalculations.tdee;
-      if (plan.goal === 'weight-loss') {
-        targetCalories -= 500;
-      } else if (plan.goal === 'muscle-gain') {
-        targetCalories += 500;
-      }
 
-      // Calculate macros based on goal
+        // Calculate target calories based on goal
+      let targetCalories = nutritionalCalculations.tdee;
+        if (plan.goal === 'weight-loss') {
+        targetCalories -= 500;
+        } else if (plan.goal === 'muscle-gain') {
+        targetCalories += 500;
+        }
+
+        // Calculate macros based on goal
       const macros = {
         'weight-loss': { protein: 40, carbs: 30, fats: 30 },
         'muscle-gain': { protein: 35, carbs: 45, fats: 20 },
@@ -303,8 +303,8 @@ export default function DietPlanDetails() {
       
       const { protein, carbs, fats } = macros[plan.goal as DietGoal] || macros.maintenance;
 
-      plan.nutritionalGoals = {
-        dailyCalories: targetCalories,
+        plan.nutritionalGoals = {
+          dailyCalories: targetCalories,
         proteinPercentage: protein,
         carbsPercentage: carbs,
         fatsPercentage: fats,

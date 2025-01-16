@@ -1,22 +1,23 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, memo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, Clock, Scale, Target, X, Info, CalendarDays } from 'lucide-react';
-import { DietPlan as DietPlanType, Food, DailyMeal, WeeklyDietPlan } from '../services/DietService';
+import { Calendar, Clock, Scale, Target, X, Info } from 'lucide-react';
+import { DietPlan as DietPlanType, Food, DailyMeal } from '../services/DietService';
 import { useProfile } from '../context/ProfileContext';
 
-interface FoodModalProps {
-  food: Food;
-  onClose: () => void;
+// Add type for goal
+type DietGoal = 'weight-loss' | 'muscle-gain' | 'maintenance';
+
+// Add type for MacroCard props
+interface MacroCardProps {
+  label: string;
+  value: number;
+  percentage?: number;
+  unit: string;
+  color: string;
 }
 
-interface DayTotals {
-  calories: number;
-  protein: number;
-  carbs: number;
-  fats: number;
-}
-
-function FoodModal({ food, onClose }: FoodModalProps) {
+// Memoize the FoodModal component
+const FoodModal = memo(({ food, onClose }: { food: Food; onClose: () => void }) => {
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-start justify-center overflow-y-auto">
       <div className="relative w-full max-w-2xl mx-auto my-8 px-4">
@@ -166,91 +167,160 @@ function FoodModal({ food, onClose }: FoodModalProps) {
       </div>
     </div>
   );
-}
+});
+
+// Update MacroCard component with proper types
+const MacroCard = memo(({ label, value, percentage, unit, color }: MacroCardProps) => (
+  <div className="bg-gray-50 dark:bg-[#252525] rounded-lg p-4">
+    <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">{label}</p>
+    <div>
+      <p className={`text-2xl font-bold text-${color}`}>
+        {percentage ?? value}
+        <span className="text-base font-normal ml-1">{percentage ? '%' : unit}</span>
+      </p>
+      {percentage && (
+        <p className={`text-sm text-${color}`}>
+          {value}{unit}
+        </p>
+      )}
+    </div>
+  </div>
+));
+
+// Memoize the MealCard component
+const MealCard = memo(({ meal, onFoodClick }: { 
+  meal: DailyMeal; 
+  onFoodClick: (food: Food) => void;
+}) => (
+  <div className="bg-white dark:bg-[#1E1E1E] rounded-xl mb-6 overflow-hidden shadow-sm">
+    <div className="flex justify-between items-center p-4 text-gray-900 dark:text-white">
+      <h3 className="text-lg font-semibold capitalize">{meal.type}</h3>
+      <span className="text-sm text-emerald-600 dark:text-emerald-400">{meal.time}</span>
+    </div>
+
+    <div className="space-y-px">
+      {meal.foods.map((food, foodIndex) => (
+        <div 
+          key={foodIndex}
+          onClick={() => onFoodClick(food)}
+          className="flex justify-between items-start p-4 bg-gray-50 dark:bg-[#252525] cursor-pointer hover:bg-gray-100 dark:hover:bg-[#2A2A2A] transition-colors"
+        >
+          <div>
+            <div className="flex items-center gap-2">
+              <div className="font-medium text-gray-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400">{food.name}</div>
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onFoodClick(food);
+                }}
+                className="w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-500 flex items-center justify-center hover:bg-emerald-200 dark:hover:bg-emerald-500/30"
+              >
+                <Info className="w-3 h-3" />
+              </button>
+            </div>
+            <div className="text-sm text-gray-500 dark:text-gray-400">Portion: {food.portion}</div>
+          </div>
+          <div className="text-right">
+            <div className="text-emerald-600 dark:text-emerald-400">{food.calories} kcal</div>
+            <div className="text-sm text-gray-500 dark:text-gray-400">
+              P: {food.protein}g | C: {food.carbs}g | F: {food.fats}g
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+
+    <div className="p-4 border-t border-gray-100 dark:border-gray-800">
+      <div className="flex justify-between text-sm">
+        <span className="text-gray-500 dark:text-gray-400">Total:</span>
+        <div className="text-right">
+          <span className="text-emerald-600 dark:text-emerald-400">{meal.totalCalories} kcal</span>
+          <span className="text-gray-500 dark:text-gray-400 ml-2">
+            P: {meal.totalProtein}g | C: {meal.totalCarbs}g | F: {meal.totalFats}g
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+));
 
 export default function DietPlanDetails() {
   const navigate = useNavigate();
   const { profileData } = useProfile();
-  const savedPlan = localStorage.getItem('selectedDietPlan');
   const [selectedPlan, setSelectedPlan] = useState<DietPlanType | null>(null);
   const [currentDay, setCurrentDay] = useState(new Date().toLocaleDateString('en-US', { weekday: 'long' }));
-  const [expandedMeal, setExpandedMeal] = useState<string | null>(null);
   const [selectedFood, setSelectedFood] = useState<Food | null>(null);
 
+  // Memoize nutritional calculations
+  const nutritionalCalculations = useMemo(() => {
+    if (!profileData?.stats?.weight || !profileData?.stats?.height || !profileData?.personalInfo?.age) {
+      return null;
+    }
+
+    const bmr = profileData.personalInfo.gender === 'male'
+      ? 88.362 + (13.397 * Number(profileData.stats.weight)) + (4.799 * Number(profileData.stats.height)) - (5.677 * Number(profileData.personalInfo.age))
+      : 447.593 + (9.247 * Number(profileData.stats.weight)) + (3.098 * Number(profileData.stats.height)) - (4.330 * Number(profileData.personalInfo.age));
+
+    const activityMultipliers = {
+      sedentary: 1.2,
+      'lightly-active': 1.375,
+      'moderately-active': 1.55,
+      'very-active': 1.725
+    };
+    const multiplier = activityMultipliers[profileData.preferences?.activityLevel as keyof typeof activityMultipliers] || 1.2;
+    
+    return {
+      bmr,
+      tdee: Math.round(bmr * multiplier),
+      waterIntake: Math.round((Number(profileData.stats.weight) * 0.033) * 10) / 10
+    };
+  }, [profileData]);
+
+  // Memoize current day plan
+  const currentDayPlan = useMemo(() => {
+    return selectedPlan?.schedule?.days.find(d => d.day === currentDay);
+  }, [selectedPlan, currentDay]);
+
   useEffect(() => {
-    if (savedPlan) {
+    const savedPlan = localStorage.getItem('selectedDietPlan');
+    if (savedPlan && nutritionalCalculations) {
       const plan = JSON.parse(savedPlan);
       
-      // Calculate BMR
-      if (profileData?.stats?.weight && profileData?.stats?.height && profileData?.personalInfo?.age) {
-        const bmr = profileData.personalInfo.gender === 'male'
-          ? 88.362 + (13.397 * Number(profileData.stats.weight)) + (4.799 * Number(profileData.stats.height)) - (5.677 * Number(profileData.personalInfo.age))
-          : 447.593 + (9.247 * Number(profileData.stats.weight)) + (3.098 * Number(profileData.stats.height)) - (4.330 * Number(profileData.personalInfo.age));
-
-        // Calculate activity multiplier
-        const activityMultipliers = {
-          sedentary: 1.2,
-          'lightly-active': 1.375,
-          'moderately-active': 1.55,
-          'very-active': 1.725
-        };
-        const multiplier = activityMultipliers[profileData.preferences?.activityLevel as keyof typeof activityMultipliers] || 1.2;
-        
-        // Calculate TDEE
-        const tdee = Math.round(bmr * multiplier);
-
-        // Calculate target calories based on goal
-        let targetCalories = tdee;
-        if (plan.goal === 'weight-loss') {
-          targetCalories = tdee - 500; // 500 calorie deficit
-        } else if (plan.goal === 'muscle-gain') {
-          targetCalories = tdee + 500; // 500 calorie surplus
-        }
-
-        // Calculate macros based on goal
-        let proteinPercentage = 30;
-        let carbsPercentage = 40;
-        let fatsPercentage = 30;
-
-        if (plan.goal === 'muscle-gain') {
-          proteinPercentage = 35;
-          carbsPercentage = 45;
-          fatsPercentage = 20;
-        } else if (plan.goal === 'weight-loss') {
-          proteinPercentage = 40;
-          carbsPercentage = 30;
-          fatsPercentage = 30;
-        }
-
-        // Update nutritional goals
-        plan.nutritionalGoals = {
-          dailyCalories: targetCalories,
-          proteinPercentage,
-          carbsPercentage,
-          fatsPercentage,
-          proteinGrams: Math.round((targetCalories * (proteinPercentage / 100)) / 4),
-          carbsGrams: Math.round((targetCalories * (carbsPercentage / 100)) / 4),
-          fatsGrams: Math.round((targetCalories * (fatsPercentage / 100)) / 9)
-        };
-
-        // Calculate water intake based on weight (in liters)
-        const waterIntake = Math.round((Number(profileData.stats.weight) * 0.033) * 10) / 10;
-        plan.waterIntake = waterIntake;
+      // Calculate target calories based on goal
+      let targetCalories = nutritionalCalculations.tdee;
+      if (plan.goal === 'weight-loss') {
+        targetCalories -= 500;
+      } else if (plan.goal === 'muscle-gain') {
+        targetCalories += 500;
       }
 
+      // Calculate macros based on goal
+      const macros = {
+        'weight-loss': { protein: 40, carbs: 30, fats: 30 },
+        'muscle-gain': { protein: 35, carbs: 45, fats: 20 },
+        'maintenance': { protein: 30, carbs: 40, fats: 30 }
+      };
+      
+      const { protein, carbs, fats } = macros[plan.goal as DietGoal] || macros.maintenance;
+
+      plan.nutritionalGoals = {
+        dailyCalories: targetCalories,
+        proteinPercentage: protein,
+        carbsPercentage: carbs,
+        fatsPercentage: fats,
+        proteinGrams: Math.round((targetCalories * (protein / 100)) / 4),
+        carbsGrams: Math.round((targetCalories * (carbs / 100)) / 4),
+        fatsGrams: Math.round((targetCalories * (fats / 100)) / 9)
+      };
+
+      plan.waterIntake = nutritionalCalculations.waterIntake;
       setSelectedPlan(plan);
-    } else {
+    } else if (!savedPlan) {
       navigate('/diet');
     }
-  }, [navigate, savedPlan, profileData]);
+  }, [navigate, nutritionalCalculations]);
 
   if (!selectedPlan) return null;
-
-  const toggleMeal = (mealType: string) => {
-    setExpandedMeal(expandedMeal === mealType ? null : mealType);
-  };
-
-  const currentDayPlan = selectedPlan.schedule?.days.find(d => d.day === currentDay);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#121212] py-8">
@@ -271,52 +341,33 @@ export default function DietPlanDetails() {
             
             {/* Macro Distribution */}
             <div className="grid grid-cols-4 gap-6 mb-8">
-              <div className="bg-gray-50 dark:bg-[#252525] rounded-lg p-4">
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Daily Calories</p>
-                <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-500">
-                  {selectedPlan.nutritionalGoals?.dailyCalories || 0}
-                  <span className="text-base font-normal text-emerald-500 dark:text-emerald-600 ml-1">kcal</span>
-                </p>
-              </div>
-
-              <div className="bg-gray-50 dark:bg-[#252525] rounded-lg p-4">
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Protein</p>
-                <div>
-                  <p className="text-2xl font-bold text-blue-600 dark:text-blue-500">
-                    {selectedPlan.nutritionalGoals?.proteinPercentage || 0}
-                    <span className="text-base font-normal text-blue-500 dark:text-blue-600 ml-1">%</span>
-                  </p>
-                  <p className="text-sm text-blue-500 dark:text-blue-400">
-                    {selectedPlan.nutritionalGoals?.proteinGrams || 0}g
-                  </p>
-                </div>
-              </div>
-
-              <div className="bg-gray-50 dark:bg-[#252525] rounded-lg p-4">
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Carbs</p>
-                <div>
-                  <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-500">
-                    {selectedPlan.nutritionalGoals?.carbsPercentage || 0}
-                    <span className="text-base font-normal text-yellow-500 dark:text-yellow-600 ml-1">%</span>
-                  </p>
-                  <p className="text-sm text-yellow-500 dark:text-yellow-400">
-                    {selectedPlan.nutritionalGoals?.carbsGrams || 0}g
-                  </p>
-                </div>
-              </div>
-
-              <div className="bg-gray-50 dark:bg-[#252525] rounded-lg p-4">
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Fats</p>
-                <div>
-                  <p className="text-2xl font-bold text-purple-600 dark:text-purple-500">
-                    {selectedPlan.nutritionalGoals?.fatsPercentage || 0}
-                    <span className="text-base font-normal text-purple-500 dark:text-purple-600 ml-1">%</span>
-                  </p>
-                  <p className="text-sm text-purple-500 dark:text-purple-400">
-                    {selectedPlan.nutritionalGoals?.fatsGrams || 0}g
-                  </p>
-                </div>
-              </div>
+              <MacroCard 
+                label="Daily Calories" 
+                value={selectedPlan.nutritionalGoals?.dailyCalories || 0} 
+                unit="kcal" 
+                color="text-emerald-600" 
+              />
+              <MacroCard 
+                label="Protein" 
+                value={selectedPlan.nutritionalGoals?.proteinGrams || 0} 
+                percentage={selectedPlan.nutritionalGoals?.proteinPercentage || 0} 
+                unit="g" 
+                color="text-blue-600" 
+              />
+              <MacroCard 
+                label="Carbs" 
+                value={selectedPlan.nutritionalGoals?.carbsGrams || 0} 
+                percentage={selectedPlan.nutritionalGoals?.carbsPercentage || 0} 
+                unit="g" 
+                color="text-yellow-600" 
+              />
+              <MacroCard 
+                label="Fats" 
+                value={selectedPlan.nutritionalGoals?.fatsGrams || 0} 
+                percentage={selectedPlan.nutritionalGoals?.fatsPercentage || 0} 
+                unit="g" 
+                color="text-purple-600" 
+              />
             </div>
 
             {/* Water Intake */}
@@ -393,59 +444,11 @@ export default function DietPlanDetails() {
         </div>
 
         {currentDayPlan?.meals.map((meal, index) => (
-          <div 
+          <MealCard 
             key={index}
-            className="bg-white dark:bg-[#1E1E1E] rounded-xl mb-6 overflow-hidden shadow-sm"
-          >
-            <div className="flex justify-between items-center p-4 text-gray-900 dark:text-white">
-              <h3 className="text-lg font-semibold capitalize">{meal.type}</h3>
-              <span className="text-sm text-emerald-600 dark:text-emerald-400">{meal.time}</span>
-            </div>
-
-            <div className="space-y-px">
-              {meal.foods.map((food, foodIndex) => (
-                <div 
-                  key={foodIndex}
-                  onClick={() => setSelectedFood(food)}
-                  className="flex justify-between items-start p-4 bg-gray-50 dark:bg-[#252525] cursor-pointer hover:bg-gray-100 dark:hover:bg-[#2A2A2A] transition-colors"
-                >
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <div className="font-medium text-gray-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400">{food.name}</div>
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedFood(food);
-                        }}
-                        className="w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-500 flex items-center justify-center hover:bg-emerald-200 dark:hover:bg-emerald-500/30"
-                      >
-                        <Info className="w-3 h-3" />
-                      </button>
-                    </div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400">Portion: {food.portion}</div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-emerald-600 dark:text-emerald-400">{food.calories} kcal</div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400">
-                      P: {food.protein}g | C: {food.carbs}g | F: {food.fats}g
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="p-4 border-t border-gray-100 dark:border-gray-800">
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500 dark:text-gray-400">Total:</span>
-                <div className="text-right">
-                  <span className="text-emerald-600 dark:text-emerald-400">{meal.totalCalories} kcal</span>
-                  <span className="text-gray-500 dark:text-gray-400 ml-2">
-                    P: {meal.totalProtein}g | C: {meal.totalCarbs}g | F: {meal.totalFats}g
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
+            meal={meal} 
+            onFoodClick={(food) => setSelectedFood(food)} 
+          />
         ))}
 
         {selectedFood && (

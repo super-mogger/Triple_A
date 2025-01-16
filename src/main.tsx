@@ -5,6 +5,7 @@ import App from './App';
 import './index.css';
 import ErrorBoundary from './components/ErrorBoundary';
 import './config/firebase'; // Import Firebase config to ensure initialization
+import { SpeedInsights } from "@vercel/speed-insights/react";
 
 // Debug Firebase config
 const firebaseConfig = {
@@ -36,6 +37,7 @@ root.render(
     <ErrorBoundary>
       <BrowserRouter>
         <App />
+        <SpeedInsights />
       </BrowserRouter>
     </ErrorBoundary>
   </StrictMode>

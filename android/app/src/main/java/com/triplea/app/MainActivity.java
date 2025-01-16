@@ -1,5 +1,6 @@
-package com.triplea.app;
+package com.triplea.gymapp;
 
 import com.getcapacitor.BridgeActivity;
 
-public class MainActivity extends BridgeActivity {}
+public class MainActivity extends BridgeActivity {
+}

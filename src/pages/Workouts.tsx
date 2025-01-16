@@ -1,10 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { scrapeWorkoutPlans, scrapeWorkoutDetails, generatePersonalizedWorkoutPlan, getExerciseDetails, generateWeeklySchedule, WorkoutPlan, Exercise, DailyWorkout, WeeklySchedule, ExerciseDetails } from '../services/WorkoutService';
+import { 
+  scrapeWorkoutPlans, 
+  scrapeWorkoutDetails, 
+  generatePersonalizedWorkoutPlan, 
+  getExerciseDetails, 
+  generateWeeklySchedule,
+  WorkoutPlan,
+  DayWorkout,
+  WeeklySchedule,
+  ExerciseDetails
+} from '../services/WorkoutService';
 import { Dumbbell, Filter, ChevronDown, X, Clock, Target, Gauge, Wrench, Calendar, Play, Info, BarChart } from 'lucide-react';
 import { usePayment } from '../context/PaymentContext';
 import { useProfile } from '../context/ProfileContext';
 import { useNavigate } from 'react-router-dom';
 import { MuscleRadarChart } from '../components/MuscleRadarChart';
+import { getExercisesByMuscleGroup } from '../services/FirestoreService';
+import type { Exercise } from '../types/exercise';
 
 type SplitType = 'bro-split' | 'push-pull-legs' | 'upper-lower';
 
@@ -96,12 +108,12 @@ const exerciseToMuscleMap: { [key: string]: string[] } = {
   'Thrusters': ['Legs', 'Shoulders', 'Core']
 };
 
-function calculateMuscleTargeting(exercise: Exercise | ExerciseDetails | Exercise[]): { muscle: string; value: number; }[] {
+const calculateMuscleTargeting = (exercise: Exercise | ExerciseDetails | Exercise[]): { muscle: string; value: number; }[] => {
   if (!Array.isArray(exercise) && 'targetMuscles' in exercise && exercise.targetMuscles) {
     const muscleData: { muscle: string; value: number; }[] = [];
 
     // Add primary target muscles with 100% activation
-    exercise.targetMuscles.forEach(muscle => {
+    exercise.targetMuscles.forEach((muscle: string) => {
       muscleData.push({
         muscle,
         value: 100
@@ -110,7 +122,7 @@ function calculateMuscleTargeting(exercise: Exercise | ExerciseDetails | Exercis
 
     // Add secondary muscles with 60% activation
     if (exercise.secondaryMuscles) {
-      exercise.secondaryMuscles.forEach(muscle => {
+      exercise.secondaryMuscles.forEach((muscle: string) => {
         if (!muscleData.some(m => m.muscle === muscle)) {
           muscleData.push({
             muscle,
@@ -160,7 +172,7 @@ function calculateMuscleTargeting(exercise: Exercise | ExerciseDetails | Exercis
     }))
     .filter(item => item.value > 0)
     .sort((a, b) => b.value - a.value);
-}
+};
 
 function WeekdaySchedule({ 
   schedule, 
@@ -197,7 +209,7 @@ function WeekdaySchedule({
     'Pull': 'Pull'
   };
 
-  const getWorkoutType = (daySchedule: DailyWorkout | undefined): string => {
+  const getWorkoutType = (daySchedule: DayWorkout | undefined): string => {
     if (!daySchedule || !daySchedule.exercises || daySchedule.exercises.length === 0) {
       return 'Rest';
     }
@@ -298,6 +310,8 @@ export default function Workouts() {
   });
   const [selectedExercise, setSelectedExercise] = useState<ExerciseDetails | null>(null);
   const [loadingExercise, setLoadingExercise] = useState(false);
+  const [exercises, setExercises] = useState<Exercise[]>([]);
+  const [loadingExercises, setLoadingExercises] = useState(false);
 
   const { profileData } = useProfile();
   const { membership } = usePayment();
@@ -310,6 +324,23 @@ export default function Workouts() {
   useEffect(() => {
     applyFilters();
   }, [workouts, filters]);
+
+  useEffect(() => {
+    const fetchExercises = async () => {
+      if (selectedWorkout && currentDay) {
+        setLoadingExercises(true);
+        const currentDayWorkout = selectedWorkout.schedule?.days.find(d => d.day === currentDay);
+        if (currentDayWorkout) {
+          const muscleGroup = currentDayWorkout.focus.toLowerCase().split(' ')[0];
+          const fetchedExercises = await getExercisesByMuscleGroup(muscleGroup);
+          setExercises(fetchedExercises);
+        }
+        setLoadingExercises(false);
+      }
+    };
+
+    fetchExercises();
+  }, [selectedWorkout, currentDay]);
 
   const fetchWorkouts = async () => {
     try {
@@ -332,7 +363,7 @@ export default function Workouts() {
     try {
       setLoading(true);
       setError(null);
-      const details = await scrapeWorkoutDetails(workout.url);
+      const details = await scrapeWorkoutDetails(workout.id);
       const fullWorkout = { 
         ...workout, 
         schedule: details.schedule 
@@ -401,7 +432,7 @@ export default function Workouts() {
     }
   };
 
-  const renderDaySchedule = (day: DailyWorkout) => {
+  const renderDaySchedule = (day: DayWorkout) => {
     return (
       <div key={day.day} className="bg-[#282828] rounded-lg p-4 mb-4">
         <div className="flex justify-between items-center mb-4">
@@ -659,6 +690,14 @@ export default function Workouts() {
     );
   }
 
+  if (loadingExercises) {
+    return (
+      <div className="min-h-screen bg-white dark:bg-[#121212] flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500"></div>
+      </div>
+    );
+  }
+
   if (!showWorkoutList && selectedWorkout) {
     const currentDayWorkout = getCurrentDayWorkout();
 
@@ -764,7 +803,7 @@ export default function Workouts() {
 
                 <div className="p-6">
                   <div className="space-y-4">
-                    {currentDayWorkout.exercises?.map((exercise, index) => (
+                    {exercises.map((exercise, index) => (
                       <button
                         key={index}
                         onClick={() => viewExerciseDetails(exercise)}
@@ -786,7 +825,7 @@ export default function Workouts() {
                         </div>
                       </button>
                     ))}
-                    {(!currentDayWorkout.exercises || currentDayWorkout.exercises.length === 0) && (
+                    {exercises.length === 0 && (
                       <div className="text-center py-12">
                         <p className="text-gray-500 dark:text-gray-400">
                           {currentDayWorkout.notes || "Rest day"}

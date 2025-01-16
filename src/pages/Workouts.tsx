@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { 
   scrapeWorkoutPlans, 
   scrapeWorkoutDetails, 
@@ -174,15 +174,13 @@ const calculateMuscleTargeting = (exercise: Exercise | ExerciseDetails | Exercis
     .sort((a, b) => b.value - a.value);
 };
 
-function WeekdaySchedule({ 
-  schedule, 
-  currentDay, 
-  setCurrentDay 
-}: { 
-  schedule: WeeklySchedule; 
-  currentDay: string; 
+interface WeekdayScheduleProps {
+  schedule: WeeklySchedule;
+  currentDay: string;
   setCurrentDay: (day: string) => void;
-}) {
+}
+
+function WeekdaySchedule({ schedule, currentDay, setCurrentDay }: WeekdayScheduleProps) {
   const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   const today = days[new Date().getDay() === 0 ? 6 : new Date().getDay() - 1];
   const scrollRef = React.useRef<HTMLDivElement>(null);
@@ -288,30 +286,180 @@ function WeekdaySchedule({
 }
 
 export default function Workouts() {
-  const [workouts, setWorkouts] = useState<WorkoutPlan[]>([]);
-  const [filteredWorkouts, setFilteredWorkouts] = useState<WorkoutPlan[]>([]);
-  const [selectedWorkout, setSelectedWorkout] = useState<WorkoutPlan | null>(() => {
-    const saved = localStorage.getItem('selectedWorkout');
-    return saved ? JSON.parse(saved) : null;
-  });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [showFilters, setShowFilters] = useState(false);
-  const [showWorkoutList, setShowWorkoutList] = useState(!localStorage.getItem('selectedWorkout'));
   const [currentDay, setCurrentDay] = useState<string>(() => {
     const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     return days[new Date().getDay()];
   });
+
+  // Initial states
+  const [workouts, setWorkouts] = useState<WorkoutPlan[]>([]);
+  const [filteredWorkouts, setFilteredWorkouts] = useState<WorkoutPlan[]>([]);
+  const [selectedWorkout, setSelectedWorkout] = useState<WorkoutPlan | null>(null);
+  const [exercises, setExercises] = useState<Exercise[]>([]);
+  const [selectedExercise, setSelectedExercise] = useState<ExerciseDetails | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [loadingExercise, setLoadingExercise] = useState(false);
+  const [loadingExercises, setLoadingExercises] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
+  const [showWorkoutList, setShowWorkoutList] = useState(true);
+
+  // Memoize filters to prevent unnecessary re-renders
   const [filters, setFilters] = useState<Filters>({
     level: '',
     duration: '',
     goal: '',
     equipment: ''
   });
-  const [selectedExercise, setSelectedExercise] = useState<ExerciseDetails | null>(null);
-  const [loadingExercise, setLoadingExercise] = useState(false);
-  const [exercises, setExercises] = useState<Exercise[]>([]);
-  const [loadingExercises, setLoadingExercises] = useState(false);
+
+  // Memoize the getCurrentDayWorkout function
+  const getCurrentDayWorkout = React.useCallback(() => {
+    if (!selectedWorkout?.schedule?.days) {
+      console.log('No schedule or days found in selected workout');
+      return null;
+    }
+
+    const currentDayLower = currentDay.toLowerCase();
+    console.log('Looking for workout on:', currentDayLower);
+    
+    const workout = selectedWorkout.schedule.days.find(
+      day => day.day.toLowerCase() === currentDayLower
+    );
+
+    if (workout) {
+      console.log('Found workout for current day:', {
+        focus: workout.focus,
+        exerciseCount: workout.exercises?.length || 0
+      });
+    } else {
+      console.log('No workout found for current day');
+    }
+
+    return workout;
+  }, [selectedWorkout, currentDay]);
+
+  // Memoize the filtered workouts calculation
+  const applyFilters = React.useCallback(() => {
+    let filtered = [...workouts];
+
+    if (filters.level) {
+      filtered = filtered.filter(w => w.level.toLowerCase().includes(filters.level.toLowerCase()));
+    }
+    if (filters.goal) {
+      filtered = filtered.filter(w => w.goal.toLowerCase().includes(filters.goal.toLowerCase()));
+    }
+    if (filters.duration) {
+      filtered = filtered.filter(w => w.duration.toLowerCase().includes(filters.duration.toLowerCase()));
+    }
+    if (filters.equipment) {
+      filtered = filtered.filter(w => w.equipment.toLowerCase().includes(filters.equipment.toLowerCase()));
+    }
+
+    setFilteredWorkouts(filtered);
+  }, [workouts, filters]);
+
+  // Load initial workout from localStorage
+  useEffect(() => {
+    const savedWorkout = localStorage.getItem('selectedWorkout');
+    if (savedWorkout) {
+      try {
+        const parsedWorkout = JSON.parse(savedWorkout);
+        setSelectedWorkout(parsedWorkout);
+        setShowWorkoutList(false);
+      } catch (error) {
+        console.error('Error parsing saved workout:', error);
+        localStorage.removeItem('selectedWorkout');
+      }
+    }
+  }, []);
+
+  // Update exercises when selected workout or current day changes
+  useEffect(() => {
+    if (selectedWorkout) {
+      const dayWorkout = getCurrentDayWorkout();
+      setExercises(dayWorkout?.exercises || []);
+    } else {
+      setExercises([]);
+    }
+  }, [selectedWorkout, getCurrentDayWorkout, currentDay]);
+
+  // Apply filters when workouts or filters change
+  useEffect(() => {
+    applyFilters();
+  }, [applyFilters]);
+
+  // Optimized workout plan selection
+  const selectWorkoutPlan = React.useCallback(async (workout: WorkoutPlan) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      if (!workout.splitType || !Object.keys(splitTypes).includes(workout.splitType)) {
+        throw new Error('Please select a valid workout split type');
+      }
+
+      const days = generateWeeklySchedule(
+        workout.level || 'Intermediate',
+        workout.goal || 'Build Muscle',
+        workout.equipment || 'Full Gym',
+        workout.splitType as SplitType
+      );
+
+      if (!days?.length || !days.some(day => day.exercises?.length)) {
+        throw new Error('Failed to generate workout schedule');
+      }
+
+      const fullWorkout = {
+        ...workout,
+        schedule: { days }
+      };
+
+      localStorage.setItem('selectedWorkout', JSON.stringify(fullWorkout));
+      setSelectedWorkout(fullWorkout);
+      setShowWorkoutList(false);
+    } catch (err) {
+      console.error('Error selecting workout plan:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load workout details');
+      setSelectedWorkout(null);
+      setExercises([]);
+      localStorage.removeItem('selectedWorkout');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Optimized exercise details view
+  const viewExerciseDetails = React.useCallback(async (exercise: Exercise) => {
+    try {
+      setLoadingExercise(true);
+      const muscleGroup = exercise.muscleGroup?.toLowerCase();
+      if (!muscleGroup) return;
+
+      const exercises = exerciseDatabase.intermediate[muscleGroup as keyof typeof exerciseDatabase.intermediate];
+      const details = exercises?.find(e => e.name === exercise.name);
+      
+      if (!details) {
+        throw new Error(`Exercise ${exercise.name} not found`);
+      }
+
+      setSelectedExercise(details as ExerciseDetails);
+    } catch (err) {
+      console.error('Error loading exercise details:', err);
+      setError('Failed to load exercise details');
+    } finally {
+      setLoadingExercise(false);
+    }
+  }, []);
+
+  // Optimized workout plan change
+  const changeWorkoutPlan = React.useCallback(() => {
+    setSelectedWorkout(null);
+    setExercises([]);
+    setSelectedExercise(null);
+    setError(null);
+    localStorage.removeItem('selectedWorkout');
+    setShowWorkoutList(true);
+  }, []);
 
   const { profileData } = useProfile();
   const { membership } = usePayment();
@@ -444,196 +592,6 @@ export default function Workouts() {
       setTimeout(() => setError(null), 5000);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const selectWorkoutPlan = async (workout: WorkoutPlan) => {
-    try {
-      setLoading(true);
-      setError(null);
-      setSelectedWorkout(null); // Clear previous workout first
-      setExercises([]); // Clear previous exercises
-      
-      console.log('Selecting workout plan:', workout);
-      
-      // Ensure workout has required fields and valid split type
-      const splitType = workout.splitType as SplitType;
-      if (!splitType || !Object.keys(splitTypes).includes(splitType)) {
-        const error = 'Please select a valid workout split type';
-        console.error(error, { splitType, validTypes: Object.keys(splitTypes) });
-        setError(error);
-        return;
-      }
-
-      const workoutWithDefaults = {
-        ...workout,
-        level: workout.level || 'Intermediate',
-        goal: workout.goal || 'Build Muscle',
-        equipment: workout.equipment || 'Full Gym',
-        splitType
-      };
-      
-      console.log('Workout with defaults:', workoutWithDefaults);
-      
-      // Create schedule based on workout type
-      const days = generateWeeklySchedule(
-        workoutWithDefaults.level,
-        workoutWithDefaults.goal,
-        workoutWithDefaults.equipment,
-        workoutWithDefaults.splitType
-      );
-      
-      if (!days || days.length === 0) {
-        const error = 'Failed to generate workout schedule';
-        console.error(error);
-        setError(error);
-        return;
-      }
-      
-      // Verify the schedule has exercises
-      const hasExercises = days.some(day => day.exercises && day.exercises.length > 0);
-      if (!hasExercises) {
-        const error = 'No exercises found in generated schedule';
-        console.error(error);
-        setError(error);
-        return;
-      }
-      
-      const fullWorkout = {
-        ...workoutWithDefaults,
-        schedule: { days }
-      };
-
-      console.log('Setting selected workout:', {
-        id: fullWorkout.id,
-        title: fullWorkout.title,
-        splitType: fullWorkout.splitType,
-        schedule: fullWorkout.schedule.days.map((day: DayWorkout) => ({
-          day: day.day,
-          focus: day.focus,
-          exerciseCount: day.exercises.length
-        }))
-      });
-
-      // Save to localStorage before updating state
-      try {
-        localStorage.removeItem('selectedWorkout'); // Clear previous data first
-        localStorage.setItem('selectedWorkout', JSON.stringify(fullWorkout));
-        console.log('Saved workout to localStorage');
-      } catch (err) {
-        console.error('Error saving to localStorage:', err);
-      }
-
-      setSelectedWorkout(fullWorkout);
-      setShowWorkoutList(false);
-    } catch (err) {
-      console.error('Error selecting workout plan:', err);
-      setError('Failed to load workout details. Please try again later.');
-      // Clear everything on error
-      setSelectedWorkout(null);
-      setExercises([]);
-      localStorage.removeItem('selectedWorkout');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const changeWorkoutPlan = () => {
-    // Clear everything before showing the list
-    setSelectedWorkout(null);
-    setExercises([]);
-    setSelectedExercise(null);
-    setError(null);
-    localStorage.removeItem('selectedWorkout');
-    setShowWorkoutList(true);
-  };
-
-  const applyFilters = () => {
-    let filtered = [...workouts];
-
-    if (filters.level) {
-      filtered = filtered.filter(w => w.level.toLowerCase().includes(filters.level.toLowerCase()));
-    }
-    if (filters.goal) {
-      filtered = filtered.filter(w => w.goal.toLowerCase().includes(filters.goal.toLowerCase()));
-    }
-    if (filters.duration) {
-      filtered = filtered.filter(w => w.duration.toLowerCase().includes(filters.duration.toLowerCase()));
-    }
-    if (filters.equipment) {
-      filtered = filtered.filter(w => w.equipment.toLowerCase().includes(filters.equipment.toLowerCase()));
-    }
-
-    setFilteredWorkouts(filtered);
-  };
-
-  const resetFilters = () => {
-    setFilters({
-      level: '',
-      duration: '',
-      goal: '',
-      equipment: ''
-    });
-  };
-
-  const getCurrentDayWorkout = () => {
-    if (!selectedWorkout?.schedule?.days) {
-      console.log('No schedule or days found in selected workout:', selectedWorkout);
-      return null;
-    }
-
-    const currentDayLower = currentDay.toLowerCase();
-    const availableDays = selectedWorkout.schedule.days.map((day: DayWorkout) => ({
-      day: day.day.toLowerCase(),
-      focus: day.focus,
-      exerciseCount: day.exercises?.length || 0
-    }));
-    
-    console.log('Looking for day:', currentDayLower);
-    console.log('Available days:', availableDays);
-    
-    const workout = selectedWorkout.schedule.days.find(
-      day => day.day.toLowerCase() === currentDayLower
-    );
-
-    if (workout) {
-      console.log(`Found workout for ${currentDay}:`, {
-        focus: workout.focus,
-        exerciseCount: workout.exercises?.length || 0,
-        exercises: workout.exercises?.map(e => ({
-          name: e.name,
-          muscleGroup: e.muscleGroup,
-          sets: e.sets,
-          reps: e.reps
-        }))
-      });
-      return workout;
-    } else {
-      console.log(`No workout found for ${currentDay} in available days:`, availableDays);
-      return null;
-    }
-  };
-
-  const viewExerciseDetails = async (exercise: Exercise) => {
-    try {
-      console.log('Viewing exercise:', exercise.name);
-      setLoadingExercise(true);
-      // Get exercise details directly from exerciseDatabase
-      const muscleGroup = exercise.muscleGroup?.toLowerCase() || '';
-      const exercises = exerciseDatabase.intermediate[muscleGroup as keyof typeof exerciseDatabase.intermediate] || [];
-      const details = exercises.find(e => e.name === exercise.name);
-      
-      if (!details) {
-        throw new Error(`Exercise ${exercise.name} not found`);
-      }
-
-      setSelectedExercise(details as ExerciseDetails);
-    } catch (err) {
-      console.error('Error loading exercise details:', err);
-      setError('Failed to load exercise details. Please try again later.');
-      setTimeout(() => setError(null), 5000);
-    } finally {
-      setLoadingExercise(false);
     }
   };
 

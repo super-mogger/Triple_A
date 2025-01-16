@@ -627,46 +627,34 @@ export default function Workouts() {
 
   if (!membership?.isActive) {
     return (
-      <div className="min-h-screen bg-[#121212] text-white py-8">
+      <div className="min-h-screen bg-white dark:bg-[#121212] text-gray-900 dark:text-white py-8">
         <div className="max-w-3xl mx-auto px-4">
-          <div className="bg-red-500/10 border border-red-500/20 rounded-xl shadow-sm p-6">
+          <div className="bg-white dark:bg-[#1E1E1E] rounded-3xl shadow-sm border border-gray-100 dark:border-gray-800 p-8">
             <div className="text-center">
-              <div className="w-16 h-16 bg-red-600/10 rounded-full flex items-center justify-center mx-auto mb-4">
+              <div className="w-16 h-16 bg-red-50 dark:bg-red-500/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
                 <Dumbbell className="w-8 h-8 text-red-500" />
               </div>
-              <h2 className="text-xl font-semibold text-red-500 mb-2">Active Membership Required</h2>
-              <p className="text-gray-400 mb-4">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Active Membership Required</h2>
+              <p className="text-gray-600 dark:text-gray-400 mb-6">
                 You need an active membership to access workout plans
               </p>
               <button
                 onClick={() => navigate('/membership')}
-                className="bg-red-500 text-white px-6 py-2 rounded-lg hover:bg-red-600 transition-colors"
+                className="px-6 py-3 bg-red-500 text-white rounded-2xl hover:bg-red-600 transition-colors font-medium"
               >
                 View Membership Plans
               </button>
             </div>
           </div>
         </div>
-        {selectedExercise && renderExerciseModal()}
-        {loadingExercise && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500"></div>
-          </div>
-        )}
       </div>
     );
   }
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#121212] flex items-center justify-center">
+      <div className="min-h-screen bg-white dark:bg-[#121212] flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500"></div>
-        {selectedExercise && renderExerciseModal()}
-        {loadingExercise && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500"></div>
-          </div>
-        )}
       </div>
     );
   }
@@ -676,98 +664,102 @@ export default function Workouts() {
 
     return (
       <>
-        <div className="min-h-screen bg-gray-50 dark:bg-[#121212] py-8">
+        <div className="min-h-screen bg-white dark:bg-[#121212] py-8">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             {/* Header Section */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
-              <div>
-                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">{selectedWorkout.title}</h1>
-                <p className="text-gray-600 dark:text-gray-400 mt-2">{selectedWorkout.description}</p>
-              </div>
-              <div className="flex flex-col gap-3 w-full sm:w-auto">
-                {/* Split Selection */}
-                <div className="relative">
-                  <button
-                    onClick={() => {
-                      setSelectedWorkout({
-                        ...selectedWorkout,
-                        showSplitMenu: !selectedWorkout.showSplitMenu
-                      });
-                    }}
-                    className="w-full bg-white/80 dark:bg-[#1E1E1E]/80 backdrop-blur-sm text-sm px-4 py-2.5 rounded-lg flex items-center justify-between border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-[#282828] transition-colors text-gray-700 dark:text-gray-200"
-                  >
-                    <span className="flex items-center gap-2">
-                      <BarChart className="w-4 h-4 text-emerald-500" />
-                      Split: {splitTypes[selectedWorkout.splitType || 'bro-split'].name}
-                    </span>
-                    <ChevronDown className="w-4 h-4 text-gray-500" />
-                  </button>
-                  {selectedWorkout.showSplitMenu && (
-                    <div className="absolute z-10 w-full mt-1 bg-white/80 dark:bg-[#1E1E1E]/80 backdrop-blur-sm rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-                      {Object.entries(splitTypes).map(([key, value]) => (
-                        <button
-                          key={key}
-                          onClick={() => {
-                            const updatedWorkout = {
-                              ...selectedWorkout,
-                              splitType: key as SplitType,
-                              showSplitMenu: false,
-                              schedule: {
-                                days: generateWeeklySchedule(selectedWorkout.level, selectedWorkout.goal, selectedWorkout.equipment, key as SplitType)
-                              }
-                            };
-                            setSelectedWorkout(updatedWorkout);
-                            localStorage.setItem('selectedWorkout', JSON.stringify(updatedWorkout));
-                          }}
-                          className={`w-full px-4 py-2.5 text-left text-sm hover:bg-gray-50 dark:hover:bg-[#282828] transition-colors ${
-                            selectedWorkout.splitType === key 
-                              ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' 
-                              : 'text-gray-700 dark:text-gray-200'
-                          }`}
-                        >
-                          <div className="font-medium">{value.name}</div>
-                          <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{value.description}</div>
-                        </button>
-                      ))}
-                    </div>
-                  )}
+            <div className="bg-white dark:bg-[#1E1E1E] rounded-3xl shadow-sm border border-gray-100 dark:border-gray-800 p-6 mb-6">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                  <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900 dark:text-white">{selectedWorkout.title}</h1>
+                  <p className="text-gray-600 dark:text-gray-400 mt-2">{selectedWorkout.description}</p>
                 </div>
-                <button
-                  onClick={changeWorkoutPlan}
-                  className="bg-emerald-500/90 backdrop-blur-sm hover:bg-emerald-600 text-white px-4 py-2.5 rounded-lg transition-colors font-medium text-sm flex items-center justify-center gap-2"
-                >
-                  <Play className="w-4 h-4" />
-                  Change Workout Plan
-                </button>
+                <div className="flex flex-col gap-3 w-full sm:w-auto">
+                  {/* Split Selection */}
+                  <div className="relative">
+                    <button
+                      onClick={() => {
+                        setSelectedWorkout({
+                          ...selectedWorkout,
+                          showSplitMenu: !selectedWorkout.showSplitMenu
+                        });
+                      }}
+                      className="w-full bg-gray-50 dark:bg-[#282828] text-sm px-4 py-2.5 rounded-2xl flex items-center justify-between border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-[#333] transition-colors text-gray-700 dark:text-gray-200"
+                    >
+                      <span className="flex items-center gap-2">
+                        <BarChart className="w-4 h-4 text-emerald-500" />
+                        Split: {splitTypes[selectedWorkout.splitType || 'bro-split'].name}
+                      </span>
+                      <ChevronDown className="w-4 h-4 text-gray-500" />
+                    </button>
+                    {selectedWorkout.showSplitMenu && (
+                      <div className="absolute z-10 w-full mt-2 bg-white dark:bg-[#1E1E1E] rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                        {Object.entries(splitTypes).map(([key, value]) => (
+                          <button
+                            key={key}
+                            onClick={() => {
+                              const updatedWorkout = {
+                                ...selectedWorkout,
+                                splitType: key as SplitType,
+                                showSplitMenu: false,
+                                schedule: {
+                                  days: generateWeeklySchedule(selectedWorkout.level, selectedWorkout.goal, selectedWorkout.equipment, key as SplitType)
+                                }
+                              };
+                              setSelectedWorkout(updatedWorkout);
+                              localStorage.setItem('selectedWorkout', JSON.stringify(updatedWorkout));
+                            }}
+                            className={`w-full px-4 py-3 text-left text-sm hover:bg-gray-50 dark:hover:bg-[#282828] transition-colors ${
+                              selectedWorkout.splitType === key 
+                                ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' 
+                                : 'text-gray-700 dark:text-gray-200'
+                            }`}
+                          >
+                            <div className="font-medium">{value.name}</div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{value.description}</div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    onClick={changeWorkoutPlan}
+                    className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2.5 rounded-2xl transition-colors font-medium text-sm flex items-center justify-center gap-2"
+                  >
+                    <Play className="w-4 h-4" />
+                    Change Workout Plan
+                  </button>
+                </div>
               </div>
             </div>
 
             {/* Day Selection */}
-            <div className="grid grid-cols-7 gap-2 mb-8">
-              {selectedWorkout.schedule?.days.map((day) => (
-                <button
-                  key={day.day}
-                  onClick={() => setCurrentDay(day.day)}
-                  className={`p-4 rounded-lg text-center transition-all ${
-                    currentDay === day.day
-                      ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20'
-                      : 'bg-white dark:bg-[#1E1E1E] text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-[#282828] border border-gray-200 dark:border-gray-700'
-                  }`}
-                >
-                  <div className="font-medium text-sm">{day.day.slice(0, 3)}</div>
-                  <div className="text-xs mt-1 opacity-80">{day.focus.split(' ')[0]}</div>
-                </button>
-              ))}
+            <div className="bg-white dark:bg-[#1E1E1E] rounded-3xl shadow-sm border border-gray-100 dark:border-gray-800 p-6 mb-6">
+              <div className="grid grid-cols-7 gap-3">
+                {selectedWorkout.schedule?.days.map((day) => (
+                  <button
+                    key={day.day}
+                    onClick={() => setCurrentDay(day.day)}
+                    className={`p-4 rounded-2xl text-center transition-all ${
+                      currentDay === day.day
+                        ? 'bg-emerald-500 text-white'
+                        : 'bg-gray-50 dark:bg-[#282828] text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#333] border border-gray-200 dark:border-gray-700'
+                    }`}
+                  >
+                    <div className="font-medium text-sm">{day.day.slice(0, 3)}</div>
+                    <div className="text-xs mt-1 opacity-80">{day.focus.split(' ')[0]}</div>
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* Current Day Workout */}
             {currentDayWorkout && (
-              <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-                <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+              <div className="bg-white dark:bg-[#1E1E1E] rounded-3xl shadow-sm border border-gray-100 dark:border-gray-800">
+                <div className="p-6 border-b border-gray-100 dark:border-gray-800">
                   <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                     <Calendar className="w-5 h-5 text-emerald-500" />
-                  {currentDayWorkout.focus}
-                </h2>
+                    {currentDayWorkout.focus}
+                  </h2>
                 </div>
 
                 <div className="p-6">
@@ -776,7 +768,7 @@ export default function Workouts() {
                       <button
                         key={index}
                         onClick={() => viewExerciseDetails(exercise)}
-                        className="w-full bg-gray-50 dark:bg-[#282828] hover:bg-gray-100 dark:hover:bg-[#333333] rounded-lg p-4 transition-colors text-left border border-gray-200 dark:border-gray-700"
+                        className="w-full bg-gray-50 dark:bg-[#282828] hover:bg-gray-100 dark:hover:bg-[#333] rounded-2xl p-4 transition-colors text-left border border-gray-200 dark:border-gray-700"
                       >
                         <div className="flex justify-between items-start gap-4">
                           <div>
@@ -787,7 +779,7 @@ export default function Workouts() {
                             <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{exercise.notes}</p>
                           </div>
                           <div className="text-right">
-                            <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
+                            <p className="text-sm font-medium text-emerald-500">
                               {exercise.sets} sets × {exercise.reps}
                             </p>
                           </div>
@@ -795,7 +787,7 @@ export default function Workouts() {
                       </button>
                     ))}
                     {(!currentDayWorkout.exercises || currentDayWorkout.exercises.length === 0) && (
-                      <div className="text-center py-8">
+                      <div className="text-center py-12">
                         <p className="text-gray-500 dark:text-gray-400">
                           {currentDayWorkout.notes || "Rest day"}
                         </p>
@@ -810,14 +802,14 @@ export default function Workouts() {
 
         {/* Exercise Modal */}
         {selectedExercise && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white dark:bg-[#1E1E1E] rounded-xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <div className="bg-white dark:bg-[#1E1E1E] rounded-3xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
               {/* Modal Header */}
               <div className="flex justify-between items-start mb-6">
                 <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">{selectedExercise.name}</h2>
                 <button
                   onClick={() => setSelectedExercise(null)}
-                  className="p-2 hover:bg-gray-100 dark:hover:bg-[#282828] rounded-lg transition-colors"
+                  className="p-2 hover:bg-gray-100 dark:hover:bg-[#282828] rounded-xl transition-colors"
                 >
                   <X className="w-6 h-6 text-gray-500 dark:text-gray-400" />
                 </button>
@@ -940,7 +932,7 @@ export default function Workouts() {
 
         {/* Loading Overlay */}
         {loadingExercise && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500"></div>
           </div>
         )}
@@ -949,57 +941,61 @@ export default function Workouts() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#121212] py-8">
+    <div className="min-h-screen bg-white dark:bg-[#121212] py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Workouts</h1>
-          </div>
+        <div className="bg-white dark:bg-[#1E1E1E] rounded-3xl shadow-sm border border-gray-100 dark:border-gray-800 p-6 mb-8">
+          <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">Workout Plans</h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-2">Choose a workout plan that matches your goals</p>
+        </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {workouts.map((workout, index) => (
             <div 
               key={index}
-              className="bg-white dark:bg-[#1E1E1E] rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow"
+              className="bg-white dark:bg-[#1E1E1E] rounded-3xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden group hover:shadow-md transition-shadow"
             >
-                    <div className="relative h-48">
-                  <img
-                    src={workout.imageUrl}
-                    alt={workout.title}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
+              <div className="relative h-48">
+                <img
+                  src={workout.imageUrl}
+                  alt={workout.title}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                <div className="absolute bottom-0 left-0 right-0 p-4">
+                  <h3 className="text-lg font-semibold text-white">{workout.title}</h3>
+                </div>
+              </div>
               <div className="p-6">
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">{workout.title}</h3>
                 <div className="space-y-3 text-sm mb-4">
                   <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
                     <Clock className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                      <span>Duration: {workout.duration}</span>
-                    </div>
+                    <span>Duration: {workout.duration}</span>
+                  </div>
                   <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
                     <Target className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                      <span>Goal: {workout.goal}</span>
-                    </div>
+                    <span>Goal: {workout.goal}</span>
+                  </div>
                   <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
                     <Gauge className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                          <span>Level: {workout.level}</span>
-                        </div>
+                    <span>Level: {workout.level}</span>
+                  </div>
                   <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
                     <Wrench className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                      <span>Equipment: {workout.equipment}</span>
-                    </div>
+                    <span>Equipment: {workout.equipment}</span>
                   </div>
+                </div>
                 <p className="text-gray-600 dark:text-gray-400 text-sm mb-6">{workout.description}</p>
-                      <button 
-                        onClick={() => selectWorkout(workout)}
-                  className="w-full bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-3 rounded-lg transition-colors font-medium"
-                      >
-                        Start Workout Plan
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                <button 
+                  onClick={() => selectWorkout(workout)}
+                  className="w-full bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-3 rounded-2xl transition-colors font-medium"
+                >
+                  Start Workout Plan
+                </button>
               </div>
+            </div>
+          ))}
         </div>
       </div>
+    </div>
   );
 } 

@@ -10,7 +10,7 @@ export default function Layout() {
   const { isDarkMode } = useTheme();
   const { pathname } = useLocation();
 
-  const showHeaderAndNav = !['profile', 'membership', 'achievements', 'profile/edit'].some(path => 
+  const showHeaderAndNav = !['profile', 'membership', 'achievements', 'profile/edit', 'settings'].some(path => 
     pathname.endsWith(path)
   );
 

@@ -1,9 +1,10 @@
-import { Edit, Crown, ArrowLeft } from 'lucide-react';
+import { Edit, Crown, ArrowLeft, Activity, Calendar, User2, Scale, Heart } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useProfile } from '../context/ProfileContext';
 import { useAuth } from '../context/AuthContext';
 import { useState, useEffect } from 'react';
 import { usePayment } from '../context/PaymentContext';
+import { useTheme } from '../context/ThemeContext';
 
 interface Plan {
   id: string;
@@ -64,6 +65,7 @@ export default function Profile() {
   const { profileData, updateProfile } = useProfile();
   const { user } = useAuth();
   const { membership } = usePayment();
+  const { isDarkMode } = useTheme();
 
   // Mock active membership data (replace with actual data from backend)
   const activeMembership = {
@@ -174,228 +176,212 @@ export default function Profile() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#121212] py-8">
-      <div className="max-w-7xl mx-auto px-4">
+      <div className="max-w-4xl mx-auto px-4 space-y-6">
         {/* Back Button with Title */}
-        <div className="flex items-center gap-3 mb-6">
+        <div className="flex items-center gap-3 mb-2">
           <button
             onClick={() => navigate('/')}
-            className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+            className="p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200"
           >
-            <ArrowLeft className="w-6 h-6" />
+            <ArrowLeft className="w-5 h-5" />
           </button>
-          <h1 className="text-xl font-semibold text-gray-900 dark:text-white">Profile</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Profile</h1>
         </div>
 
         {/* User Info Card */}
-        <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 mb-8">
-          <div className="p-6 flex items-center">
-            <div className="w-16 h-16 bg-emerald-600 rounded-full flex items-center justify-center mr-4">
+        <div className="bg-white dark:bg-[#1E1E1E] rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 transform transition-all duration-200 hover:shadow-xl">
+          <div className="p-8 flex items-center gap-6">
+            <div className="w-20 h-20 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-2xl flex items-center justify-center shadow-lg transform transition-transform duration-200 hover:scale-105">
               {user?.photoURL ? (
-                <img src={user.photoURL} alt="Profile" className="w-full h-full rounded-full object-cover" />
+                <img src={user.photoURL} alt="Profile" className="w-full h-full rounded-2xl object-cover" />
               ) : (
-                <span className="text-2xl font-bold text-white">{user?.email?.[0].toUpperCase()}</span>
+                <span className="text-3xl font-bold text-white">{user?.email?.[0].toUpperCase()}</span>
               )}
             </div>
             <div className="flex-1">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">{user?.displayName || user?.email}</h2>
-              <p className="text-gray-500 dark:text-gray-400">Member since {new Date(user?.metadata?.creationTime || '').toLocaleDateString()}</p>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">{user?.displayName || user?.email}</h2>
+              <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
+                <Calendar className="w-4 h-4" />
+                <p>Member since {new Date(user?.metadata?.creationTime || '').toLocaleDateString()}</p>
+              </div>
             </div>
             <button
               onClick={() => navigate('/profile/edit')}
-              className="flex items-center gap-2 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-4 py-2 rounded-lg hover:bg-emerald-500/20 transition-colors"
+              className="flex items-center gap-2 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-6 py-3 rounded-xl hover:bg-emerald-500/20 transition-all duration-200 font-medium"
             >
               <Edit className="w-4 h-4" />
-              Edit
+              Edit Profile
             </button>
+          </div>
+        </div>
+
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* BMI Card */}
+          <div className="bg-white dark:bg-[#1E1E1E] rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 p-6 transform transition-all duration-200 hover:shadow-xl">
+            <div className="flex items-center gap-3 mb-4">
+              <Scale className="w-5 h-5 text-emerald-500" />
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">BMI Status</h3>
+            </div>
+            {bmi && bmiInfo && (
+              <div className="space-y-4">
+                <div className="flex justify-between items-baseline">
+                  <span className="text-3xl font-bold text-gray-900 dark:text-white">{bmi}</span>
+                  <span className="text-lg font-medium text-emerald-500">{bmiInfo.category}</span>
+                </div>
+                <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-2.5">
+                  <div 
+                    className="bg-emerald-500 h-2.5 rounded-full transition-all duration-500 ease-out"
+                    style={{ width: bmiInfo.position }}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* BMR Card */}
+          <div className="bg-white dark:bg-[#1E1E1E] rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 p-6 transform transition-all duration-200 hover:shadow-xl">
+            <div className="flex items-center gap-3 mb-4">
+              <Activity className="w-5 h-5 text-emerald-500" />
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Daily Calories</h3>
+            </div>
+            {bmr && (
+              <div className="space-y-2">
+                <div className="flex justify-between items-baseline">
+                  <span className="text-3xl font-bold text-gray-900 dark:text-white">{bmr}</span>
+                  <span className="text-sm text-gray-500 dark:text-gray-400">calories/day</span>
+                </div>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Base Metabolic Rate</p>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Active Membership Card */}
         <div 
-          className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 mb-8 cursor-pointer hover:bg-gray-50 dark:hover:bg-[#242424] transition-colors"
+          className="bg-white dark:bg-[#1E1E1E] rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 transform transition-all duration-200 hover:shadow-xl cursor-pointer"
           onClick={() => navigate('/membership')}
         >
-          <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
-            <h2 className="text-xl font-semibold flex items-center gap-2 text-gray-900 dark:text-white">
-              <Crown className="w-5 h-5 text-yellow-500" />
+          <div className="px-8 py-6 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+            <h2 className="text-xl font-bold flex items-center gap-3 text-gray-900 dark:text-white">
+              <Crown className="w-6 h-6 text-yellow-500" />
               Active Membership
             </h2>
             {membership?.isActive ? (
-              <span className="bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-3 py-1 rounded-full text-sm font-medium">
+              <span className="bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-4 py-1.5 rounded-full text-sm font-medium">
                 Active
               </span>
             ) : (
-              <span className="bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 px-3 py-1 rounded-full text-sm font-medium">
+              <span className="bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 px-4 py-1.5 rounded-full text-sm font-medium">
                 Inactive
               </span>
             )}
           </div>
-          <div className="p-6">
+          <div className="p-8">
             {membership?.isActive ? (
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
+              <div className="space-y-6">
+                <div className="flex justify-between items-start">
                   <div>
-                    <h3 className="text-lg font-medium text-gray-900 dark:text-white">{plans.find(p => p.id === membership.planId)?.name}</h3>
-                    <p className="text-gray-500 dark:text-gray-400 text-sm">Valid until {new Date(membership.endDate).toLocaleDateString()}</p>
+                    <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-1">
+                      {plans.find(p => p.id === membership.planId)?.name}
+                    </h3>
+                    <p className="text-gray-500 dark:text-gray-400">Valid until {new Date(membership.endDate).toLocaleDateString()}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Days Remaining</p>
-                    <p className="text-2xl font-bold text-emerald-500 dark:text-emerald-400">
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Days Remaining</p>
+                    <p className="text-3xl font-bold text-emerald-500">
                       {Math.ceil((new Date(membership.endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))}
                     </p>
                   </div>
                 </div>
-                <div className="w-full bg-gray-100 dark:bg-[#282828] rounded-full h-2">
+                <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-2.5">
                   <div 
-                    className="bg-emerald-500 dark:bg-emerald-400 h-2 rounded-full transition-all duration-300 ease-in-out"
+                    className="bg-emerald-500 h-2.5 rounded-full transition-all duration-500 ease-out"
                     style={{
-                      width: `${Math.max(0, Math.min(100, (new Date(membership.endDate).getTime() - new Date().getTime()) / 
-                        (new Date(membership.endDate).getTime() - new Date(membership.startDate).getTime()) * 100))}%`
+                      width: `${(Math.ceil((new Date(membership.endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) / 
+                        Math.ceil((new Date(membership.endDate).getTime() - new Date(membership.startDate).getTime()) / (1000 * 60 * 60 * 24))) * 100}%`
                     }}
                   />
                 </div>
               </div>
             ) : (
-              <div className="text-center py-8">
-                <div className="w-16 h-16 bg-red-50 dark:bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <Crown className="w-8 h-8 text-red-500" />
-                </div>
-                <div className="space-y-2">
-                  <p className="text-lg font-medium text-gray-900 dark:text-gray-300">No Active Membership</p>
-                  <p className="text-gray-500 dark:text-gray-400">Get access to all gym facilities and features</p>
-                  <button className="mt-4 bg-emerald-500 text-white px-6 py-2 rounded-lg hover:bg-emerald-600 transition-colors inline-flex items-center gap-2">
-                    <Crown className="w-4 h-4" />
-                    View Plans
-                  </button>
-                </div>
+              <div className="text-center py-6">
+                <p className="text-gray-500 dark:text-gray-400 mb-4">No active membership. Click to view available plans.</p>
+                <button className="bg-emerald-500 text-white px-6 py-2 rounded-lg hover:bg-emerald-600 transition-colors">
+                  View Plans
+                </button>
               </div>
             )}
           </div>
         </div>
 
-        {/* Profile Information Card */}
-        <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-gray-200 dark:border-gray-800">
-          <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-800">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Profile Information</h2>
+        {/* Dietary Preferences Card */}
+        <div className="bg-white dark:bg-[#1E1E1E] rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 transform transition-all duration-200 hover:shadow-xl">
+          <div className="px-8 py-6 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+            <h2 className="text-xl font-bold flex items-center gap-3 text-gray-900 dark:text-white">
+              <Heart className="w-6 h-6 text-red-500" />
+              Dietary Preferences
+            </h2>
+            {!editingDietary && (
+              <button
+                onClick={() => setEditingDietary(true)}
+                className="flex items-center gap-2 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 px-4 py-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+              >
+                <Edit className="w-4 h-4" />
+                Edit
+              </button>
+            )}
           </div>
-
-          <div className="p-6 space-y-8">
-            {/* BMR and Calorie Information */}
-            <div>
-              <h3 className="text-lg font-medium mb-4 text-gray-900 dark:text-white">BMR & Calorie Information</h3>
-              <div className="bg-[#1E1E1E] rounded-xl p-6">
-                <h2 className="text-xl font-semibold mb-6">BMR & Calorie Information</h2>
-                
-                <div className="space-y-6">
-                  {/* BMR Display */}
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <p className="text-sm text-gray-400">Basal Metabolic Rate (BMR)</p>
-                      <p className="text-xs text-gray-500">Calories your body burns at complete rest</p>
-                    </div>
-                    <p className="text-lg font-semibold text-emerald-500">{bmr ? `${bmr} kcal/day` : 'N/A'}</p>
-                  </div>
-
-                  {/* BMI Display */}
-                  <div>
-                    <div className="flex justify-between items-center mb-2">
-                      <p className="text-sm text-gray-400">Body Mass Index (BMI)</p>
-                      <p className="text-lg font-semibold text-emerald-500">{bmi || 'N/A'}</p>
-                    </div>
-                    
-                    {bmi && (
-                      <>
-                        <div className="relative h-2 rounded-full overflow-hidden mb-2" 
-                          style={{ background: 'linear-gradient(to right, #3b82f6, #22c55e, #eab308, #ef4444)' }}
-                        >
-                          {/* BMI Indicator */}
-                          <div 
-                            className="absolute w-1 h-4 bg-white -top-1 transition-all duration-300"
-                            style={{ left: bmiInfo?.position, transform: 'translateX(-50%)' }}
-                          />
-                        </div>
-                        
-                        {/* BMI Categories */}
-                        <div className="flex justify-between text-xs text-gray-400">
-                          <span>Underweight</span>
-                          <span>Normal</span>
-                          <span>Overweight</span>
-                          <span>Obese</span>
-                        </div>
-                      </>
-                    )}
-                  </div>
+          <div className="p-8">
+            {editingDietary ? (
+              <div className="space-y-4">
+                <div className="flex flex-wrap gap-2">
+                  {dietaryOptions.map(option => (
+                    <button
+                      key={option}
+                      onClick={() => handleDietaryChange(option)}
+                      className={`px-4 py-2 rounded-lg transition-all duration-200 ${
+                        dietaryPreferences.includes(option)
+                          ? 'bg-emerald-500 text-white'
+                          : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                      }`}
+                    >
+                      {option}
+                    </button>
+                  ))}
+                </div>
+                {saveError && <p className="text-red-500 text-sm">{saveError}</p>}
+                <div className="flex justify-end gap-3">
+                  <button
+                    onClick={() => setEditingDietary(false)}
+                    className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={saveDietaryPreferences}
+                    className="px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors"
+                  >
+                    Save
+                  </button>
                 </div>
               </div>
-            </div>
-
-            {/* Personal Information */}
-            <div>
-              <h3 className="text-lg font-medium mb-4">Personal Information</h3>
-              <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <p className="text-sm text-gray-400">Age</p>
-                  <p className="mt-1">{profileData?.personalInfo?.age || 'Not set'}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-400">Date of Birth</p>
-                  <p className="mt-1">{profileData?.personalInfo?.dateOfBirth || 'Not set'}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-400">Gender</p>
-                  <p className="mt-1">{profileData?.personalInfo?.gender || 'Not set'}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-400">Blood Type</p>
-                  <p className="mt-1">{profileData?.personalInfo?.bloodType || 'Not set'}</p>
-                </div>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {profileData?.preferences?.dietary && profileData.preferences.dietary.length > 0 ? (
+                  profileData.preferences.dietary.map(pref => (
+                    <span
+                      key={pref}
+                      className="px-4 py-2 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-lg"
+                    >
+                      {pref}
+                    </span>
+                  ))
+                ) : (
+                  <p className="text-gray-500 dark:text-gray-400">No dietary preferences set</p>
+                )}
               </div>
-            </div>
-
-            {/* Medical Information */}
-            <div>
-              <h3 className="text-lg font-medium mb-4">Medical Information</h3>
-              <div>
-                <p className="text-sm text-gray-400">Medical Conditions</p>
-                <p className="mt-1">{profileData?.medicalInfo?.conditions || 'None reported'}</p>
-              </div>
-            </div>
-
-            {/* Physical Stats */}
-            <div>
-              <h3 className="text-lg font-medium mb-4">Physical Stats</h3>
-              <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <p className="text-sm text-gray-400">Weight</p>
-                  <p className="mt-1">{profileData?.stats?.weight || 'Not set'}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-400">Height</p>
-                  <p className="mt-1">{profileData?.stats?.height || 'Not set'}</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Preferences */}
-            <div>
-              <h3 className="text-lg font-medium mb-4">Preferences</h3>
-              <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <p className="text-sm text-gray-400">Fitness Level</p>
-                  <p className="mt-1">{profileData?.preferences?.fitnessLevel || 'Not Set'}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-400">Activity Level</p>
-                  <p className="mt-1">{profileData?.preferences?.activityLevel || 'Not Set'}</p>
-                </div>
-              </div>
-              <div className="mt-4">
-                <p className="text-sm text-gray-400">Dietary Preferences</p>
-                <p className="mt-1">
-                  {renderDietaryPreferences()}
-                </p>
-              </div>
-            </div>
+            )}
           </div>
         </div>
       </div>

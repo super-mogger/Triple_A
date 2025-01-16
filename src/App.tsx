@@ -22,6 +22,7 @@ import MembershipDetails from './pages/MembershipDetails';
 import PaymentHistory from './pages/PaymentHistory';
 import { PaymentPlans } from './components/PaymentPlans';
 import Achievements from './pages/Achievements';
+import Settings from './pages/Settings';
 
 function App() {
   return (
@@ -54,6 +55,7 @@ function App() {
                 <Route path="/membership" element={<MembershipDetails />} />
                 <Route path="/payment-history" element={<PaymentHistory />} />
                 <Route path="/achievements" element={<Achievements />} />
+                <Route path="/settings" element={<Settings />} />
               </Route>
               <Route path="*" element={<Navigate to="/welcome" replace />} />
             </Routes>

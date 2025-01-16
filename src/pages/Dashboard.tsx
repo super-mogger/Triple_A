@@ -117,211 +117,194 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-white dark:bg-[#121212] text-gray-900 dark:text-white">
-      <div className="container mx-auto px-4 py-4 pb-24">
+    <div className="min-h-screen bg-white dark:bg-[#121212]">
+      <div className="container mx-auto px-4 py-6 pb-24 max-w-5xl">
         {/* Streak Broken Alert */}
         {showStreakBrokenAlert && (
-          <div className="fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg animate-slide-in-right">
-            <div className="flex items-center gap-2">
-              <span className="text-2xl">💔</span>
+          <div className="fixed top-4 right-4 bg-white dark:bg-[#1E1E1E] text-gray-900 dark:text-white px-6 py-3 rounded-2xl shadow-lg animate-slide-in-right">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">💪</span>
               <div>
-                <h3 className="font-semibold">Streak Lost!</h3>
-                <p className="text-sm">Don't worry, start a new streak today!</p>
+                <h3 className="font-medium">Streak Lost</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-300">Start a new streak today!</p>
               </div>
-            </div>
-          </div>
-        )}
-
-        <div className="mb-8 bg-gray-50 dark:bg-[#1E1E1E] rounded-xl p-6 shadow-sm">
-          <h2 className="text-xl font-semibold mb-4">Workout Streak</h2>
-          <div className="flex items-center justify-center">
-            <StreakCounter 
-              streak={streak} 
-              label="Day Streak"
-              onStreakBroken={handleStreakBroken}
-            />
-          </div>
-        </div>
-
-        {/* Membership Alert */}
-        {!membership?.isActive && (
-          <div className="bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-xl shadow-sm p-4 mb-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Crown className="h-6 w-6 text-red-500" />
-                <div>
-                  <h3 className="text-lg font-medium text-red-500">No Active Membership</h3>
-                  <p className="text-sm text-red-400/80">Get access to all gym facilities and features</p>
-                </div>
-              </div>
-              <button
-                onClick={() => navigate('/membership')}
-                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
-              >
-                View Plans
-              </button>
             </div>
           </div>
         )}
 
         {/* Welcome Section */}
-        <div className="bg-gray-50 dark:bg-[#1E1E1E] rounded-xl shadow-sm p-6 mb-6">
-          <h1 className="text-2xl font-bold">
-            Welcome back, {profileData?.displayName || 'Athlete'}!
+        <div className="mb-8">
+          <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">
+            Hi, {profileData?.displayName || 'Athlete'}
           </h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-2">Let's achieve your fitness goals together.</p>
+          <p className="text-gray-600 dark:text-gray-300 mt-1">Let's stay active today</p>
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-2 gap-4 mb-8">
+          {/* Streak Card */}
+          <div className="bg-white dark:bg-[#1E1E1E] rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-800">
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-base font-medium text-gray-900 dark:text-white">Workout Streak</h2>
+              <Activity className="w-5 h-5 text-emerald-500" />
+            </div>
+            <div className="mt-2">
+              <div className="flex items-baseline">
+                <span className="text-3xl font-semibold text-emerald-500">{streak}</span>
+                <span className="ml-1 text-sm text-gray-600 dark:text-gray-400">days</span>
+              </div>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Keep it going!</p>
+            </div>
+          </div>
+
+          {/* Today's Goal */}
+          <div className="bg-white dark:bg-[#1E1E1E] rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-800">
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-base font-medium text-gray-900 dark:text-white">Today's Goal</h2>
+              <Target className="w-5 h-5 text-blue-500" />
+            </div>
+            <div className="mt-2">
+              <div className="flex items-baseline">
+                <span className="text-3xl font-semibold text-blue-500">1</span>
+                <span className="ml-1 text-sm text-gray-600 dark:text-gray-400">workout</span>
+              </div>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">30 minutes target</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Main Content */}
+        <div className="space-y-6">
           {/* Today's Workout */}
-          <div className="bg-gray-50 dark:bg-[#1E1E1E] rounded-xl shadow-sm p-4">
-            <div className="flex items-center">
-              <div className="p-3 bg-gray-100 dark:bg-[#282828] rounded-full">
-                <Dumbbell className="h-6 w-6 text-emerald-500" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm text-gray-500 dark:text-gray-400">Today's Workout</p>
-                <p className="text-lg font-semibold">Pending</p>
+          <div className="bg-white dark:bg-[#1E1E1E] rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-800">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-medium text-gray-900 dark:text-white">Today's Workout</h2>
+              <button className="px-4 py-2 bg-emerald-500 text-white rounded-full text-sm font-medium hover:bg-emerald-600 transition-colors">
+                Start
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between py-3 border-b border-gray-100 dark:border-gray-800">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-emerald-50 dark:bg-emerald-500/10 rounded-xl">
+                    <Dumbbell className="w-5 h-5 text-emerald-500" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900 dark:text-white">Warm Up</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">5-10 minutes</p>
+                  </div>
+                </div>
+                <span className="text-sm text-gray-600 dark:text-gray-400">Pending</span>
               </div>
             </div>
           </div>
 
-          {/* Progress Stats */}
-          <div className="bg-gray-50 dark:bg-[#1E1E1E] rounded-xl shadow-sm p-4">
-            <div className="flex items-center">
-              <div className="p-3 bg-gray-100 dark:bg-[#282828] rounded-full">
-                <TrendingUp className="h-6 w-6 text-blue-500" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm text-gray-500 dark:text-gray-400">Weekly Progress</p>
-                <p className="text-lg font-semibold">On Track</p>
-              </div>
-            </div>
-          </div>
+          {/* Profile Summary */}
+          <div className="bg-white dark:bg-[#1E1E1E] rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-800">
+            <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Profile Summary</h2>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-4">
+                {/* Weight */}
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-blue-50 dark:bg-blue-500/10 rounded-xl">
+                    <User className="w-5 h-5 text-blue-500" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Weight</p>
+                    <p className="font-medium text-gray-900 dark:text-white">{profileData?.stats?.weight || 73} kg</p>
+                  </div>
+                </div>
 
-          {/* Goals */}
-          <div className="bg-gray-50 dark:bg-[#1E1E1E] rounded-xl shadow-sm p-4">
-            <div className="flex items-center">
-              <div className="p-3 bg-gray-100 dark:bg-[#282828] rounded-full">
-                <Target className="h-6 w-6 text-purple-500" />
+                {/* Fitness Level */}
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-purple-50 dark:bg-purple-500/10 rounded-xl">
+                    <Activity className="w-5 h-5 text-purple-500" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Fitness Level</p>
+                    <p className="font-medium text-gray-900 dark:text-white">{profileData?.preferences?.fitnessLevel || 'Intermediate'}</p>
+                  </div>
+                </div>
               </div>
-              <div className="ml-4">
-                <p className="text-sm text-gray-500 dark:text-gray-400">Active Goals</p>
-                <p className="text-lg font-semibold">
-                  {profileData?.goals?.length || 0}
-                </p>
+
+              <div className="space-y-4">
+                {/* Activity Level */}
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-emerald-50 dark:bg-emerald-500/10 rounded-xl">
+                    <TrendingUp className="w-5 h-5 text-emerald-500" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Activity Level</p>
+                    <p className="font-medium text-gray-900 dark:text-white">{profileData?.preferences?.activityLevel || 'Moderately-Active'}</p>
+                  </div>
+                </div>
+
+                {/* Next Workout */}
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-yellow-50 dark:bg-yellow-500/10 rounded-xl">
+                    <Calendar className="w-5 h-5 text-yellow-500" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Next Workout</p>
+                    <p className="font-medium text-gray-900 dark:text-white">Today</p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
           {/* Achievements */}
           <div 
-            className="bg-gray-50 dark:bg-[#1E1E1E] rounded-xl shadow-sm p-4 cursor-pointer hover:bg-gray-100 dark:hover:bg-[#252525] transition-colors"
+            className="bg-white dark:bg-[#1E1E1E] rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-800 cursor-pointer"
             onClick={() => navigate('/achievements')}
           >
-            <div className="flex items-center">
-              <div className="p-3 bg-gray-100 dark:bg-[#282828] rounded-full">
-                <Award className="h-6 w-6 text-yellow-500" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm text-gray-500 dark:text-gray-400">Achievements</p>
-                <p className="text-lg font-semibold">
-                  {achievements.filter(a => a.unlocked).length} / {achievements.length}
-                </p>
-                <div className="flex gap-1 mt-1">
-                  {achievements
-                    .filter(a => a.unlocked)
-                    .slice(-3)
-                    .map(achievement => (
-                      <span 
-                        key={achievement.id} 
-                        className="text-lg" 
-                        title={achievement.title}
-                      >
-                        {achievement.icon}
-                      </span>
-                    ))}
-                </div>
-              </div>
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-lg font-medium text-gray-900 dark:text-white">Achievements</h2>
+              <Award className="w-5 h-5 text-yellow-500" />
             </div>
-          </div>
-        </div>
-
-        {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Workout Plan */}
-          <div className="lg:col-span-2">
-            <div className="bg-gray-50 dark:bg-[#1E1E1E] rounded-xl shadow-sm p-6">
-              <h2 className="text-xl font-semibold mb-4">Today's Workout Plan</h2>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 bg-gray-100 dark:bg-[#282828] rounded-xl">
-                  <div className="flex items-center">
-                    <Activity className="h-5 w-5 text-emerald-500 mr-3" />
-                    <div>
-                      <p className="font-medium">Warm Up</p>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">5-10 minutes</p>
-                    </div>
-                  </div>
-                  <span className="px-3 py-1 text-sm text-emerald-500 bg-emerald-500/10 rounded-full">
-                    Pending
-                  </span>
-                </div>
+            <div className="flex items-center justify-between">
+              <div className="flex gap-2">
+                {achievements
+                  .filter(a => a.unlocked)
+                  .slice(-3)
+                  .map(achievement => (
+                    <span 
+                      key={achievement.id} 
+                      className="text-xl" 
+                      title={achievement.title}
+                    >
+                      {achievement.icon}
+                    </span>
+                  ))}
               </div>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                {achievements.filter(a => a.unlocked).length} / {achievements.length}
+              </p>
             </div>
           </div>
 
-          {/* Profile Summary */}
-          <div className="lg:col-span-1">
-            <div className="bg-gray-50 dark:bg-[#1E1E1E] rounded-xl shadow-sm p-6">
-              <h2 className="text-xl font-semibold mb-4">Profile Summary</h2>
-              <div className="space-y-4">
-                {/* Current Weight */}
-                <div className="flex items-center">
-                  <div className="p-2 bg-gray-100 dark:bg-[#282828] rounded-full">
-                    <User className="h-5 w-5 text-blue-500" />
+          {/* Membership Alert */}
+          {!membership?.isActive && (
+            <div className="bg-white dark:bg-[#1E1E1E] rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-800">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-red-50 dark:bg-red-500/10 rounded-xl">
+                    <Crown className="w-5 h-5 text-red-500" />
                   </div>
-                  <div className="ml-3">
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Current Weight</p>
-                    <p className="font-medium">{profileData?.stats?.weight || 73} kg</p>
+                  <div>
+                    <h3 className="font-medium text-gray-900 dark:text-white">Upgrade to Premium</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Get access to all features</p>
                   </div>
                 </div>
-
-                {/* Fitness Level */}
-                <div className="flex items-center">
-                  <div className="p-2 bg-gray-100 dark:bg-[#282828] rounded-full">
-                    <Activity className="h-5 w-5 text-purple-500" />
-                  </div>
-                  <div className="ml-3">
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Fitness Level</p>
-                    <p className="font-medium">{profileData?.preferences?.fitnessLevel || 'Intermediate'}</p>
-                  </div>
-                </div>
-
-                {/* Activity Level */}
-                <div className="flex items-center">
-                  <div className="p-2 bg-gray-100 dark:bg-[#282828] rounded-full">
-                    <TrendingUp className="h-5 w-5 text-emerald-500" />
-                  </div>
-                  <div className="ml-3">
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Activity Level</p>
-                    <p className="font-medium">{profileData?.preferences?.activityLevel || 'Moderately-Active'}</p>
-                  </div>
-                </div>
-
-                {/* Next Workout */}
-                <div className="flex items-center">
-                  <div className="p-2 bg-gray-100 dark:bg-[#282828] rounded-full">
-                    <Calendar className="h-5 w-5 text-yellow-500" />
-                  </div>
-                  <div className="ml-3">
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Next Workout</p>
-                    <p className="font-medium">Today</p>
-                  </div>
-                </div>
+                <button
+                  onClick={() => navigate('/membership')}
+                  className="px-4 py-2 bg-red-500 text-white rounded-full text-sm font-medium hover:bg-red-600 transition-colors"
+                >
+                  Upgrade
+                </button>
               </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

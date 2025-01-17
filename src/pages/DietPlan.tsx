@@ -176,8 +176,15 @@ export default function DietPlan() {
       // Generate personalized diet plan based on profile and selected plan type
       const dietPlan = generateDietPlan(selectedPlan.type);
       
-      // Store the generated plan in localStorage
-      localStorage.setItem('currentDietPlan', JSON.stringify(dietPlan));
+      // Store both the plan type and the generated plan
+      localStorage.setItem('selectedDietPlanType', selectedPlan.type);
+      localStorage.setItem('currentDietPlan', JSON.stringify({
+        ...dietPlan,
+        type: selectedPlan.type,
+        title: selectedPlan.title,
+        description: selectedPlan.description,
+        goal: selectedPlan.goal
+      }));
       
       // Navigate to diet plan details page
       navigate('/diet/plan-details');

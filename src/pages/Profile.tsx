@@ -2,7 +2,7 @@ import { Edit, Crown, ArrowLeft, Activity, Calendar, User2, Scale, Heart } from 
 import { useNavigate } from 'react-router-dom';
 import { useProfile } from '../context/ProfileContext';
 import { useAuth } from '../context/AuthContext';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { usePayment } from '../context/PaymentContext';
 import { useTheme } from '../context/ThemeContext';
 
@@ -62,49 +62,53 @@ const plans: Plan[] = [
 
 export default function Profile() {
   const navigate = useNavigate();
-  const { profileData, updateProfile } = useProfile();
+  const { profile, loading, error, refreshProfile, updateProfile } = useProfile();
   const { user } = useAuth();
   const { membership } = usePayment();
   const { isDarkMode } = useTheme();
-
-  // Mock active membership data (replace with actual data from backend)
-  const activeMembership = {
-    plan: 'quarterly',
-    startDate: '2024-01-08',
-    endDate: '2024-04-08',
-    isActive: false
-  };
-
   const [editingDietary, setEditingDietary] = useState(false);
-  const [dietaryPreferences, setDietaryPreferences] = useState<string[]>(
-    profileData?.preferences?.dietary || []
-  );
+  const [dietaryPreferences, setDietaryPreferences] = useState<string[]>([]);
   const [saveError, setSaveError] = useState<string | null>(null);
 
+  // Effect for error handling
   useEffect(() => {
-    if (profileData?.preferences?.dietary) {
-      setDietaryPreferences(profileData.preferences.dietary);
+    if (error) {
+      console.error('Profile error:', error);
     }
-  }, [profileData]);
+  }, [error]);
 
-  const dietaryOptions = ['Vegetarian', 'Vegan', 'Gluten-free', 'Dairy-free', 'Keto'];
-
-  const handleDietaryChange = (option: string) => {
-    if (dietaryPreferences.includes(option)) {
-      setDietaryPreferences(dietaryPreferences.filter(pref => pref !== option));
-    } else {
-      setDietaryPreferences([...dietaryPreferences, option]);
+  // Effect for dietary preferences
+  useEffect(() => {
+    if (profile?.preferences?.dietary) {
+      setDietaryPreferences(profile.preferences.dietary);
     }
-  };
+  }, [profile]);
 
-  const saveDietaryPreferences = async () => {
-    if (!profileData) return;
+  // Retry mechanism
+  const handleRetry = useCallback(async () => {
+    try {
+      await refreshProfile();
+    } catch (err) {
+      console.error('Failed to refresh profile:', err);
+    }
+  }, [refreshProfile]);
+
+  const handleDietaryChange = useCallback((option: string) => {
+    setDietaryPreferences(prev => 
+      prev.includes(option) 
+        ? prev.filter(pref => pref !== option)
+        : [...prev, option]
+    );
+  }, []);
+
+  const saveDietaryPreferences = useCallback(async () => {
+    if (!profile) return;
     
     try {
       setSaveError(null);
       const updatedPreferences = {
-        fitnessLevel: profileData.preferences?.fitnessLevel || 'beginner',
-        activityLevel: profileData.preferences?.activityLevel || 'sedentary',
+        fitnessLevel: profile.preferences?.fitnessLevel || 'beginner',
+        activityLevel: profile.preferences?.activityLevel || 'sedentary',
         dietary: dietaryPreferences
       } as const;
       
@@ -116,9 +120,104 @@ export default function Profile() {
       console.error('Error saving dietary preferences:', error);
       setSaveError('Failed to save preferences. Please try again.');
     }
+  }, [profile, dietaryPreferences, updateProfile]);
+
+  // Calculate BMI
+  const calculateBMI = useCallback(() => {
+    if (!profile?.stats?.weight || !profile?.stats?.height) return null;
+    const weight = Number(profile.stats.weight);
+    const heightInMeters = Number(profile.stats.height) / 100;
+    return (weight / (heightInMeters * heightInMeters)).toFixed(1);
+  }, [profile]);
+
+  // Calculate BMR
+  const calculateBMR = useCallback(() => {
+    if (!profile?.stats?.weight || !profile?.stats?.height || !profile?.personalInfo?.age) return null;
+    
+    const weight = Number(profile.stats.weight);
+    const height = Number(profile.stats.height);
+    const age = Number(profile.personalInfo.age);
+    const gender = profile.personalInfo.gender;
+
+    const bmr = (10 * weight) + (6.25 * height) - (5 * age);
+    return gender === 'male' ? Math.round(bmr + 5) : Math.round(bmr - 161);
+  }, [profile]);
+
+  const bmr = calculateBMR();
+  const bmi = calculateBMI();
+  const bmiInfo = useMemo(() => {
+    if (!bmi) return null;
+    const bmiNum = Number(bmi);
+    if (bmiNum < 18.5) return { category: 'Underweight', position: '10%' };
+    if (bmiNum < 25) return { category: 'Normal', position: '35%' };
+    if (bmiNum < 30) return { category: 'Overweight', position: '60%' };
+    return { category: 'Obese', position: '85%' };
+  }, [bmi]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-[#121212] flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-gray-600 dark:text-gray-400">Loading your profile...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-[#121212] flex items-center justify-center">
+        <div className="text-center space-y-4 p-8">
+          <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto">
+            <svg className="w-8 h-8 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white">Failed to load profile</h2>
+          <p className="text-gray-600 dark:text-gray-400">{error}</p>
+          <button
+            onClick={handleRetry}
+            className="bg-emerald-500 text-white px-6 py-2 rounded-lg hover:bg-emerald-600 transition-colors"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-[#121212] flex items-center justify-center">
+        <div className="text-center space-y-4 p-8">
+          <div className="w-16 h-16 bg-yellow-100 dark:bg-yellow-900/30 rounded-full flex items-center justify-center mx-auto">
+            <User2 className="w-8 h-8 text-yellow-500" />
+          </div>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white">Profile Not Found</h2>
+          <p className="text-gray-600 dark:text-gray-400">We couldn't find your profile information.</p>
+          <button
+            onClick={() => navigate('/profile/edit')}
+            className="bg-emerald-500 text-white px-6 py-2 rounded-lg hover:bg-emerald-600 transition-colors"
+          >
+            Create Profile
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Mock active membership data (replace with actual data from backend)
+  const activeMembership = {
+    plan: 'quarterly',
+    startDate: '2024-01-08',
+    endDate: '2024-04-08',
+    isActive: false
   };
 
-  // Calculate activity multiplier with type safety
+  const dietaryOptions = ['Vegetarian', 'Vegan', 'Gluten-free', 'Dairy-free', 'Keto'];
+
+  // Get activity multiplier with type safety
   const getActivityMultiplier = (level: string): number => {
     const activityMultipliers: { [key: string]: number } = {
       sedentary: 1.2,
@@ -131,48 +230,12 @@ export default function Profile() {
 
   // Helper function to safely display dietary preferences
   const renderDietaryPreferences = () => {
-    const preferences = profileData?.preferences?.dietary;
+    const preferences = profile?.preferences?.dietary;
     if (!preferences || preferences.length === 0) {
       return 'No dietary preferences set';
     }
     return preferences.join(', ');
   };
-
-  // Calculate BMI
-  const calculateBMI = () => {
-    if (!profileData?.stats?.weight || !profileData?.stats?.height) return null;
-    const weight = Number(profileData.stats.weight);
-    const heightInMeters = Number(profileData.stats.height) / 100;
-    return (weight / (heightInMeters * heightInMeters)).toFixed(1);
-  };
-
-  // Get BMI category and position
-  const getBMIInfo = (bmi: number) => {
-    if (bmi < 18.5) return { category: 'Underweight', position: '10%' };
-    if (bmi < 25) return { category: 'Normal', position: '35%' };
-    if (bmi < 30) return { category: 'Overweight', position: '60%' };
-    return { category: 'Obese', position: '85%' };
-  };
-
-  // Calculate BMR using Mifflin-St Jeor Equation
-  const calculateBMR = () => {
-    if (!profileData?.stats?.weight || !profileData?.stats?.height || !profileData?.personalInfo?.age) return null;
-    
-    const weight = Number(profileData.stats.weight);
-    const height = Number(profileData.stats.height);
-    const age = Number(profileData.personalInfo.age);
-    const gender = profileData.personalInfo.gender;
-
-    // BMR Formula:
-    // For men: BMR = 10W + 6.25H - 5A + 5
-    // For women: BMR = 10W + 6.25H - 5A - 161
-    const bmr = (10 * weight) + (6.25 * height) - (5 * age);
-    return gender === 'male' ? Math.round(bmr + 5) : Math.round(bmr - 161);
-  };
-
-  const bmr = calculateBMR();
-  const bmi = calculateBMI();
-  const bmiInfo = bmi ? getBMIInfo(Number(bmi)) : null;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#121212] py-8">
@@ -368,8 +431,8 @@ export default function Profile() {
               </div>
             ) : (
               <div className="flex flex-wrap gap-2">
-                {profileData?.preferences?.dietary && profileData.preferences.dietary.length > 0 ? (
-                  profileData.preferences.dietary.map(pref => (
+                {profile?.preferences?.dietary && profile.preferences.dietary.length > 0 ? (
+                  profile.preferences.dietary.map((pref: string) => (
                     <span
                       key={pref}
                       className="px-4 py-2 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-lg"

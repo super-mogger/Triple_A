@@ -1,6 +1,7 @@
 import { useProfile } from '../context/ProfileContext';
 
-interface DietaryAlternative {
+// Export all necessary interfaces
+export interface DietaryAlternative {
   name: string;
   protein: number;
   carbs: number;
@@ -9,7 +10,7 @@ interface DietaryAlternative {
   servingSize: string;
 }
 
-interface Food {
+export interface Food {
   name: string;
   protein: number;
   carbs: number;
@@ -17,21 +18,31 @@ interface Food {
   calories: number;
   servingSize: string;
   alternatives?: DietaryAlternative[];
+  category?: string;
+  difficulty?: string;
+  preparationTime?: string;
+  cookingTime?: string;
+  imageUrl?: string;
+  allergens?: string[];
 }
 
-interface Meal {
+export interface Meal {
   type: string;
   time: string;
   foods: Food[];
   notes?: string;
+  totalCalories: number;
+  totalProtein: number;
+  totalCarbs: number;
+  totalFats: number;
 }
 
-interface DailyMeals {
+export interface DailyMeals {
   day: string;
   meals: Meal[];
 }
 
-interface WeeklyDietPlan {
+export interface WeeklyDietPlan {
   title: string;
   description: string;
   level: string;
@@ -45,7 +56,7 @@ interface WeeklyDietPlan {
   weeklyPlan: DailyMeals[];
 }
 
-interface NutritionalGoals {
+export interface NutritionalGoals {
   calories: number;
   protein: {
     grams: number;
@@ -61,7 +72,7 @@ interface NutritionalGoals {
   };
 }
 
-interface Supplement {
+export interface Supplement {
   name: string;
   dosage: string;
   timing: string;
@@ -70,17 +81,60 @@ interface Supplement {
 }
 
 const highProteinMealDatabase: Food[] = [
-  // ... existing food database ...
+  {
+    name: "Chicken Breast with Rice",
+    protein: 30,
+    carbs: 40,
+    fats: 5,
+    calories: 325,
+    servingSize: "300g",
+      category: "High Protein",
+    difficulty: "Easy",
+      preparationTime: "10 mins",
+    cookingTime: "20 mins",
+    imageUrl: "https://images.unsplash.com/photo-1532550907401-a500c9a57435",
+    allergens: []
+  },
+  {
+    name: "Protein Oatmeal",
+    protein: 20,
+      carbs: 35,
+    fats: 8,
+    calories: 290,
+    servingSize: "250g",
+      category: "High Protein",
+    difficulty: "Easy",
+    preparationTime: "5 mins",
+    cookingTime: "10 mins",
+    allergens: ["Dairy"]
+  },
+  {
+    name: "Salmon with Sweet Potato",
+    protein: 25,
+    carbs: 30,
+    fats: 15,
+    calories: 355,
+    servingSize: "300g",
+      category: "High Protein",
+    difficulty: "Medium",
+    preparationTime: "10 mins",
+    cookingTime: "25 mins",
+    allergens: ["Fish"]
+  }
 ];
 
 const lowCalorieMealDatabase: Food[] = [
   {
     name: "Grilled Chicken Breast",
-    protein: 25,
+          protein: 25,
     carbs: 0,
     fats: 3,
     calories: 165,
     servingSize: "100g",
+    category: "Low Calorie",
+    difficulty: "Easy",
+    preparationTime: "5 mins",
+    cookingTime: "15 mins",
     alternatives: [
       {
         name: "Grilled Fish",
@@ -98,42 +152,63 @@ const lowCalorieMealDatabase: Food[] = [
     carbs: 5,
     fats: 0,
     calories: 25,
-    servingSize: "100g"
+    servingSize: "100g",
+    category: "Low Calorie",
+    difficulty: "Easy",
+    preparationTime: "10 mins",
+    cookingTime: "0 mins"
   },
   {
-    name: "Quinoa",
+    name: "Quinoa Bowl",
     protein: 4,
     carbs: 21,
     fats: 2,
     calories: 120,
-    servingSize: "100g"
+    servingSize: "100g",
+    category: "Low Calorie",
+    difficulty: "Easy",
+    preparationTime: "5 mins",
+    cookingTime: "15 mins"
   }
 ];
 
 const maintenanceMealDatabase: Food[] = [
   {
-    name: "Brown Rice",
+    name: "Brown Rice Bowl",
     protein: 3,
     carbs: 45,
     fats: 2,
     calories: 215,
-    servingSize: "100g"
+    servingSize: "100g",
+    category: "Balanced",
+    difficulty: "Easy",
+    preparationTime: "5 mins",
+    cookingTime: "20 mins"
   },
   {
-    name: "Sweet Potato",
+    name: "Sweet Potato Mash",
     protein: 2,
     carbs: 20,
     fats: 0,
     calories: 90,
-    servingSize: "100g"
+    servingSize: "100g",
+    category: "Balanced",
+    difficulty: "Easy",
+    preparationTime: "10 mins",
+    cookingTime: "15 mins"
   },
   {
-    name: "Salmon",
+    name: "Grilled Salmon",
     protein: 20,
     carbs: 0,
     fats: 13,
     calories: 208,
-    servingSize: "100g"
+    servingSize: "100g",
+    category: "Balanced",
+    difficulty: "Medium",
+    preparationTime: "5 mins",
+    cookingTime: "15 mins",
+    allergens: ["Fish"]
   }
 ];
 
@@ -146,7 +221,7 @@ const generateDietPlan = (profile: any, planType: string): WeeklyDietPlan => {
     : (10 * weight) + (6.25 * height) - (5 * age) - 161;
 
   // Activity level multipliers
-  const activityMultipliers = {
+  const activityMultipliers: Record<string, number> = {
     sedentary: 1.2,
     light: 1.375,
     moderate: 1.55,
@@ -154,7 +229,9 @@ const generateDietPlan = (profile: any, planType: string): WeeklyDietPlan => {
     veryActive: 1.9
   };
 
-  const tdee = bmr * activityMultipliers[activityLevel];
+  // Use a default multiplier if activityLevel is not found
+  const multiplier = activityMultipliers[activityLevel] || activityMultipliers.moderate;
+  const tdee = bmr * multiplier;
 
   let targetCalories: number;
   let proteinMultiplier: number;
@@ -262,8 +339,45 @@ const generateDietPlan = (profile: any, planType: string): WeeklyDietPlan => {
     }
   };
 
-  // Generate weekly meal plan based on nutritional goals and meal database
-  const weeklyPlan = generateWeeklyPlan(nutritionalGoals, mealDatabase);
+  // Generate daily meals with totals
+  const generateDailyMeals = (mealDb: Food[]): Meal[] => {
+    const meals: Meal[] = [
+      {
+        type: 'Breakfast',
+              time: '8:00 AM',
+        foods: [mealDb[0]],
+        totalCalories: mealDb[0].calories,
+        totalProtein: mealDb[0].protein,
+        totalCarbs: mealDb[0].carbs,
+        totalFats: mealDb[0].fats
+      },
+      {
+        type: 'Lunch',
+              time: '1:00 PM',
+        foods: [mealDb[1]],
+        totalCalories: mealDb[1].calories,
+        totalProtein: mealDb[1].protein,
+        totalCarbs: mealDb[1].carbs,
+        totalFats: mealDb[1].fats
+      },
+      {
+        type: 'Dinner',
+              time: '7:00 PM',
+        foods: [mealDb[2]],
+        totalCalories: mealDb[2].calories,
+        totalProtein: mealDb[2].protein,
+        totalCarbs: mealDb[2].carbs,
+        totalFats: mealDb[2].fats
+      }
+    ];
+    return meals;
+  };
+
+  // Generate weekly plan
+  const weeklyPlan = Array(7).fill(null).map((_, index) => ({
+    day: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][index],
+    meals: generateDailyMeals(mealDatabase)
+  }));
 
   return {
     title: `${planType.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')} Diet Plan`,
@@ -311,39 +425,6 @@ const getColor = (planType: string): string => {
     default:
       return "green";
   }
-};
-
-const generateWeeklyPlan = (nutritionalGoals: NutritionalGoals, mealDatabase: Food[]): DailyMeals[] => {
-  // Implementation of weekly plan generation based on nutritional goals and meal database
-  // This would include logic to distribute meals throughout the day while meeting macro targets
-  // For now, returning a placeholder implementation
-  return Array(7).fill(null).map((_, index) => ({
-    day: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][index],
-    meals: generateDailyMeals(nutritionalGoals, mealDatabase)
-  }));
-};
-
-const generateDailyMeals = (nutritionalGoals: NutritionalGoals, mealDatabase: Food[]): Meal[] => {
-  // Implementation of daily meal generation based on nutritional goals and meal database
-  // This would include logic to select appropriate foods and portion sizes
-  // For now, returning a placeholder implementation
-  return [
-    {
-      type: 'Breakfast',
-      time: '8:00 AM',
-      foods: [mealDatabase[0]]
-    },
-    {
-      type: 'Lunch',
-      time: '1:00 PM',
-      foods: [mealDatabase[1]]
-    },
-    {
-      type: 'Dinner',
-      time: '7:00 PM',
-      foods: [mealDatabase[2]]
-    }
-  ];
 };
 
 export const useDietService = () => {

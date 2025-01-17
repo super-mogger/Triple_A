@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, memo, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Calendar, Clock, Scale, Target, X, Info } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { Calendar, Clock, Scale, Target, X, Info, ArrowLeft } from 'lucide-react';
 import { DietPlan as DietPlanType, Food, DailyMeal } from '../services/DietService';
 import { useProfile } from '../context/ProfileContext';
 
@@ -261,259 +261,257 @@ const MealCard = memo(({ meal, onFoodClick }: {
 
 export default function DietPlanDetails() {
   const navigate = useNavigate();
-  const { profileData } = useProfile();
-  const [selectedPlan, setSelectedPlan] = useState<DietPlanType | null>(null);
-  const [currentDay, setCurrentDay] = useState(new Date().toLocaleDateString('en-US', { weekday: 'long' }));
+  const location = useLocation();
   const [selectedFood, setSelectedFood] = useState<Food | null>(null);
+  const [currentDayPlan, setCurrentDayPlan] = useState<DailyMeal[] | null>(null);
+  const [dietPlan, setDietPlan] = useState<DietPlanType | null>(null);
+
+  useEffect(() => {
+    const savedPlanType = localStorage.getItem('selectedDietPlanType');
+    const savedPlan = localStorage.getItem('selectedDietPlan');
+    
+    if (!savedPlanType || !savedPlan) {
+      navigate('/diet');
+      return;
+    }
+
+    try {
+      const plan = JSON.parse(savedPlan);
+      
+      // Verify that the loaded plan matches the selected type
+      if (plan.goal !== savedPlanType) {
+        console.error('Plan type mismatch, redirecting to diet selection');
+        navigate('/diet');
+        return;
+      }
+
+      setDietPlan(plan);
+
+      // Set current day plan based on the first day's meals
+      if (plan.schedule?.days[0]?.meals) {
+        setCurrentDayPlan(plan.schedule.days[0].meals);
+      }
+    } catch (error) {
+      console.error('Error loading diet plan:', error);
+      navigate('/diet');
+    }
+  }, [navigate]);
 
   const handleFoodClick = useCallback((food: Food) => {
     setSelectedFood(food);
   }, []);
 
-  const handleDayChange = useCallback((day: string) => {
-    setCurrentDay(day);
-  }, []);
-
-  const handleNavigateBack = useCallback(() => {
-    navigate('/diet');
-  }, [navigate]);
-
-  const handleCloseFoodModal = useCallback(() => {
+  const closeModal = useCallback(() => {
     setSelectedFood(null);
   }, []);
 
-  const nutritionalCalculations = useMemo(() => {
-    if (!profileData?.stats?.weight || !profileData?.stats?.height || !profileData?.personalInfo?.age) {
-      return null;
-    }
-
-        const bmr = profileData.personalInfo.gender === 'male'
-          ? 88.362 + (13.397 * Number(profileData.stats.weight)) + (4.799 * Number(profileData.stats.height)) - (5.677 * Number(profileData.personalInfo.age))
-          : 447.593 + (9.247 * Number(profileData.stats.weight)) + (3.098 * Number(profileData.stats.height)) - (4.330 * Number(profileData.personalInfo.age));
-
-        const activityMultipliers = {
-          sedentary: 1.2,
-          'lightly-active': 1.375,
-          'moderately-active': 1.55,
-          'very-active': 1.725
-        };
-        const multiplier = activityMultipliers[profileData.preferences?.activityLevel as keyof typeof activityMultipliers] || 1.2;
-        
+  // Memoize nutritional goals calculations
+  const nutritionalGoals = useMemo(() => {
+    if (!dietPlan?.nutritionalGoals) return null;
     return {
-      bmr,
-      tdee: Math.round(bmr * multiplier),
-      waterIntake: Math.round((Number(profileData.stats.weight) * 0.033) * 10) / 10
-    };
-  }, [
-    profileData?.stats?.weight,
-    profileData?.stats?.height,
-    profileData?.personalInfo?.age,
-    profileData?.personalInfo?.gender,
-    profileData?.preferences?.activityLevel
-  ]);
-
-  const currentDayPlan = useMemo(() => {
-    if (!selectedPlan?.schedule?.days) return null;
-    return selectedPlan.schedule.days.find(d => d.day === currentDay);
-  }, [selectedPlan?.schedule?.days, currentDay]);
-
-  const visibleMeals = useMemo(() => {
-    if (!currentDayPlan?.meals) return [];
-    return currentDayPlan.meals.slice(0, 10);
-  }, [currentDayPlan?.meals]);
-
-  useEffect(() => {
-    const savedPlan = localStorage.getItem('selectedDietPlan');
-    if (savedPlan && nutritionalCalculations) {
-      try {
-        const plan = JSON.parse(savedPlan);
-        let targetCalories = nutritionalCalculations.tdee;
-        if (plan.goal === 'weight-loss') {
-          targetCalories -= 500;
-        } else if (plan.goal === 'muscle-gain') {
-          targetCalories += 500;
-        }
-
-        const macros = {
-          'weight-loss': { protein: 40, carbs: 30, fats: 30 },
-          'muscle-gain': { protein: 35, carbs: 45, fats: 20 },
-          'maintenance': { protein: 30, carbs: 40, fats: 30 }
-        };
-        
-        const { protein, carbs, fats } = macros[plan.goal as DietGoal] || macros.maintenance;
-
-        plan.nutritionalGoals = {
-          dailyCalories: targetCalories,
-          proteinPercentage: protein,
-          carbsPercentage: carbs,
-          fatsPercentage: fats,
-          proteinGrams: Math.round((targetCalories * (protein / 100)) / 4),
-          carbsGrams: Math.round((targetCalories * (carbs / 100)) / 4),
-          fatsGrams: Math.round((targetCalories * (fats / 100)) / 9)
-        };
-
-        plan.waterIntake = nutritionalCalculations.waterIntake;
-        setSelectedPlan(plan);
-      } catch (error) {
-        console.error('Error parsing diet plan:', error);
-        navigate('/diet');
+      calories: dietPlan.nutritionalGoals.dailyCalories,
+      protein: {
+        grams: dietPlan.nutritionalGoals.proteinGrams,
+        percentage: dietPlan.nutritionalGoals.proteinPercentage
+      },
+      carbs: {
+        grams: dietPlan.nutritionalGoals.carbsGrams,
+        percentage: dietPlan.nutritionalGoals.carbsPercentage
+      },
+      fats: {
+        grams: dietPlan.nutritionalGoals.fatsGrams,
+        percentage: dietPlan.nutritionalGoals.fatsPercentage
       }
-    } else if (!savedPlan) {
-      navigate('/diet');
-    }
-
-    return () => {
-      setSelectedPlan(null);
-      setSelectedFood(null);
     };
-  }, [navigate, nutritionalCalculations]);
+  }, [dietPlan?.nutritionalGoals]);
 
-  if (!selectedPlan || !currentDayPlan) {
+  // Get plan type specific details
+  const getPlanTypeDetails = () => {
+    const planType = localStorage.getItem('selectedDietPlanType');
+    
+    switch (planType) {
+      case 'weight-loss':
+        return {
+          title: 'Weight Loss Diet Plan',
+          description: 'Focus on caloric deficit while maintaining nutrition',
+          color: 'emerald',
+          level: 'Beginner'
+        };
+      case 'muscle-gain':
+        return {
+          title: 'Muscle Building Diet Plan',
+          description: 'High protein diet to support muscle growth',
+          color: 'blue',
+          level: 'Intermediate'
+        };
+      case 'maintenance':
+        return {
+          title: 'Maintenance Diet Plan',
+          description: 'Balanced nutrition to maintain current weight',
+          color: 'purple',
+          level: 'All Levels'
+        };
+      default:
+        return {
+          title: 'Custom Diet Plan',
+          description: 'Personalized nutrition plan',
+          color: 'emerald',
+          level: 'Custom'
+        };
+    }
+  };
+
+  const planDetails = getPlanTypeDetails();
+
+  if (!dietPlan || !currentDayPlan) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-[#121212] flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+        <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#121212] py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{selectedPlan.title}</h1>
+      <div className="max-w-4xl mx-auto px-4">
+        {/* Header */}
+        <div className="mb-8">
           <button
             onClick={() => navigate('/diet')}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-white dark:bg-[#1E1E1E] border border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-[#252525] transition-colors text-gray-700 dark:text-gray-200"
+            className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white mb-4"
           >
-            Change Diet Plan
+            <ArrowLeft className="w-5 h-5" />
+            Back to Diet Plans
           </button>
-        </div>
-
-        <div className="bg-white dark:bg-[#1E1E1E] rounded-xl overflow-hidden shadow-sm mb-8">
-          <div className="p-6">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">Plan Details</h2>
-            
-            {/* Macro Distribution */}
-            <div className="grid grid-cols-4 gap-6 mb-8">
-              <MacroCard 
-                label="Daily Calories" 
-                value={selectedPlan.nutritionalGoals?.dailyCalories || 0} 
-                unit="kcal" 
-                color="text-emerald-600" 
-              />
-              <MacroCard 
-                label="Protein" 
-                value={selectedPlan.nutritionalGoals?.proteinGrams || 0} 
-                percentage={selectedPlan.nutritionalGoals?.proteinPercentage || 0} 
-                unit="g" 
-                color="text-blue-600" 
-              />
-              <MacroCard 
-                label="Carbs" 
-                value={selectedPlan.nutritionalGoals?.carbsGrams || 0} 
-                percentage={selectedPlan.nutritionalGoals?.carbsPercentage || 0} 
-                unit="g" 
-                color="text-yellow-600" 
-              />
-              <MacroCard 
-                label="Fats" 
-                value={selectedPlan.nutritionalGoals?.fatsGrams || 0} 
-                percentage={selectedPlan.nutritionalGoals?.fatsPercentage || 0} 
-                unit="g" 
-                color="text-purple-600" 
-              />
+          
+          <div className="flex items-start justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                {planDetails.title}
+              </h1>
+              <p className="text-gray-600 dark:text-gray-400">
+                {planDetails.description}
+              </p>
             </div>
-
-            {/* Water Intake */}
-            <div className="mb-8">
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Daily Water Intake</h3>
-              <div className="bg-gray-50 dark:bg-[#252525] rounded-lg p-4">
-                <div className="flex items-center justify-between">
-                  <p className="text-gray-600 dark:text-gray-400">Recommended water intake</p>
-                  <p className="text-2xl font-bold text-blue-600 dark:text-blue-500">
-                    {selectedPlan.waterIntake || 0}
-                    <span className="text-base font-normal text-blue-500 dark:text-blue-600 ml-1">L</span>
-                  </p>
-                </div>
-                <p className="text-sm text-gray-500 mt-2">Based on your body weight and activity level</p>
-              </div>
-            </div>
-
-            {/* Dietary Restrictions */}
-            <div className="mb-8">
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Dietary Restrictions</h3>
-              <div className="flex flex-wrap gap-2">
-                {selectedPlan.restrictions?.map((restriction, index) => (
-                  <span
-                    key={index}
-                    className="px-3 py-1 bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-500 rounded-full text-sm"
-                  >
-                    {restriction}
-                  </span>
-                ))}
-              </div>
-            </div>
-
-            {/* Supplementation */}
-            {selectedPlan.supplementation && selectedPlan.supplementation.length > 0 && (
-              <div className="mb-8">
-                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Recommended Supplements</h3>
-                <div className="grid gap-4">
-                  {selectedPlan.supplementation.map((supplement, index) => (
-                    <div key={index} className="bg-gray-50 dark:bg-[#252525] rounded-lg p-4">
-                      <div className="flex justify-between items-start mb-2">
-                        <h4 className="font-medium text-gray-900 dark:text-white">{supplement.name}</h4>
-                        <span className="text-sm text-emerald-600 dark:text-emerald-500">{supplement.dosage}</span>
-                      </div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{supplement.timing}</p>
-                      <p className="text-sm text-gray-500">{supplement.notes}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+            <span className={`px-3 py-1 rounded-full text-sm font-medium bg-${planDetails.color}-100 dark:bg-${planDetails.color}-900/30 text-${planDetails.color}-700 dark:text-${planDetails.color}-400`}>
+              {dietPlan.level}
+            </span>
           </div>
         </div>
 
-        <div className="grid grid-cols-7 gap-2 mb-8">
-          {selectedPlan.schedule?.days.map((day) => (
-            <button
-              key={day.day}
-              onClick={() => setCurrentDay(day.day)}
-              className={`p-4 rounded-lg text-center transition-all ${
-                currentDay === day.day
-                  ? 'bg-emerald-500 text-white'
-                  : 'bg-white dark:bg-[#1E1E1E] text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-[#252525]'
-              }`}
-            >
-              <div className="font-medium text-sm">{day.day.slice(0, 3)}</div>
-              <div className="text-xs mt-1">{day.totalDailyCalories || 0} kcal</div>
-            </button>
-          ))}
-        </div>
+        {/* Nutritional Goals */}
+        {nutritionalGoals && (
+          <div className="grid grid-cols-4 gap-4 mb-8">
+            <MacroCard
+              label="Daily Calories"
+              value={nutritionalGoals.calories}
+              unit="kcal"
+              color="gray-900 dark:text-white"
+            />
+            <MacroCard
+              label="Protein"
+              value={nutritionalGoals.protein.grams}
+              percentage={nutritionalGoals.protein.percentage}
+              unit="g"
+              color="blue-600 dark:text-blue-400"
+            />
+            <MacroCard
+              label="Carbs"
+              value={nutritionalGoals.carbs.grams}
+              percentage={nutritionalGoals.carbs.percentage}
+              unit="g"
+              color="yellow-600 dark:text-yellow-400"
+            />
+            <MacroCard
+              label="Fats"
+              value={nutritionalGoals.fats.grams}
+              percentage={nutritionalGoals.fats.percentage}
+              unit="g"
+              color="purple-600 dark:text-purple-400"
+            />
+          </div>
+        )}
 
-        <div className="flex items-center gap-2 mb-6 text-gray-900 dark:text-white">
-          <Calendar className="w-5 h-5" />
-          <h2 className="text-xl font-semibold">{currentDay}'s Meals</h2>
-        </div>
+        {/* Water Intake */}
+        {dietPlan.waterIntake && (
+          <div className="bg-white dark:bg-[#1E1E1E] rounded-xl p-6 mb-8 border border-gray-200 dark:border-gray-800">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Daily Water Intake</h2>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Recommended daily intake</p>
+                  <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{dietPlan.waterIntake}L</p>
+                </div>
+              </div>
+              <div className="text-sm text-gray-500 dark:text-gray-400">
+                <p>💡 Tips:</p>
+                <ul className="list-disc list-inside">
+                  <li>Drink water before, during, and after exercise</li>
+                  <li>Keep a water bottle with you throughout the day</li>
+                  <li>Set reminders to drink water regularly</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        )}
 
+        {/* Supplement Recommendations */}
+        {dietPlan.supplementation && dietPlan.supplementation.length > 0 && (
+          <div className="bg-white dark:bg-[#1E1E1E] rounded-xl p-6 mb-8 border border-gray-200 dark:border-gray-800">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Supplement Recommendations</h2>
+            <div className="grid gap-4">
+              {dietPlan.supplementation.map((supplement, index) => (
+                <div 
+                  key={index}
+                  className="bg-gray-50 dark:bg-[#252525] rounded-lg p-4"
+                >
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <h3 className="font-medium text-gray-900 dark:text-white">{supplement.name}</h3>
+                      <p className="text-sm text-emerald-600 dark:text-emerald-400">
+                        {supplement.dosage} • {supplement.timing}
+                      </p>
+                    </div>
+                    <span className="px-2 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 text-xs rounded-full">
+                      Recommended
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{supplement.notes}</p>
+                  {supplement.benefits && (
+                    <p className="text-sm text-gray-500 dark:text-gray-500">
+                      Benefits: {supplement.benefits}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Meals */}
         <div className="space-y-6">
-          {visibleMeals.map((meal, index) => (
-            <MealCard 
+          {currentDayPlan.map((meal, index) => (
+            <MealCard
               key={`${meal.type}-${index}`}
-              meal={meal} 
-              onFoodClick={handleFoodClick} 
+              meal={meal}
+              onFoodClick={handleFoodClick}
             />
           ))}
         </div>
-
-        {selectedFood && (
-          <FoodModal 
-            food={selectedFood} 
-            onClose={handleCloseFoodModal} 
-          />
-        )}
       </div>
+
+      {/* Food Details Modal */}
+      {selectedFood && (
+        <FoodModal
+          food={selectedFood}
+          onClose={closeModal}
+        />
+      )}
     </div>
   );
 } 

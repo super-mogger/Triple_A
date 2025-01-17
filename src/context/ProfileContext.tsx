@@ -3,57 +3,57 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { useAuth } from './AuthContext';
 
-interface Membership {
-  planId: string;
-  startDate: string;
-  endDate: string;
-  isActive: boolean;
-  lastPaymentId: string;
-}
-
-interface ProfileData {
+interface Profile {
   uid: string;
   email: string;
   displayName: string;
   photoURL: string;
   personalInfo: {
-    age: string;
+    age: number;
     dateOfBirth: string;
-    gender: string;
+    gender: 'male' | 'female';
     bloodType: string;
   };
   stats: {
-    weight: string;
-    height: string;
+    weight: number;
+    height: number;
   };
   preferences: {
     fitnessLevel: string;
-    activityLevel: string;
+    activityLevel: 'sedentary' | 'light' | 'moderate' | 'active' | 'veryActive';
     dietary: string[];
   };
   goals: string[];
   medicalInfo: {
     conditions: string;
   };
-  membership: Membership;
+  membership: {
+    planId: string;
+    startDate: string;
+    endDate: string;
+    isActive: boolean;
+    lastPaymentId: string;
+  };
   createdAt: string;
   lastUpdated: string;
 }
 
 interface ProfileContextType {
-  profileData: ProfileData | null;
+  profile: Profile | null;
   loading: boolean;
-  updateProfile: (updatedData: Partial<ProfileData>) => Promise<void>;
+  updateProfile: (updatedData: Partial<Profile>) => Promise<void>;
 }
 
-const ProfileContext = createContext<ProfileContextType>({} as ProfileContextType);
+const ProfileContext = createContext<ProfileContextType>({
+  profile: null,
+  loading: true,
+  updateProfile: async () => {}
+});
 
-export function useProfile() {
-  return useContext(ProfileContext);
-}
+export const useProfile = () => useContext(ProfileContext);
 
-export function ProfileProvider({ children }: { children: React.ReactNode }) {
-  const [profileData, setProfileData] = useState<ProfileData | null>(null);
+export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
 
@@ -85,27 +85,27 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
             // Update the document with active membership
             await setDoc(docRef, data, { merge: true });
           }
-          setProfileData(data as ProfileData);
+          setProfile(data as Profile);
         } else {
           console.log('Creating new profile for:', user.email);
-          const initialProfile: ProfileData = {
+          const initialProfile: Profile = {
             uid: user.uid,
             email: user.email,
             displayName: user.displayName || '',
             photoURL: user.photoURL || '',
             personalInfo: {
-              age: '',
+              age: 0,
               dateOfBirth: '',
-              gender: '',
+              gender: 'male',
               bloodType: '',
             },
             stats: {
-              weight: '',
-              height: '',
+              weight: 0,
+              height: 0,
             },
             preferences: {
               fitnessLevel: '',
-              activityLevel: '',
+              activityLevel: 'moderate',
               dietary: [],
             },
             goals: [],
@@ -115,7 +115,7 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
             membership: {
               planId: 'monthly',
               startDate: new Date().toISOString(),
-              endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days from now
+              endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
               isActive: true,
               lastPaymentId: 'initial_free_month'
             },
@@ -125,7 +125,7 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
           
           await setDoc(docRef, initialProfile);
           console.log('Initial profile created');
-          setProfileData(initialProfile);
+          setProfile(initialProfile);
         }
       } catch (error) {
         console.error('Error in ProfileContext:', error);
@@ -137,8 +137,8 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
     fetchProfile();
   }, [user]);
 
-  const updateProfile = async (updatedData: Partial<ProfileData>) => {
-    if (!user?.email || !profileData) {
+  const updateProfile = async (updatedData: Partial<Profile>) => {
+    if (!user?.email || !profile) {
       console.log('No authenticated user found or no existing profile');
       return;
     }
@@ -147,12 +147,12 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
       console.log('Updating profile for:', user.email);
       const docRef = doc(db, 'users', user.uid);
       
-      console.log('Current profile data:', profileData);
+      console.log('Current profile data:', profile);
       console.log('Update data received:', updatedData);
       
       // Merge with existing data
-      const updatedProfile: ProfileData = {
-        ...profileData,
+      const updatedProfile: Profile = {
+        ...profile,
         ...updatedData,
         uid: user.uid,
         email: user.email,
@@ -165,7 +165,7 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
 
       await setDoc(docRef, updatedProfile, { merge: true });
       console.log('Profile updated successfully');
-      setProfileData(updatedProfile);
+      setProfile(updatedProfile);
     } catch (error: any) {
       console.error('Detailed error:', {
         error,
@@ -178,8 +178,8 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <ProfileContext.Provider value={{ profileData, loading, updateProfile }}>
+    <ProfileContext.Provider value={{ profile, loading, updateProfile }}>
       {children}
     </ProfileContext.Provider>
   );
-}
+};

@@ -34,23 +34,27 @@ interface PaymentContextType {
   updateMembership: (membership: Membership) => Promise<void>;
 }
 
-const PaymentContext = createContext<PaymentContextType>({} as PaymentContextType);
+const PaymentContext = createContext<PaymentContextType>({
+  payments: [],
+  membership: null,
+  loading: true,
+  addPayment: async () => {},
+  updateMembership: async () => {}
+});
 
-export function usePayment() {
-  return useContext(PaymentContext);
-}
+export const usePayment = () => useContext(PaymentContext);
 
-export function PaymentProvider({ children }: { children: React.ReactNode }) {
+export const PaymentProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [membership, setMembership] = useState<Membership | null>(null);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
-  const { profileData, updateProfile } = useProfile();
+  const { profile, updateProfile } = useProfile();
 
-  // Immediately update membership when profileData changes
+  // Immediately update membership when profile changes
   useEffect(() => {
-    if (profileData?.membership) {
-      setMembership(profileData.membership);
+    if (profile?.membership) {
+      setMembership(profile.membership);
     } else if (user?.uid) {
       // If no membership exists, create a default one
       const defaultMembership: Membership = {
@@ -63,7 +67,7 @@ export function PaymentProvider({ children }: { children: React.ReactNode }) {
       updateProfile({ membership: defaultMembership });
       setMembership(defaultMembership);
     }
-  }, [profileData, user]);
+  }, [profile, user]);
 
   useEffect(() => {
     const fetchPayments = async () => {
@@ -139,4 +143,4 @@ export function PaymentProvider({ children }: { children: React.ReactNode }) {
       {children}
     </PaymentContext.Provider>
   );
-} 
+}; 

@@ -75,103 +75,103 @@ export default function MembershipDetails() {
   const activePlan = membership?.planId ? plans.find(p => p.id === membership.planId) : null;
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#121212] py-8">
+    <div className="min-h-screen bg-gray-100 py-8">
       <div className="max-w-7xl mx-auto px-4">
         {/* Back Button with Title */}
         <div className="flex items-center gap-3 mb-6">
           <button
             onClick={() => navigate(-1)}
-            className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+            className="text-gray-600 hover:text-gray-900 transition-colors"
           >
             <ArrowLeft className="w-6 h-6" />
           </button>
-          <h1 className="text-xl font-semibold text-gray-900 dark:text-white">Membership</h1>
+          <h1 className="text-xl font-semibold text-gray-900">Membership</h1>
         </div>
 
         {/* Active Membership */}
-        <div className="bg-[#1E1E1E] rounded-xl p-6 mb-8">
+        <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <Crown className="w-5 h-5 text-yellow-500" />
-              <h2 className="text-lg font-semibold">Active Membership</h2>
+              <h2 className="text-lg font-semibold text-gray-900">Active Membership</h2>
             </div>
             <span className={`px-3 py-1 ${
               membership?.isActive 
-                ? 'bg-emerald-500/10 text-emerald-500'
-                : 'bg-red-500/10 text-red-500'
+                ? 'bg-emerald-100 text-emerald-600'
+                : 'bg-red-100 text-red-600'
             } text-sm rounded-full`}>
               {membership?.isActive ? 'Active' : 'Inactive'}
-              </span>
+            </span>
           </div>
 
           <div className="mb-4">
-            <h3 className="text-lg font-medium">{activePlan?.name || 'No Active Plan'}</h3>
-            <p className="text-sm text-gray-400">
+            <h3 className="text-lg font-medium text-gray-900">{activePlan?.name || 'No Active Plan'}</h3>
+            <p className="text-sm text-gray-500">
               {membership?.endDate ? `Valid until ${new Date(membership.endDate).toLocaleDateString()}` : 'Not subscribed'}
-                    </p>
-                  </div>
+            </p>
+          </div>
 
           {membership?.isActive && (
             <div className="relative pt-1">
               <div className="flex items-center justify-between mb-2">
                 <div className="text-right">
-                  <span className="text-sm font-semibold text-emerald-500">
+                  <span className="text-sm font-semibold text-emerald-600">
                     {daysRemaining} days
                   </span>
-                  <span className="text-sm text-gray-400"> remaining</span>
+                  <span className="text-sm text-gray-500"> remaining</span>
                 </div>
               </div>
-              <div className="overflow-hidden h-2 text-xs flex rounded bg-[#282828]">
+              <div className="overflow-hidden h-2 text-xs flex rounded bg-gray-200">
                 <div
                   style={{ width: `${(daysRemaining / totalDays) * 100}%` }}
                   className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-emerald-500"
                 ></div>
               </div>
-              </div>
-            )}
+            </div>
+          )}
         </div>
 
         {/* Available Plans */}
         <div>
-          <h2 className="text-xl font-semibold mb-6">Available Plans</h2>
+          <h2 className="text-xl font-semibold text-gray-900 mb-6">Available Plans</h2>
           <div className="grid md:grid-cols-3 gap-6">
-              {plans.map((plan) => (
-                <div
-                  key={plan.id}
-                className={`bg-[#1E1E1E] rounded-xl p-6 border ${
+            {plans.map((plan) => (
+              <div
+                key={plan.id}
+                className={`bg-white rounded-xl shadow-lg p-6 border ${
                   membership?.planId === plan.id
                     ? 'border-emerald-500'
-                    : 'border-gray-800 hover:border-gray-700'
+                    : 'border-gray-200 hover:border-emerald-200'
                 } transition-colors`}
               >
-                <h3 className="text-lg font-medium mb-2">{plan.name}</h3>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">{plan.name}</h3>
                 <div className="flex items-baseline gap-1 mb-4">
-                  <span className="text-2xl font-bold">₹{plan.price}</span>
-                  <span className="text-gray-400">/{plan.duration}</span>
-                  </div>
-                  <p className="text-sm text-gray-400 mb-4">
-                    Just ₹{plan.pricePerMonth} per month
-                  </p>
-                  <ul className="space-y-3 mb-6">
-                    {plan.features.map((feature, index) => (
-                    <li key={index} className="flex items-start gap-2 text-sm text-gray-300">
+                  <span className="text-2xl font-bold text-gray-900">₹{plan.price}</span>
+                  <span className="text-gray-500">/{plan.duration}</span>
+                </div>
+                <p className="text-sm text-gray-500 mb-4">
+                  Just ₹{plan.pricePerMonth} per month
+                </p>
+                <ul className="space-y-3 mb-6">
+                  {plan.features.map((feature, index) => (
+                    <li key={index} className="flex items-start gap-2 text-sm text-gray-600">
                       <span className="text-emerald-500">•</span>
                       {feature}
-                      </li>
-                    ))}
-                  </ul>
-                  <button
+                    </li>
+                  ))}
+                </ul>
+                <button
                   className={`w-full ${
                     membership?.planId === plan.id
-                      ? 'bg-emerald-500/20 text-emerald-500 cursor-default'
+                      ? 'bg-emerald-100 text-emerald-600 cursor-default'
                       : 'bg-emerald-500 hover:bg-emerald-600 text-white'
                   } py-2 rounded-lg font-medium transition-colors`}
                   disabled={membership?.planId === plan.id}
                 >
                   {membership?.planId === plan.id ? 'Current Plan' : 'Choose Plan'}
-                  </button>
-                </div>
-              ))}
+                </button>
+              </div>
+            ))}
           </div>
         </div>
       </div>

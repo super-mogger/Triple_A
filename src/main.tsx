@@ -34,25 +34,6 @@ const App = lazy(() => {
   ]).then(([appModule]) => appModule);
 });
 
-// Defer analytics to avoid blocking route transitions
-const SpeedInsights = lazy(() => 
-  new Promise(resolve => 
-    requestIdleCallback(() => 
-      import('@vercel/speed-insights/react')
-        .then(mod => resolve({ default: mod.SpeedInsights }))
-    )
-  )
-);
-
-const Analytics = lazy(() => 
-  new Promise(resolve => 
-    requestIdleCallback(() => 
-      import('@vercel/analytics/react')
-        .then(mod => resolve({ default: mod.Analytics }))
-    )
-  )
-);
-
 // Optimized loading UI with instant feedback
 const LoadingFallback = () => (
   <div className="min-h-screen bg-gray-50 dark:bg-[#121212] flex items-center justify-center">
@@ -100,10 +81,6 @@ root.render(
     <Suspense fallback={<LoadingFallback />}>
       <BrowserRouter>
         <App />
-        <Suspense fallback={null}>
-          <SpeedInsights />
-          <Analytics />
-        </Suspense>
       </BrowserRouter>
     </Suspense>
   </ErrorBoundary>

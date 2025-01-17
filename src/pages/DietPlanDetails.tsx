@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, memo } from 'react';
+import React, { useState, useEffect, useMemo, memo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Calendar, Clock, Scale, Target, X, Info } from 'lucide-react';
 import { DietPlan as DietPlanType, Food, DailyMeal } from '../services/DietService';
@@ -16,8 +16,15 @@ interface MacroCardProps {
   color: string;
 }
 
-// Memoize the FoodModal component
+// Memoize the FoodModal component with useCallback for handlers
 const FoodModal = memo(({ food, onClose }: { food: Food; onClose: () => void }) => {
+  const handleClose = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    onClose();
+  }, [onClose]);
+
+  if (!food) return null;
+
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-start justify-center overflow-y-auto">
       <div className="relative w-full max-w-2xl mx-auto my-8 px-4">
@@ -30,10 +37,7 @@ const FoodModal = memo(({ food, onClose }: { food: Food; onClose: () => void }) 
                 className="w-full h-64 object-cover rounded-t-xl"
               />
             )}
-            <button
-              onClick={onClose}
-              className="absolute top-4 right-4 p-2 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors"
-            >
+            <button onClick={handleClose}>
               <X size={20} />
             </button>
           </div>
@@ -169,7 +173,7 @@ const FoodModal = memo(({ food, onClose }: { food: Food; onClose: () => void }) 
   );
 });
 
-// Update MacroCard component with proper types
+// Optimize MacroCard with proper memoization
 const MacroCard = memo(({ label, value, percentage, unit, color }: MacroCardProps) => (
   <div className="bg-gray-50 dark:bg-[#252525] rounded-lg p-4">
     <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">{label}</p>
@@ -185,64 +189,75 @@ const MacroCard = memo(({ label, value, percentage, unit, color }: MacroCardProp
       )}
     </div>
   </div>
-));
+), (prevProps, nextProps) => {
+  return prevProps.value === nextProps.value && 
+         prevProps.percentage === nextProps.percentage;
+});
 
-// Memoize the MealCard component
+// Optimize MealCard with proper event handling
 const MealCard = memo(({ meal, onFoodClick }: { 
   meal: DailyMeal; 
   onFoodClick: (food: Food) => void;
-}) => (
-  <div className="bg-white dark:bg-[#1E1E1E] rounded-xl mb-6 overflow-hidden shadow-sm">
-    <div className="flex justify-between items-center p-4 text-gray-900 dark:text-white">
-      <h3 className="text-lg font-semibold capitalize">{meal.type}</h3>
-      <span className="text-sm text-emerald-600 dark:text-emerald-400">{meal.time}</span>
-    </div>
+}) => {
+  const handleFoodClick = useCallback((food: Food) => {
+    onFoodClick(food);
+  }, [onFoodClick]);
 
-    <div className="space-y-px">
-      {meal.foods.map((food, foodIndex) => (
-        <div 
-          key={foodIndex}
-          onClick={() => onFoodClick(food)}
-          className="flex justify-between items-start p-4 bg-gray-50 dark:bg-[#252525] cursor-pointer hover:bg-gray-100 dark:hover:bg-[#2A2A2A] transition-colors"
-        >
-          <div>
-            <div className="flex items-center gap-2">
-              <div className="font-medium text-gray-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400">{food.name}</div>
-              <button 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onFoodClick(food);
-                }}
-                className="w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-500 flex items-center justify-center hover:bg-emerald-200 dark:hover:bg-emerald-500/30"
-              >
-                <Info className="w-3 h-3" />
-              </button>
+  if (!meal) return null;
+
+  return (
+    <div className="bg-white dark:bg-[#1E1E1E] rounded-xl mb-6 overflow-hidden shadow-sm">
+      <div className="flex justify-between items-center p-4 text-gray-900 dark:text-white">
+        <h3 className="text-lg font-semibold capitalize">{meal.type}</h3>
+        <span className="text-sm text-emerald-600 dark:text-emerald-400">{meal.time}</span>
+      </div>
+
+      <div className="space-y-px">
+        {meal.foods.map((food, foodIndex) => (
+          <div 
+            key={foodIndex}
+            onClick={() => handleFoodClick(food)}
+            className="flex justify-between items-start p-4 bg-gray-50 dark:bg-[#252525] cursor-pointer hover:bg-gray-100 dark:hover:bg-[#2A2A2A] transition-colors"
+          >
+            <div>
+              <div className="flex items-center gap-2">
+                <div className="font-medium text-gray-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400">{food.name}</div>
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleFoodClick(food);
+                  }}
+                  className="w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-500 flex items-center justify-center hover:bg-emerald-200 dark:hover:bg-emerald-500/30"
+                >
+                  <Info className="w-3 h-3" />
+                </button>
+              </div>
+              <div className="text-sm text-gray-500 dark:text-gray-400">Portion: {food.portion}</div>
             </div>
-            <div className="text-sm text-gray-500 dark:text-gray-400">Portion: {food.portion}</div>
+            <div className="text-right">
+              <div className="text-emerald-600 dark:text-emerald-400">{food.calories} kcal</div>
+              <div className="text-sm text-gray-500 dark:text-gray-400">
+                P: {food.protein}g | C: {food.carbs}g | F: {food.fats}g
+              </div>
+            </div>
           </div>
+        ))}
+      </div>
+
+      <div className="p-4 border-t border-gray-100 dark:border-gray-800">
+        <div className="flex justify-between text-sm">
+          <span className="text-gray-500 dark:text-gray-400">Total:</span>
           <div className="text-right">
-            <div className="text-emerald-600 dark:text-emerald-400">{food.calories} kcal</div>
-            <div className="text-sm text-gray-500 dark:text-gray-400">
-              P: {food.protein}g | C: {food.carbs}g | F: {food.fats}g
-            </div>
+            <span className="text-emerald-600 dark:text-emerald-400">{meal.totalCalories} kcal</span>
+            <span className="text-gray-500 dark:text-gray-400 ml-2">
+              P: {meal.totalProtein}g | C: {meal.totalCarbs}g | F: {meal.totalFats}g
+            </span>
           </div>
-        </div>
-      ))}
-    </div>
-
-    <div className="p-4 border-t border-gray-100 dark:border-gray-800">
-      <div className="flex justify-between text-sm">
-        <span className="text-gray-500 dark:text-gray-400">Total:</span>
-        <div className="text-right">
-          <span className="text-emerald-600 dark:text-emerald-400">{meal.totalCalories} kcal</span>
-          <span className="text-gray-500 dark:text-gray-400 ml-2">
-            P: {meal.totalProtein}g | C: {meal.totalCarbs}g | F: {meal.totalFats}g
-          </span>
         </div>
       </div>
     </div>
-  </div>
-));
+  );
+});
 
 export default function DietPlanDetails() {
   const navigate = useNavigate();
@@ -251,7 +266,22 @@ export default function DietPlanDetails() {
   const [currentDay, setCurrentDay] = useState(new Date().toLocaleDateString('en-US', { weekday: 'long' }));
   const [selectedFood, setSelectedFood] = useState<Food | null>(null);
 
-  // Memoize nutritional calculations
+  const handleFoodClick = useCallback((food: Food) => {
+    setSelectedFood(food);
+  }, []);
+
+  const handleDayChange = useCallback((day: string) => {
+    setCurrentDay(day);
+  }, []);
+
+  const handleNavigateBack = useCallback(() => {
+    navigate('/diet');
+  }, [navigate]);
+
+  const handleCloseFoodModal = useCallback(() => {
+    setSelectedFood(null);
+  }, []);
+
   const nutritionalCalculations = useMemo(() => {
     if (!profileData?.stats?.weight || !profileData?.stats?.height || !profileData?.personalInfo?.age) {
       return null;
@@ -274,53 +304,77 @@ export default function DietPlanDetails() {
       tdee: Math.round(bmr * multiplier),
       waterIntake: Math.round((Number(profileData.stats.weight) * 0.033) * 10) / 10
     };
-  }, [profileData]);
+  }, [
+    profileData?.stats?.weight,
+    profileData?.stats?.height,
+    profileData?.personalInfo?.age,
+    profileData?.personalInfo?.gender,
+    profileData?.preferences?.activityLevel
+  ]);
 
-  // Memoize current day plan
   const currentDayPlan = useMemo(() => {
-    return selectedPlan?.schedule?.days.find(d => d.day === currentDay);
-  }, [selectedPlan, currentDay]);
+    if (!selectedPlan?.schedule?.days) return null;
+    return selectedPlan.schedule.days.find(d => d.day === currentDay);
+  }, [selectedPlan?.schedule?.days, currentDay]);
+
+  const visibleMeals = useMemo(() => {
+    if (!currentDayPlan?.meals) return [];
+    return currentDayPlan.meals.slice(0, 10);
+  }, [currentDayPlan?.meals]);
 
   useEffect(() => {
     const savedPlan = localStorage.getItem('selectedDietPlan');
     if (savedPlan && nutritionalCalculations) {
-      const plan = JSON.parse(savedPlan);
-
-        // Calculate target calories based on goal
-      let targetCalories = nutritionalCalculations.tdee;
+      try {
+        const plan = JSON.parse(savedPlan);
+        let targetCalories = nutritionalCalculations.tdee;
         if (plan.goal === 'weight-loss') {
-        targetCalories -= 500;
+          targetCalories -= 500;
         } else if (plan.goal === 'muscle-gain') {
-        targetCalories += 500;
+          targetCalories += 500;
         }
 
-        // Calculate macros based on goal
-      const macros = {
-        'weight-loss': { protein: 40, carbs: 30, fats: 30 },
-        'muscle-gain': { protein: 35, carbs: 45, fats: 20 },
-        'maintenance': { protein: 30, carbs: 40, fats: 30 }
-      };
-      
-      const { protein, carbs, fats } = macros[plan.goal as DietGoal] || macros.maintenance;
+        const macros = {
+          'weight-loss': { protein: 40, carbs: 30, fats: 30 },
+          'muscle-gain': { protein: 35, carbs: 45, fats: 20 },
+          'maintenance': { protein: 30, carbs: 40, fats: 30 }
+        };
+        
+        const { protein, carbs, fats } = macros[plan.goal as DietGoal] || macros.maintenance;
 
         plan.nutritionalGoals = {
           dailyCalories: targetCalories,
-        proteinPercentage: protein,
-        carbsPercentage: carbs,
-        fatsPercentage: fats,
-        proteinGrams: Math.round((targetCalories * (protein / 100)) / 4),
-        carbsGrams: Math.round((targetCalories * (carbs / 100)) / 4),
-        fatsGrams: Math.round((targetCalories * (fats / 100)) / 9)
-      };
+          proteinPercentage: protein,
+          carbsPercentage: carbs,
+          fatsPercentage: fats,
+          proteinGrams: Math.round((targetCalories * (protein / 100)) / 4),
+          carbsGrams: Math.round((targetCalories * (carbs / 100)) / 4),
+          fatsGrams: Math.round((targetCalories * (fats / 100)) / 9)
+        };
 
-      plan.waterIntake = nutritionalCalculations.waterIntake;
-      setSelectedPlan(plan);
+        plan.waterIntake = nutritionalCalculations.waterIntake;
+        setSelectedPlan(plan);
+      } catch (error) {
+        console.error('Error parsing diet plan:', error);
+        navigate('/diet');
+      }
     } else if (!savedPlan) {
       navigate('/diet');
     }
+
+    return () => {
+      setSelectedPlan(null);
+      setSelectedFood(null);
+    };
   }, [navigate, nutritionalCalculations]);
 
-  if (!selectedPlan) return null;
+  if (!selectedPlan || !currentDayPlan) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-[#121212] flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#121212] py-8">
@@ -443,18 +497,20 @@ export default function DietPlanDetails() {
           <h2 className="text-xl font-semibold">{currentDay}'s Meals</h2>
         </div>
 
-        {currentDayPlan?.meals.map((meal, index) => (
-          <MealCard 
-            key={index}
-            meal={meal} 
-            onFoodClick={(food) => setSelectedFood(food)} 
-          />
-        ))}
+        <div className="space-y-6">
+          {visibleMeals.map((meal, index) => (
+            <MealCard 
+              key={`${meal.type}-${index}`}
+              meal={meal} 
+              onFoodClick={handleFoodClick} 
+            />
+          ))}
+        </div>
 
         {selectedFood && (
           <FoodModal 
             food={selectedFood} 
-            onClose={() => setSelectedFood(null)} 
+            onClose={handleCloseFoodModal} 
           />
         )}
       </div>

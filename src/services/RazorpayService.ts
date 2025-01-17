@@ -22,7 +22,7 @@ interface RazorpayOptions {
   };
 }
 
-const RAZORPAY_KEY = 'rzp_test_GEZQfBnCrf1uyR';
+const RAZORPAY_KEY = import.meta.env.VITE_RAZORPAY_KEY_ID;
 
 export const loadRazorpayScript = (): Promise<boolean> => {
   return new Promise((resolve) => {
@@ -54,7 +54,29 @@ export const initializeRazorpayPayment = async (
     description: 'Membership Payment',
     order_id: orderId,
     handler: (response) => {
-      onSuccess(response);
+      // Send verification request to Vercel API
+      fetch('/api/razorpay/verifyPayment', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          razorpay_payment_id: response.razorpay_payment_id,
+          razorpay_order_id: response.razorpay_order_id,
+          razorpay_signature: response.razorpay_signature
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.verified) {
+          onSuccess(response);
+        } else {
+          onFailure(new Error('Payment verification failed'));
+        }
+      })
+      .catch(error => {
+        onFailure(error);
+      });
     },
     prefill: {
       name: userDetails.name,

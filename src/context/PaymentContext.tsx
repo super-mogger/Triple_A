@@ -186,14 +186,29 @@ export const PaymentProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const isLoaded = await loadRazorpayScript();
       if (!isLoaded) throw new Error('Failed to load Razorpay script');
 
-      // Create a temporary order ID (in production, this should come from your backend)
-      const tempOrderId = `order_${Date.now()}`;
+      // Create order using Vercel API
+      const orderResponse = await fetch('/api/razorpay/createOrder', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          amount: options.amount,
+          currency: options.currency
+        })
+      });
+
+      if (!orderResponse.ok) {
+        throw new Error('Failed to create order');
+      }
+
+      const { orderId } = await orderResponse.json();
 
       // Initialize payment
       await initializeRazorpayPayment(
         options.amount,
         options.currency,
-        tempOrderId,
+        orderId,
         {
           name: user.displayName || '',
           email: user.email || '',
@@ -218,7 +233,7 @@ export const PaymentProvider: React.FC<{ children: React.ReactNode }> = ({ child
             status: 'failed',
             transactionId: 'failed_' + Date.now(),
             paymentMethod: 'razorpay',
-            orderId: tempOrderId
+            orderId: orderId
           };
           addPayment(failedPayment).catch(console.error);
           throw error;

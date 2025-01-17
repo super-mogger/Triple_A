@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, memo, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Calendar, Clock, Scale, Target, X, Info, ArrowLeft } from 'lucide-react';
+import { Calendar, Clock, Scale, Target, X, Info, ArrowLeft, Droplets, Pill } from 'lucide-react';
 import { WeeklyDietPlan, Food, Meal, Supplement } from '../services/DietService';
 import { useProfile } from '../context/ProfileContext';
 
@@ -380,124 +380,101 @@ export default function DietPlanDetails() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#121212] py-8">
       <div className="max-w-4xl mx-auto px-4">
-        {/* Header */}
-        <div className="mb-8">
-          <button
-            onClick={() => navigate('/diet')}
-            className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white mb-4"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            Back to Diet Plans
-          </button>
-          
-          <div className="flex items-start justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                {planDetails.title}
-              </h1>
-              <p className="text-gray-600 dark:text-gray-400">
-                {planDetails.description}
-              </p>
-            </div>
-            <span className={`px-3 py-1 rounded-full text-sm font-medium bg-${planDetails.color}-100 dark:bg-${planDetails.color}-900/30 text-${planDetails.color}-700 dark:text-${planDetails.color}-400`}>
-              {dietPlan.level}
+        {/* Header Section */}
+        <div className="flex flex-col space-y-4 p-4 sm:p-6">
+          {/* Back Button and Title */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => navigate('/diet')}
+              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <h1 className="text-xl sm:text-2xl font-bold">{dietPlan?.title}</h1>
+            <span className="ml-auto px-3 py-1 text-xs bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-full">
+              {dietPlan?.level}
             </span>
+          </div>
+
+          {/* Description */}
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            {dietPlan?.description}
+          </p>
+
+          {/* Macro Stats Grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="bg-gray-50 dark:bg-gray-800/50 p-3 rounded-xl">
+              <p className="text-xs text-gray-500 dark:text-gray-400">Daily Calories</p>
+              <p className="text-lg font-semibold">{dietPlan?.nutritionalGoals?.calories} kcal</p>
+            </div>
+            <div className="bg-gray-50 dark:bg-gray-800/50 p-3 rounded-xl">
+              <p className="text-xs text-gray-500 dark:text-gray-400">Protein</p>
+              <p className="text-lg font-semibold">{dietPlan?.nutritionalGoals?.protein?.grams}g</p>
+              <p className="text-xs text-gray-500">{dietPlan?.nutritionalGoals?.protein?.percentage}%</p>
+            </div>
+            <div className="bg-gray-50 dark:bg-gray-800/50 p-3 rounded-xl">
+              <p className="text-xs text-gray-500 dark:text-gray-400">Carbs</p>
+              <p className="text-lg font-semibold">{dietPlan?.nutritionalGoals?.carbs?.grams}g</p>
+              <p className="text-xs text-gray-500">{dietPlan?.nutritionalGoals?.carbs?.percentage}%</p>
+            </div>
+            <div className="bg-gray-50 dark:bg-gray-800/50 p-3 rounded-xl">
+              <p className="text-xs text-gray-500 dark:text-gray-400">Fats</p>
+              <p className="text-lg font-semibold">{dietPlan?.nutritionalGoals?.fats?.grams}g</p>
+              <p className="text-xs text-gray-500">{dietPlan?.nutritionalGoals?.fats?.percentage}%</p>
+            </div>
           </div>
         </div>
 
-        {/* Nutritional Goals */}
-        {nutritionalGoals && (
-          <div className="grid grid-cols-4 gap-4 mb-8">
-            <MacroCard
-              label="Daily Calories"
-              value={nutritionalGoals.calories}
-              unit="kcal"
-              color="emerald"
-            />
-            <MacroCard
-              label="Protein"
-              value={nutritionalGoals.protein.grams}
-              percentage={nutritionalGoals.protein.percentage}
-              unit="g"
-              color="blue"
-            />
-            <MacroCard
-              label="Carbs"
-              value={nutritionalGoals.carbs.grams}
-              percentage={nutritionalGoals.carbs.percentage}
-              unit="g"
-              color="yellow"
-            />
-            <MacroCard
-              label="Fats"
-              value={nutritionalGoals.fats.grams}
-              percentage={nutritionalGoals.fats.percentage}
-              unit="g"
-              color="purple"
-            />
-          </div>
-        )}
-
-        {/* Water Intake */}
-        {dietPlan.waterIntake && (
-          <div className="bg-white dark:bg-[#1E1E1E] rounded-xl p-6 mb-8 border border-gray-200 dark:border-gray-800">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Daily Water Intake</h2>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                  </svg>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Recommended daily intake</p>
-                  <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{dietPlan.waterIntake}L</p>
-                </div>
+        {/* Water Intake Section */}
+        <div className="p-4 sm:p-6 space-y-4">
+          <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4">
+            <div className="flex items-start gap-3">
+              <div className="p-2 bg-blue-100 dark:bg-blue-800/30 rounded-lg">
+                <Droplets className="w-5 h-5 text-blue-500" />
               </div>
-              <div className="text-sm text-gray-500 dark:text-gray-400">
-                <p>💡 Tips:</p>
-                <ul className="list-disc list-inside">
-                  <li>Drink water before, during, and after exercise</li>
-                  <li>Keep a water bottle with you throughout the day</li>
-                  <li>Set reminders to drink water regularly</li>
-                </ul>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold mb-1">Daily Water Intake</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Recommended daily intake: {dietPlan?.waterIntake}L
+                </p>
+                <div className="mt-3 space-y-2">
+                  <h4 className="text-sm font-medium">Tips:</h4>
+                  <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1 list-disc list-inside">
+                    <li>Drink water before, during, and after exercise</li>
+                    <li>Keep a water bottle with you throughout the day</li>
+                    <li>Set reminders to drink water regularly</li>
+                  </ul>
+                </div>
               </div>
             </div>
           </div>
-        )}
+        </div>
 
         {/* Supplement Recommendations */}
-        {dietPlan.supplementation && dietPlan.supplementation.length > 0 && (
-          <div className="bg-white dark:bg-[#1E1E1E] rounded-xl p-6 mb-8 border border-gray-200 dark:border-gray-800">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Supplement Recommendations</h2>
-            <div className="grid gap-4">
-              {dietPlan.supplementation.map((supplement: Supplement, index: number) => (
-                <div 
-                  key={index}
-                  className="bg-gray-50 dark:bg-[#252525] rounded-lg p-4"
-                >
-                  <div className="flex justify-between items-start mb-2">
-                    <div>
-                      <h3 className="font-medium text-gray-900 dark:text-white">{supplement.name}</h3>
-                      <p className="text-sm text-emerald-600 dark:text-emerald-400">
-                        {supplement.dosage} • {supplement.timing}
-                      </p>
-                    </div>
-                    <span className="px-2 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 text-xs rounded-full">
-                      Recommended
-                    </span>
-                  </div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{supplement.notes}</p>
-                  {supplement.benefits && (
-                    <p className="text-sm text-gray-500 dark:text-gray-500">
-                      Benefits: {supplement.benefits}
-                    </p>
-                  )}
+        <div className="p-4 sm:p-6">
+          <h3 className="text-lg font-semibold mb-4">Supplement Recommendations</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {dietPlan?.supplementation?.map((supplement: Supplement, index: number) => (
+              <div 
+                key={index}
+                className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4 space-y-2"
+              >
+                <h4 className="font-medium">{supplement.name}</h4>
+                <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                  <Clock className="w-4 h-4" />
+                  <span>{supplement.timing}</span>
                 </div>
-              ))}
-            </div>
+                <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                  <Pill className="w-4 h-4" />
+                  <span>{supplement.dosage}</span>
+                </div>
+                {supplement.notes && (
+                  <p className="text-sm text-gray-500 dark:text-gray-400">{supplement.notes}</p>
+                )}
+              </div>
+            ))}
           </div>
-        )}
+        </div>
 
         {/* Meals */}
         <div className="space-y-6">

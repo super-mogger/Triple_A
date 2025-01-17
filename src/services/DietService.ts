@@ -8,6 +8,7 @@ export interface DietaryAlternative {
   fats: number;
   calories: number;
   servingSize: string;
+  changes?: string;
 }
 
 export interface Food {
@@ -17,13 +18,20 @@ export interface Food {
   fats: number;
   calories: number;
   servingSize: string;
-  alternatives?: DietaryAlternative[];
+  portion: string;
+  alternatives?: {
+    vegetarian?: DietaryAlternative;
+    glutenFree?: DietaryAlternative;
+    lactoseFree?: DietaryAlternative;
+  };
   category?: string;
   difficulty?: string;
   preparationTime?: string;
   cookingTime?: string;
   imageUrl?: string;
   allergens?: string[];
+  instructions?: string[];
+  tips?: string[];
 }
 
 export interface Meal {
@@ -88,9 +96,10 @@ const highProteinMealDatabase: Food[] = [
     fats: 5,
     calories: 325,
     servingSize: "300g",
-      category: "High Protein",
+    portion: "300g",
+    category: "High Protein",
     difficulty: "Easy",
-      preparationTime: "10 mins",
+    preparationTime: "10 mins",
     cookingTime: "20 mins",
     imageUrl: "https://images.unsplash.com/photo-1532550907401-a500c9a57435",
     allergens: []
@@ -98,11 +107,12 @@ const highProteinMealDatabase: Food[] = [
   {
     name: "Protein Oatmeal",
     protein: 20,
-      carbs: 35,
+    carbs: 35,
     fats: 8,
     calories: 290,
     servingSize: "250g",
-      category: "High Protein",
+    portion: "250g",
+    category: "High Protein",
     difficulty: "Easy",
     preparationTime: "5 mins",
     cookingTime: "10 mins",
@@ -115,7 +125,8 @@ const highProteinMealDatabase: Food[] = [
     fats: 15,
     calories: 355,
     servingSize: "300g",
-      category: "High Protein",
+    portion: "300g",
+    category: "High Protein",
     difficulty: "Medium",
     preparationTime: "10 mins",
     cookingTime: "25 mins",
@@ -126,25 +137,27 @@ const highProteinMealDatabase: Food[] = [
 const lowCalorieMealDatabase: Food[] = [
   {
     name: "Grilled Chicken Breast",
-          protein: 25,
+    protein: 25,
     carbs: 0,
     fats: 3,
     calories: 165,
     servingSize: "100g",
+    portion: "100g",
     category: "Low Calorie",
     difficulty: "Easy",
     preparationTime: "5 mins",
     cookingTime: "15 mins",
-    alternatives: [
-      {
-        name: "Grilled Fish",
-        protein: 22,
-        carbs: 0,
+    alternatives: {
+      vegetarian: {
+        name: "Grilled Tofu",
+        protein: 20,
+        carbs: 2,
         fats: 5,
         calories: 150,
-        servingSize: "100g"
+        servingSize: "100g",
+        changes: "Replace chicken with firm tofu"
       }
-    ]
+    }
   },
   {
     name: "Mixed Green Salad",
@@ -153,6 +166,7 @@ const lowCalorieMealDatabase: Food[] = [
     fats: 0,
     calories: 25,
     servingSize: "100g",
+    portion: "100g",
     category: "Low Calorie",
     difficulty: "Easy",
     preparationTime: "10 mins",
@@ -165,6 +179,7 @@ const lowCalorieMealDatabase: Food[] = [
     fats: 2,
     calories: 120,
     servingSize: "100g",
+    portion: "100g",
     category: "Low Calorie",
     difficulty: "Easy",
     preparationTime: "5 mins",
@@ -180,6 +195,7 @@ const maintenanceMealDatabase: Food[] = [
     fats: 2,
     calories: 215,
     servingSize: "100g",
+    portion: "100g",
     category: "Balanced",
     difficulty: "Easy",
     preparationTime: "5 mins",
@@ -192,6 +208,7 @@ const maintenanceMealDatabase: Food[] = [
     fats: 0,
     calories: 90,
     servingSize: "100g",
+    portion: "100g",
     category: "Balanced",
     difficulty: "Easy",
     preparationTime: "10 mins",
@@ -204,6 +221,7 @@ const maintenanceMealDatabase: Food[] = [
     fats: 13,
     calories: 208,
     servingSize: "100g",
+    portion: "100g",
     category: "Balanced",
     difficulty: "Medium",
     preparationTime: "5 mins",
@@ -211,6 +229,25 @@ const maintenanceMealDatabase: Food[] = [
     allergens: ["Fish"]
   }
 ];
+
+const calculateMealTotals = (foods: Food[]): { 
+  totalCalories: number;
+  totalProtein: number;
+  totalCarbs: number;
+  totalFats: number;
+} => {
+  return foods.reduce((totals, food) => ({
+    totalCalories: totals.totalCalories + food.calories,
+    totalProtein: totals.totalProtein + food.protein,
+    totalCarbs: totals.totalCarbs + food.carbs,
+    totalFats: totals.totalFats + food.fats
+  }), {
+    totalCalories: 0,
+    totalProtein: 0,
+    totalCarbs: 0,
+    totalFats: 0
+  });
+};
 
 const generateDietPlan = (profile: any, planType: string): WeeklyDietPlan => {
   const { weight, height, age, gender, activityLevel } = profile;
@@ -231,7 +268,7 @@ const generateDietPlan = (profile: any, planType: string): WeeklyDietPlan => {
 
   // Use a default multiplier if activityLevel is not found
   const multiplier = activityMultipliers[activityLevel] || activityMultipliers.moderate;
-  const tdee = bmr * multiplier;
+  const tdee = Math.round(bmr * multiplier);
 
   let targetCalories: number;
   let proteinMultiplier: number;
@@ -248,7 +285,7 @@ const generateDietPlan = (profile: any, planType: string): WeeklyDietPlan => {
       carbsMultiplier = 2; 
       fatsMultiplier = 0.8;
       mealDatabase = lowCalorieMealDatabase;
-      waterIntake = weight * 0.04; // 40ml per kg of body weight
+      waterIntake = Math.round(weight * 0.04 * 100) / 100; // 40ml per kg of body weight
       supplementation = [
         {
           name: "CLA (Conjugated Linoleic Acid)",
@@ -273,7 +310,7 @@ const generateDietPlan = (profile: any, planType: string): WeeklyDietPlan => {
       carbsMultiplier = 4;
       fatsMultiplier = 0.9;
       mealDatabase = highProteinMealDatabase;
-      waterIntake = weight * 0.05; // 50ml per kg of body weight
+      waterIntake = Math.round(weight * 0.05 * 100) / 100; // 50ml per kg of body weight
       supplementation = [
         {
           name: "Whey Protein",
@@ -298,7 +335,7 @@ const generateDietPlan = (profile: any, planType: string): WeeklyDietPlan => {
       carbsMultiplier = 3;
       fatsMultiplier = 1;
       mealDatabase = maintenanceMealDatabase;
-      waterIntake = weight * 0.035; // 35ml per kg of body weight
+      waterIntake = Math.round(weight * 0.035 * 100) / 100; // 35ml per kg of body weight
       supplementation = [
         {
           name: "Multivitamin",
@@ -317,24 +354,25 @@ const generateDietPlan = (profile: any, planType: string): WeeklyDietPlan => {
       ];
   }
 
-  const proteinGrams = weight * proteinMultiplier;
+  // Calculate macronutrient goals
+  const proteinGrams = Math.round(weight * proteinMultiplier);
   const proteinCalories = proteinGrams * 4;
-  const fatsGrams = weight * fatsMultiplier;
+  const fatsGrams = Math.round(weight * fatsMultiplier);
   const fatsCalories = fatsGrams * 9;
-  const carbsGrams = (targetCalories - proteinCalories - fatsCalories) / 4;
+  const carbsGrams = Math.round((targetCalories - proteinCalories - fatsCalories) / 4);
 
   const nutritionalGoals: NutritionalGoals = {
-    calories: Math.round(targetCalories),
+    calories: targetCalories,
     protein: {
-      grams: Math.round(proteinGrams),
+      grams: proteinGrams,
       percentage: Math.round((proteinCalories / targetCalories) * 100)
     },
     carbs: {
-      grams: Math.round(carbsGrams),
+      grams: carbsGrams,
       percentage: Math.round((carbsGrams * 4 / targetCalories) * 100)
     },
     fats: {
-      grams: Math.round(fatsGrams),
+      grams: fatsGrams,
       percentage: Math.round((fatsCalories / targetCalories) * 100)
     }
   };
@@ -344,7 +382,7 @@ const generateDietPlan = (profile: any, planType: string): WeeklyDietPlan => {
     const meals: Meal[] = [
       {
         type: 'Breakfast',
-              time: '8:00 AM',
+        time: '8:00 AM',
         foods: [mealDb[0]],
         totalCalories: mealDb[0].calories,
         totalProtein: mealDb[0].protein,
@@ -353,7 +391,7 @@ const generateDietPlan = (profile: any, planType: string): WeeklyDietPlan => {
       },
       {
         type: 'Lunch',
-              time: '1:00 PM',
+        time: '1:00 PM',
         foods: [mealDb[1]],
         totalCalories: mealDb[1].calories,
         totalProtein: mealDb[1].protein,
@@ -362,7 +400,7 @@ const generateDietPlan = (profile: any, planType: string): WeeklyDietPlan => {
       },
       {
         type: 'Dinner',
-              time: '7:00 PM',
+        time: '7:00 PM',
         foods: [mealDb[2]],
         totalCalories: mealDb[2].calories,
         totalProtein: mealDb[2].protein,
@@ -431,6 +469,6 @@ export const useDietService = () => {
   const { profile } = useProfile();
 
   return {
-    generateDietPlan: (planType: string) => generateDietPlan(profile, planType)
+    generateDietPlan: (profileData: any, planType: string) => generateDietPlan(profileData, planType)
   };
 }; 

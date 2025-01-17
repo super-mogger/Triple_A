@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, memo, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Calendar, Clock, Scale, Target, X, Info, ArrowLeft } from 'lucide-react';
-import { DietPlan as DietPlanType, Food, DailyMeal } from '../services/DietService';
+import { WeeklyDietPlan, Food, Meal, Supplement } from '../services/DietService';
 import { useProfile } from '../context/ProfileContext';
 
 // Add type for goal
@@ -134,35 +134,41 @@ const FoodModal = memo(({ food, onClose }: { food: Food; onClose: () => void }) 
               <div>
                 <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-4">Dietary Alternatives</h3>
                 <div className="space-y-4">
-                  <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                    <h4 className="font-medium text-green-700 dark:text-green-400 mb-2">
-                      Vegetarian Option: {food.alternatives.vegetarian.name}
-                    </h4>
-                    <p className="text-sm text-green-600 dark:text-green-500">
-                      {food.alternatives.vegetarian.changes}
-                      {food.alternatives.vegetarian.protein && (
-                        <span className="ml-2 font-medium">({food.alternatives.vegetarian.protein}g protein)</span>
-                      )}
-                    </p>
-                  </div>
+                  {food.alternatives.vegetarian && (
+                    <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                      <h4 className="font-medium text-green-700 dark:text-green-400 mb-2">
+                        Vegetarian Option: {food.alternatives.vegetarian.name}
+                      </h4>
+                      <p className="text-sm text-green-600 dark:text-green-500">
+                        {food.alternatives.vegetarian.changes}
+                        {food.alternatives.vegetarian.protein && (
+                          <span className="ml-2 font-medium">({food.alternatives.vegetarian.protein}g protein)</span>
+                        )}
+                      </p>
+                    </div>
+                  )}
 
-                  <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
-                    <h4 className="font-medium text-yellow-700 dark:text-yellow-400 mb-2">
-                      Gluten-Free Option: {food.alternatives.glutenFree.name}
-                    </h4>
-                    <p className="text-sm text-yellow-600 dark:text-yellow-500">
-                      {food.alternatives.glutenFree.changes}
-                    </p>
-                  </div>
+                  {food.alternatives.glutenFree && (
+                    <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
+                      <h4 className="font-medium text-yellow-700 dark:text-yellow-400 mb-2">
+                        Gluten-Free Option: {food.alternatives.glutenFree.name}
+                      </h4>
+                      <p className="text-sm text-yellow-600 dark:text-yellow-500">
+                        {food.alternatives.glutenFree.changes}
+                      </p>
+                    </div>
+                  )}
 
-                  <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                    <h4 className="font-medium text-blue-700 dark:text-blue-400 mb-2">
-                      Lactose-Free Option: {food.alternatives.lactoseFree.name}
-                    </h4>
-                    <p className="text-sm text-blue-600 dark:text-blue-500">
-                      {food.alternatives.lactoseFree.changes}
-                    </p>
-                  </div>
+                  {food.alternatives.lactoseFree && (
+                    <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                      <h4 className="font-medium text-blue-700 dark:text-blue-400 mb-2">
+                        Lactose-Free Option: {food.alternatives.lactoseFree.name}
+                      </h4>
+                      <p className="text-sm text-blue-600 dark:text-blue-500">
+                        {food.alternatives.lactoseFree.changes}
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -196,7 +202,7 @@ const MacroCard = memo(({ label, value, percentage, unit, color }: MacroCardProp
 
 // Optimize MealCard with proper event handling
 const MealCard = memo(({ meal, onFoodClick }: { 
-  meal: DailyMeal; 
+  meal: Meal; 
   onFoodClick: (food: Food) => void;
 }) => {
   const handleFoodClick = useCallback((food: Food) => {
@@ -213,7 +219,7 @@ const MealCard = memo(({ meal, onFoodClick }: {
             </div>
 
             <div className="space-y-px">
-              {meal.foods.map((food, foodIndex) => (
+              {meal.foods.map((food: Food, foodIndex: number) => (
                 <div 
                   key={foodIndex}
             onClick={() => handleFoodClick(food)}
@@ -263,8 +269,8 @@ export default function DietPlanDetails() {
   const navigate = useNavigate();
   const location = useLocation();
   const [selectedFood, setSelectedFood] = useState<Food | null>(null);
-  const [currentDayPlan, setCurrentDayPlan] = useState<DailyMeal[] | null>(null);
-  const [dietPlan, setDietPlan] = useState<DietPlanType | null>(null);
+  const [currentDayPlan, setCurrentDayPlan] = useState<Meal[] | null>(null);
+  const [dietPlan, setDietPlan] = useState<WeeklyDietPlan | null>(null);
 
   useEffect(() => {
     const savedPlanType = localStorage.getItem('selectedDietPlanType');
@@ -309,18 +315,18 @@ export default function DietPlanDetails() {
   const nutritionalGoals = useMemo(() => {
     if (!dietPlan?.nutritionalGoals) return null;
     return {
-      calories: dietPlan.nutritionalGoals.dailyCalories,
+      calories: dietPlan.nutritionalGoals.calories,
       protein: {
-        grams: dietPlan.nutritionalGoals.proteinGrams,
-        percentage: dietPlan.nutritionalGoals.proteinPercentage
+        grams: dietPlan.nutritionalGoals.protein.grams,
+        percentage: dietPlan.nutritionalGoals.protein.percentage
       },
       carbs: {
-        grams: dietPlan.nutritionalGoals.carbsGrams,
-        percentage: dietPlan.nutritionalGoals.carbsPercentage
+        grams: dietPlan.nutritionalGoals.carbs.grams,
+        percentage: dietPlan.nutritionalGoals.carbs.percentage
       },
       fats: {
-        grams: dietPlan.nutritionalGoals.fatsGrams,
-        percentage: dietPlan.nutritionalGoals.fatsPercentage
+        grams: dietPlan.nutritionalGoals.fats.grams,
+        percentage: dietPlan.nutritionalGoals.fats.percentage
       }
     };
   }, [dietPlan?.nutritionalGoals]);
@@ -406,28 +412,28 @@ export default function DietPlanDetails() {
               label="Daily Calories"
               value={nutritionalGoals.calories}
               unit="kcal"
-              color="gray-900 dark:text-white"
+              color="emerald"
             />
             <MacroCard
               label="Protein"
               value={nutritionalGoals.protein.grams}
               percentage={nutritionalGoals.protein.percentage}
               unit="g"
-              color="blue-600 dark:text-blue-400"
+              color="blue"
             />
             <MacroCard
               label="Carbs"
               value={nutritionalGoals.carbs.grams}
               percentage={nutritionalGoals.carbs.percentage}
               unit="g"
-              color="yellow-600 dark:text-yellow-400"
+              color="yellow"
             />
             <MacroCard
               label="Fats"
               value={nutritionalGoals.fats.grams}
               percentage={nutritionalGoals.fats.percentage}
               unit="g"
-              color="purple-600 dark:text-purple-400"
+              color="purple"
             />
           </div>
         )}
@@ -465,7 +471,7 @@ export default function DietPlanDetails() {
           <div className="bg-white dark:bg-[#1E1E1E] rounded-xl p-6 mb-8 border border-gray-200 dark:border-gray-800">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Supplement Recommendations</h2>
             <div className="grid gap-4">
-              {dietPlan.supplementation.map((supplement, index) => (
+              {dietPlan.supplementation.map((supplement: Supplement, index: number) => (
                 <div 
                   key={index}
                   className="bg-gray-50 dark:bg-[#252525] rounded-lg p-4"

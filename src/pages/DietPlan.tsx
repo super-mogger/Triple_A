@@ -168,13 +168,19 @@ export default function DietPlan() {
   }, []);
 
   const handleStartPlan = useCallback(async () => {
-    if (!selectedPlan) return;
+    if (!selectedPlan || !profile) return;
     
     try {
       setIsGenerating(true);
       
       // Generate personalized diet plan based on profile and selected plan type
-      const dietPlan = generateDietPlan(selectedPlan.type);
+      const dietPlan = generateDietPlan({
+        weight: profile.stats.weight,
+        height: profile.stats.height,
+        age: profile.personalInfo.age,
+        gender: profile.personalInfo.gender,
+        activityLevel: profile.preferences?.activityLevel || 'moderate'
+      }, selectedPlan.type);
       
       // Store both the plan type and the generated plan
       localStorage.setItem('selectedDietPlanType', selectedPlan.type);
@@ -194,7 +200,7 @@ export default function DietPlan() {
     } finally {
       setIsGenerating(false);
     }
-  }, [selectedPlan, generateDietPlan, navigate]);
+  }, [selectedPlan, profile, generateDietPlan, navigate]);
 
   if (!profile) {
     return (

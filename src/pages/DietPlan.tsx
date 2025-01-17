@@ -209,15 +209,15 @@ export default function DietPlan() {
           <div className="text-center">
             <h2 className="text-2xl font-bold mb-4">Complete Your Profile</h2>
             <p className="mb-4">Please complete your profile to get a personalized diet plan.</p>
-            <button
+              <button 
               onClick={() => navigate('/profile')}
               className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
+              >
               Go to Profile
-            </button>
+              </button>
+            </div>
           </div>
-        </div>
-      </div>
+            </div>
     );
   }
 
@@ -228,8 +228,8 @@ export default function DietPlan() {
           <div className="text-center">
             <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
             <p>Loading membership status...</p>
-          </div>
-        </div>
+                </div>
+                </div>
       </div>
     );
   }
@@ -244,7 +244,7 @@ export default function DietPlan() {
           <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
             Select a diet plan that aligns with your fitness goals
           </p>
-        </div>
+          </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {dietPlans.map((plan) => (
@@ -258,7 +258,7 @@ export default function DietPlan() {
               onStartPlan={handleStartPlan}
             />
           ))}
-        </div>
+            </div>
 
         {!isPremium && (
           <div className="text-center mt-8">

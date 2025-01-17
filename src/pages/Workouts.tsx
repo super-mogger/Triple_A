@@ -18,7 +18,33 @@ import { MuscleRadarChart } from '../components/MuscleRadarChart';
 import { exerciseDatabase } from '../data/exerciseDatabase';
 import type { Exercise } from '../types/exercise';
 
+interface Exercise {
+  name: string;
+  videoUrl: string;
+  targetMuscles: string[];
+  secondaryMuscles: string[];
+  equipment: string[];
+  difficulty: string;
+  category: string;
+  instructions: string[];
+  tips: string[];
+  notes: string;
+  sets: number;
+  reps: string;
+  muscleGroup: string;
+}
+
+interface MuscleData {
+  muscle: string;
+  value: number;
+}
+
 type SplitType = 'bro-split' | 'push-pull-legs' | 'upper-lower';
+
+type WorkoutPlan = WorkoutPlan & {
+  showSplitMenu?: boolean;
+  splitType: SplitType;
+};
 
 const splitTypes = {
   'bro-split': {
@@ -108,70 +134,28 @@ const exerciseToMuscleMap: { [key: string]: string[] } = {
   'Thrusters': ['Legs', 'Shoulders', 'Core']
 };
 
-const calculateMuscleTargeting = (exercise: Exercise | ExerciseDetails | Exercise[]): { muscle: string; value: number; }[] => {
-  if (!Array.isArray(exercise) && 'targetMuscles' in exercise && exercise.targetMuscles) {
-    const muscleData: { muscle: string; value: number; }[] = [];
+const calculateMuscleTargeting = (exercise: Exercise): MuscleData[] => {
+  const muscleScores: Record<string, number> = {};
+  
+  exercise.targetMuscles.forEach((muscle) => {
+    muscleScores[muscle] = 100;
+  });
+  
+  exercise.secondaryMuscles.forEach((muscle) => {
+    muscleScores[muscle] = 50;
+  });
+  
+  return Object.entries(muscleScores).map(([muscle, value]) => ({
+    muscle,
+    value
+  }));
+};
 
-    // Add primary target muscles with 100% activation
-    exercise.targetMuscles.forEach((muscle: string) => {
-      muscleData.push({
-        muscle,
-        value: 100
-      });
-    });
-
-    // Add secondary muscles with 60% activation
-    if (exercise.secondaryMuscles) {
-      exercise.secondaryMuscles.forEach((muscle: string) => {
-        if (!muscleData.some(m => m.muscle === muscle)) {
-          muscleData.push({
-            muscle,
-            value: 60
-          });
-        }
-      });
-    }
-
-    return muscleData.sort((a, b) => b.value - a.value);
-  }
-
-  // Fallback for array of exercises or other cases
-  const muscleGroups = {
-    'Chest': 0,
-    'Back': 0,
-    'Shoulders': 0,
-    'Arms': 0,
-    'Legs': 0,
-    'Core': 0
-  };
-
-  if (Array.isArray(exercise)) {
-    exercise.forEach(ex => {
-      const targetMuscles = exerciseToMuscleMap[ex.name] || [];
-      const contributionPerMuscle = 100 / (exercise.length * targetMuscles.length || 1);
-      
-      targetMuscles.forEach(muscle => {
-        if (muscle in muscleGroups) {
-          muscleGroups[muscle as keyof typeof muscleGroups] += contributionPerMuscle;
-        }
-      });
-    });
-  } else if ('name' in exercise) {
-    const targetMuscles = exerciseToMuscleMap[exercise.name] || [];
-    targetMuscles.forEach(muscle => {
-      if (muscle in muscleGroups) {
-        muscleGroups[muscle as keyof typeof muscleGroups] = 100;
-      }
-    });
-  }
-
-  return Object.entries(muscleGroups)
-    .map(([muscle, value]) => ({
-      muscle,
-      value: Math.round(value)
-    }))
-    .filter(item => item.value > 0)
-    .sort((a, b) => b.value - a.value);
+const filterWorkoutsByEquipment = (workouts: WorkoutPlan[], equipment: string[]): WorkoutPlan[] => {
+  return workouts.filter(workout => {
+    const requiredEquipment = workout.equipment || [];
+    return requiredEquipment.every((item: string) => equipment.includes(item.toLowerCase()));
+  });
 };
 
 interface WeekdayScheduleProps {
@@ -296,7 +280,7 @@ export default function Workouts() {
   const [filteredWorkouts, setFilteredWorkouts] = useState<WorkoutPlan[]>([]);
   const [selectedWorkout, setSelectedWorkout] = useState<WorkoutPlan | null>(null);
   const [exercises, setExercises] = useState<Exercise[]>([]);
-  const [selectedExercise, setSelectedExercise] = useState<ExerciseDetails | null>(null);
+  const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadingExercise, setLoadingExercise] = useState(false);
   const [loadingExercises, setLoadingExercises] = useState(false);
@@ -656,7 +640,7 @@ export default function Workouts() {
           </div>
 
           {/* Video Section */}
-          <div className="mb-8">
+          <div className="mb-6 sm:mb-8">
             <div className="relative pt-[56.25%] rounded-lg overflow-hidden bg-black">
               <iframe
                 src={selectedExercise.videoUrl}
@@ -668,10 +652,10 @@ export default function Workouts() {
           </div>
 
           {/* Muscle Targeting Chart */}
-          <div className="mb-8 bg-gray-50 dark:bg-[#282828] p-6 rounded-lg">
+          <div className="mb-6 sm:mb-8 bg-gray-50 dark:bg-[#282828] p-4 sm:p-6 rounded-lg">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Muscle Activation Analysis</h3>
-              <div className="text-sm text-gray-500 dark:text-gray-400">
+              <h3 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">Muscle Activation Analysis</h3>
+              <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
                 Hover over the chart for detailed percentages
               </div>
             </div>
@@ -935,20 +919,20 @@ export default function Workouts() {
             </div>
 
             {/* Day Selection */}
-            <div className="bg-white dark:bg-[#1E1E1E] rounded-3xl shadow-sm border border-gray-100 dark:border-gray-800 p-6 mb-6">
-              <div className="grid grid-cols-7 gap-3">
+            <div className="bg-white dark:bg-[#1E1E1E] rounded-3xl shadow-sm border border-gray-100 dark:border-gray-800 p-4 sm:p-6 mb-4 sm:mb-6">
+              <div className="grid grid-cols-4 sm:grid-cols-7 gap-2 sm:gap-3">
                 {selectedWorkout.schedule?.days.map((day) => (
                   <button
                     key={day.day}
                     onClick={() => setCurrentDay(day.day)}
-                    className={`p-4 rounded-2xl text-center transition-all ${
+                    className={`p-2 sm:p-4 rounded-xl sm:rounded-2xl text-center transition-all ${
                       currentDay === day.day
                         ? 'bg-emerald-500 text-white'
                         : 'bg-gray-50 dark:bg-[#282828] text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#333] border border-gray-200 dark:border-gray-700'
                     }`}
                   >
-                    <div className="font-medium text-sm">{day.day.slice(0, 3)}</div>
-                    <div className="text-xs mt-1 opacity-80">{day.focus.split(' ')[0]}</div>
+                    <div className="font-medium text-xs sm:text-sm">{day.day.slice(0, 3)}</div>
+                    <div className="text-[10px] sm:text-xs mt-0.5 sm:mt-1 opacity-80">{day.focus.split(' ')[0]}</div>
                   </button>
                 ))}
               </div>
@@ -957,31 +941,31 @@ export default function Workouts() {
             {/* Current Day Workout */}
             {currentDayWorkout && (
               <div className="bg-white dark:bg-[#1E1E1E] rounded-3xl shadow-sm border border-gray-100 dark:border-gray-800">
-                <div className="p-6 border-b border-gray-100 dark:border-gray-800">
-                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                    <Calendar className="w-5 h-5 text-emerald-500" />
+                <div className="p-4 sm:p-6 border-b border-gray-100 dark:border-gray-800">
+                  <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                    <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-500" />
                     {currentDayWorkout.focus}
                   </h2>
                 </div>
 
-                <div className="p-6">
-                  <div className="space-y-4">
+                <div className="p-3 sm:p-6">
+                  <div className="space-y-2 sm:space-y-4">
                     {exercises.map((exercise, index) => (
                       <button
                         key={index}
                         onClick={() => viewExerciseDetails(exercise)}
-                        className="w-full bg-gray-50 dark:bg-[#282828] hover:bg-gray-100 dark:hover:bg-[#333] rounded-2xl p-4 transition-colors text-left border border-gray-200 dark:border-gray-700"
+                        className="w-full bg-gray-50 dark:bg-[#282828] hover:bg-gray-100 dark:hover:bg-[#333] rounded-xl sm:rounded-2xl p-3 sm:p-4 transition-colors text-left border border-gray-200 dark:border-gray-700"
                       >
-                        <div className="flex justify-between items-start gap-4">
+                        <div className="flex justify-between items-start gap-3 sm:gap-4">
                           <div>
-                            <h4 className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
+                            <h4 className="font-medium text-sm sm:text-base text-gray-900 dark:text-white flex items-center gap-2">
                               {exercise.name}
-                              <Info className="w-4 h-4 text-emerald-500" />
+                              <Info className="w-3 h-3 sm:w-4 sm:h-4 text-emerald-500" />
                             </h4>
-                            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{exercise.notes}</p>
+                            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-0.5 sm:mt-1">{exercise.notes}</p>
                           </div>
                           <div className="text-right">
-                            <p className="text-sm font-medium text-emerald-500">
+                            <p className="text-xs sm:text-sm font-medium text-emerald-500">
                               {exercise.sets} sets × {exercise.reps}
                             </p>
                           </div>
@@ -989,8 +973,8 @@ export default function Workouts() {
                       </button>
                     ))}
                     {exercises.length === 0 && (
-                      <div className="text-center py-12">
-                        <p className="text-gray-500 dark:text-gray-400">
+                      <div className="text-center py-8 sm:py-12">
+                        <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400">
                           {currentDayWorkout.notes || "Rest day"}
                         </p>
                       </div>
@@ -999,145 +983,118 @@ export default function Workouts() {
                 </div>
               </div>
             )}
+
+            {/* Exercise Modal */}
+            {selectedExercise && (
+              <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-start sm:items-center justify-center p-2 sm:p-4 z-50">
+                <div className="bg-white dark:bg-[#1E1E1E] rounded-2xl sm:rounded-3xl p-4 sm:p-6 w-full max-w-4xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
+                  {/* Modal Header */}
+                  <div className="flex justify-between items-start mb-4 sm:mb-6 sticky top-0 bg-white dark:bg-[#1E1E1E] z-10 py-2">
+                    <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">{selectedExercise.name}</h2>
+                    <button
+                      onClick={() => setSelectedExercise(null)}
+                      className="p-1.5 sm:p-2 hover:bg-gray-100 dark:hover:bg-[#282828] rounded-lg sm:rounded-xl transition-colors"
+                    >
+                      <X className="w-5 h-5 sm:w-6 sm:h-6 text-gray-500 dark:text-gray-400" />
+                    </button>
+                  </div>
+
+                  {/* Video Section */}
+                  <div className="mb-6 sm:mb-8">
+                    <div className="relative pt-[56.25%] rounded-lg overflow-hidden bg-black">
+                      <iframe
+                        src={selectedExercise.videoUrl}
+                        className="absolute inset-0 w-full h-full"
+                        allowFullScreen
+                        title={`${selectedExercise.name} demonstration`}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Muscle Targeting Chart */}
+                  <div className="mb-6 sm:mb-8 bg-gray-50 dark:bg-[#282828] p-4 sm:p-6 rounded-lg">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">Muscle Activation Analysis</h3>
+                      <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+                        Hover over the chart for detailed percentages
+                      </div>
+                    </div>
+                    <MuscleRadarChart 
+                      muscleData={calculateMuscleTargeting(selectedExercise)} 
+                      detailedView={true}
+                    />
+                  </div>
+
+                  {/* Exercise Info Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
+                    {/* Target Muscles */}
+                    <div className="bg-gray-50 dark:bg-[#282828] p-3 sm:p-4 rounded-lg">
+                      <h3 className="text-sm sm:text-base font-semibold mb-2 sm:mb-3 text-gray-900 dark:text-white">Primary Target Muscles</h3>
+                      <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                        {selectedExercise.targetMuscles.map((muscle, index) => (
+                          <span key={index} className="bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm">
+                            {muscle}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Secondary Muscles */}
+                    <div className="bg-gray-50 dark:bg-[#282828] p-3 sm:p-4 rounded-lg">
+                      <h3 className="text-sm sm:text-base font-semibold mb-2 sm:mb-3 text-gray-900 dark:text-white">Secondary Muscles</h3>
+                      <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                        {selectedExercise.secondaryMuscles.map((muscle, index) => (
+                          <span key={index} className="bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm">
+                            {muscle}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Instructions */}
+                  <div className="mb-6 sm:mb-8">
+                    <h3 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-gray-900 dark:text-white">Instructions</h3>
+                    <div className="space-y-3 sm:space-y-4">
+                      {selectedExercise.instructions.map((instruction, index) => (
+                        <div key={index} className="flex gap-3 sm:gap-4">
+                          <div className="flex-shrink-0 w-6 h-6 sm:w-8 sm:h-8 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-full flex items-center justify-center font-medium text-sm sm:text-base">
+                            {index + 1}
+                          </div>
+                          <p className="text-sm sm:text-base text-gray-700 dark:text-gray-300">{instruction}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Tips */}
+                  <div>
+                    <h3 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-gray-900 dark:text-white">Pro Tips</h3>
+                    <div className="bg-gray-50 dark:bg-[#282828] rounded-lg p-3 sm:p-4">
+                      <ul className="space-y-2 sm:space-y-3">
+                        {selectedExercise.tips.map((tip, index) => (
+                          <li key={index} className="flex items-start gap-2 sm:gap-3 text-sm sm:text-base text-gray-700 dark:text-gray-300">
+                            <div className="flex-shrink-0 w-4 h-4 sm:w-5 sm:h-5 bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center text-[10px] sm:text-xs mt-0.5">
+                              ✓
+                            </div>
+                            {tip}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Loading Overlay */}
+            {loadingExercise && (
+              <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500"></div>
+              </div>
+            )}
           </div>
         </div>
-
-        {/* Exercise Modal */}
-        {selectedExercise && (
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-            <div className="bg-white dark:bg-[#1E1E1E] rounded-3xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-              {/* Modal Header */}
-              <div className="flex justify-between items-start mb-6">
-                <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">{selectedExercise.name}</h2>
-                <button
-                  onClick={() => setSelectedExercise(null)}
-                  className="p-2 hover:bg-gray-100 dark:hover:bg-[#282828] rounded-xl transition-colors"
-                >
-                  <X className="w-6 h-6 text-gray-500 dark:text-gray-400" />
-                </button>
-              </div>
-
-              {/* Video Section */}
-              <div className="mb-8">
-                <div className="relative pt-[56.25%] rounded-lg overflow-hidden bg-black">
-                  <iframe
-                    src={selectedExercise.videoUrl}
-                    className="absolute inset-0 w-full h-full"
-                    allowFullScreen
-                    title={`${selectedExercise.name} demonstration`}
-                  />
-                </div>
-              </div>
-
-              {/* Muscle Targeting Chart */}
-              <div className="mb-8 bg-gray-50 dark:bg-[#282828] p-6 rounded-lg">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Muscle Activation Analysis</h3>
-                  <div className="text-sm text-gray-500 dark:text-gray-400">
-                    Hover over the chart for detailed percentages
-                  </div>
-                </div>
-                <MuscleRadarChart 
-                  muscleData={calculateMuscleTargeting(selectedExercise)} 
-                  detailedView={true}
-                />
-              </div>
-
-              {/* Exercise Info Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
-                {/* Target Muscles */}
-                <div className="bg-gray-50 dark:bg-[#282828] p-4 rounded-lg">
-                  <h3 className="font-semibold mb-3 text-gray-900 dark:text-white">Primary Target Muscles</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedExercise.targetMuscles.map((muscle, index) => (
-                      <span key={index} className="bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-3 py-1 rounded-full text-sm">
-                        {muscle}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Secondary Muscles */}
-                <div className="bg-gray-50 dark:bg-[#282828] p-4 rounded-lg">
-                  <h3 className="font-semibold mb-3 text-gray-900 dark:text-white">Secondary Muscles</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedExercise.secondaryMuscles.map((muscle, index) => (
-                      <span key={index} className="bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 px-3 py-1 rounded-full text-sm">
-                        {muscle}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Equipment */}
-                <div className="bg-gray-50 dark:bg-[#282828] p-4 rounded-lg">
-                  <h3 className="font-semibold mb-3 text-gray-900 dark:text-white">Required Equipment</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedExercise.equipment.map((item, index) => (
-                      <span key={index} className="bg-purple-50 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400 px-3 py-1 rounded-full text-sm">
-                        {item}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Difficulty & Category */}
-                <div className="bg-gray-50 dark:bg-[#282828] p-4 rounded-lg">
-                  <h3 className="font-semibold mb-3 text-gray-900 dark:text-white">Exercise Info</h3>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-600 dark:text-gray-400">Difficulty:</span>
-                      <span className="text-orange-600 dark:text-orange-400">{selectedExercise.difficulty}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-600 dark:text-gray-400">Category:</span>
-                      <span className="text-emerald-600 dark:text-emerald-400">{selectedExercise.category}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Instructions */}
-              <div className="mb-8">
-                <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Instructions</h3>
-                <div className="space-y-4">
-                  {selectedExercise.instructions.map((instruction, index) => (
-                    <div key={index} className="flex gap-4">
-                      <div className="flex-shrink-0 w-8 h-8 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-full flex items-center justify-center font-medium">
-                        {index + 1}
-                      </div>
-                      <p className="text-gray-700 dark:text-gray-300">{instruction}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Tips */}
-              <div>
-                <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Pro Tips</h3>
-                <div className="bg-gray-50 dark:bg-[#282828] rounded-lg p-4">
-                  <ul className="space-y-3">
-                    {selectedExercise.tips.map((tip, index) => (
-                      <li key={index} className="flex items-start gap-3 text-gray-700 dark:text-gray-300">
-                        <div className="flex-shrink-0 w-5 h-5 bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center text-xs mt-0.5">
-                          ✓
-                        </div>
-                        {tip}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Loading Overlay */}
-        {loadingExercise && (
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500"></div>
-          </div>
-        )}
       </>
     );
   }

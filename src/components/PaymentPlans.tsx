@@ -1,8 +1,10 @@
-import React from 'react';
-import { razorpayService } from '../services/RazorpayClientService';
-import { useAuth } from '../hooks/useAuth';
+import React, { useState, useCallback } from 'react';
+import { loadRazorpayScript, initializeRazorpayPayment, createOrder } from '../services/RazorpayService';
+import { useAuth } from '../context/AuthContext';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Crown, Dumbbell, Users, Star, Shield, Zap } from 'lucide-react';
+import { usePayment } from '../context/PaymentContext';
+import toast from 'react-hot-toast';
 
 interface Plan {
   id: string;
@@ -63,75 +65,78 @@ const plans: Plan[] = [
   }
 ];
 
-const getErrorMessage = (errorCode: string | null): string => {
-  switch (errorCode) {
-    case 'payment-failed':
-      return 'Your payment was not successful. Please try again.';
-    case 'verification-failed':
-      return 'Payment verification failed. Please contact support.';
-    default:
-      return 'An error occurred. Please try again.';
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
   }
-};
+  return 'An unexpected error occurred. Please try again.';
+}
 
-export const PaymentPlans: React.FC = () => {
-  const { user, loading: authLoading } = useAuth();
+export default function PaymentPlans() {
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const [loading, setLoading] = React.useState<string | null>(null);
-  const [error, setError] = React.useState<string | null>(null);
+  const [loading, setLoading] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  React.useEffect(() => {
-    const errorParam = searchParams.get('error');
-    if (errorParam) {
-      setError(getErrorMessage(errorParam));
+  const handlePayment = useCallback(async (plan: Plan) => {
+    if (!user) {
+      navigate('/login');
+      return;
     }
-  }, [searchParams]);
 
-  React.useEffect(() => {
-    if (!authLoading && !user) {
-      navigate('/login', { state: { from: '/plans' } });
-    }
-  }, [user, authLoading, navigate]);
-
-  const handlePayment = async (plan: Plan) => {
     try {
       setLoading(plan.id);
       setError(null);
+      console.log('Starting payment flow for plan:', plan.name);
 
-      await razorpayService.createOrder({
-        amount: plan.price,
-        planId: plan.id,
-        name: 'Triple A Fitness',
-        description: `${plan.name} Membership - ${plan.duration}`,
-        prefill: {
-          name: user?.displayName || undefined,
-          email: user?.email || undefined,
-          contact: user?.phoneNumber || undefined
-        }
-      });
-    } catch (err) {
-      console.error('Payment failed:', err);
-      let errorMessage = 'Payment failed. Please try again.';
-      
-      if (err instanceof Error) {
-        if (err.message.includes('User must be logged in')) {
-          errorMessage = 'Please log in to make a payment.';
-          navigate('/login', { state: { from: '/plans' } });
-        } else if (err.message.includes('Failed to create order')) {
-          errorMessage = 'Unable to create order. Please try again later.';
-        } else if (err.message.includes('Payment verification failed')) {
-          errorMessage = 'Payment verification failed. Please contact support.';
-        } else {
-          errorMessage = err.message;
-        }
+      // Load Razorpay script
+      const scriptLoaded = await loadRazorpayScript();
+      if (!scriptLoaded) {
+        throw new Error('Failed to load payment system. Please refresh and try again.');
       }
+
+      // Create order
+      const amount = Math.round(plan.price * 100); // Convert to paise
+      console.log('Creating order with amount:', amount);
+      const orderId = await createOrder(amount);
       
+      if (!orderId) {
+        throw new Error('Failed to create order. Please try again.');
+      }
+
+      // Initialize payment
+      console.log('Initializing Razorpay payment...');
+      await initializeRazorpayPayment(
+        amount,
+        'INR',
+        orderId,
+        {
+          name: user.displayName || 'User',
+          email: user.email || '',
+          contact: user.phoneNumber || '',
+        },
+        (response) => {
+          console.log('Payment successful:', response);
+          toast.success('Payment successful! Redirecting...');
+          navigate('/profile');
+        },
+        (error) => {
+          console.error('Payment failed:', error);
+          const errorMessage = getErrorMessage(error);
+          setError(errorMessage);
+          toast.error(errorMessage);
+        }
+      );
+    } catch (error) {
+      console.error('Payment flow error:', error);
+      const errorMessage = getErrorMessage(error);
       setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(null);
     }
-  };
+  }, [user, navigate]);
 
   if (authLoading) {
     return (
@@ -202,25 +207,27 @@ export const PaymentPlans: React.FC = () => {
                   ))}
                 </ul>
 
-                <button
-                  onClick={() => handlePayment(plan)}
-                  disabled={!!loading || !user}
-                  className={`w-full bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-3 px-4 rounded-xl
-                    transition duration-150 ease-in-out flex items-center justify-center
-                    ${loading === plan.id ? 'opacity-75 cursor-not-allowed' : ''}
-                    ${!user ? 'opacity-50 cursor-not-allowed' : ''}`}
-                >
-                  {loading === plan.id ? (
-                    <>
-                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                      Processing...
-                    </>
-                  ) : !user ? (
-                    'Please Login'
-                  ) : (
-                    'Get Started'
-                  )}
-                </button>
+                <div className="px-6 pt-6 pb-8">
+                  <button
+                    onClick={() => handlePayment(plan)}
+                    disabled={loading === plan.id}
+                    className={`w-full bg-emerald-500 text-white rounded-md px-4 py-2 hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 ${
+                      loading === plan.id ? 'opacity-75 cursor-not-allowed' : ''
+                    }`}
+                  >
+                    {loading === plan.id ? (
+                      <span className="flex items-center justify-center">
+                        <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Processing...
+                      </span>
+                    ) : (
+                      'Get Started'
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
           ))}
@@ -237,4 +244,4 @@ export const PaymentPlans: React.FC = () => {
       </div>
     </div>
   );
-}; 
+} 

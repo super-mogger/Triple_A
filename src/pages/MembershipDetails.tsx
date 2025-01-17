@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowLeft, Crown } from 'lucide-react';
+import { ArrowLeft, Crown, Check } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { usePayment } from '../context/PaymentContext';
 
@@ -75,38 +75,40 @@ export default function MembershipDetails() {
   const activePlan = membership?.planId ? plans.find(p => p.id === membership.planId) : null;
 
   return (
-    <div className="min-h-screen bg-gray-100 py-8">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#121212] py-8">
       <div className="max-w-7xl mx-auto px-4">
         {/* Back Button with Title */}
-        <div className="flex items-center gap-3 mb-6">
+        <div className="flex items-center gap-3 mb-8">
           <button
             onClick={() => navigate(-1)}
-            className="text-gray-600 hover:text-gray-900 transition-colors"
+            className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors"
           >
-            <ArrowLeft className="w-6 h-6" />
+            <ArrowLeft className="w-5 h-5" />
           </button>
-          <h1 className="text-xl font-semibold text-gray-900">Membership</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Membership</h1>
         </div>
 
-        {/* Active Membership */}
-        <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
-          <div className="flex items-center justify-between mb-4">
+        {/* Active Membership Card */}
+        <div className="bg-white dark:bg-[#1E1E1E] rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 p-6 mb-8">
+          <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-2">
-              <Crown className="w-5 h-5 text-yellow-500" />
-              <h2 className="text-lg font-semibold text-gray-900">Active Membership</h2>
+              <Crown className="w-6 h-6 text-yellow-500" />
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Active Membership</h2>
             </div>
-            <span className={`px-3 py-1 ${
+            <span className={`px-4 py-1.5 rounded-full text-sm font-medium ${
               membership?.isActive 
-                ? 'bg-emerald-100 text-emerald-600'
-                : 'bg-red-100 text-red-600'
-            } text-sm rounded-full`}>
+                ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400'
+                : 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400'
+            }`}>
               {membership?.isActive ? 'Active' : 'Inactive'}
             </span>
           </div>
 
-          <div className="mb-4">
-            <h3 className="text-lg font-medium text-gray-900">{activePlan?.name || 'No Active Plan'}</h3>
-            <p className="text-sm text-gray-500">
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
+              {activePlan?.name || 'No Active Plan'}
+            </h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
               {membership?.endDate ? `Valid until ${new Date(membership.endDate).toLocaleDateString()}` : 'Not subscribed'}
             </p>
           </div>
@@ -114,17 +116,17 @@ export default function MembershipDetails() {
           {membership?.isActive && (
             <div className="relative pt-1">
               <div className="flex items-center justify-between mb-2">
-                <div className="text-right">
-                  <span className="text-sm font-semibold text-emerald-600">
+                <div>
+                  <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
                     {daysRemaining} days
                   </span>
-                  <span className="text-sm text-gray-500"> remaining</span>
+                  <span className="text-sm text-gray-600 dark:text-gray-400"> remaining</span>
                 </div>
               </div>
-              <div className="overflow-hidden h-2 text-xs flex rounded bg-gray-200">
+              <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                 <div
                   style={{ width: `${(daysRemaining / totalDays) * 100}%` }}
-                  className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-emerald-500"
+                  className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 dark:from-emerald-400 dark:to-teal-400 rounded-full transition-all duration-300"
                 ></div>
               </div>
             </div>
@@ -132,40 +134,40 @@ export default function MembershipDetails() {
         </div>
 
         {/* Available Plans */}
-        <div>
-          <h2 className="text-xl font-semibold text-gray-900 mb-6">Available Plans</h2>
+        <div className="space-y-6">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white">Available Plans</h2>
           <div className="grid md:grid-cols-3 gap-6">
             {plans.map((plan) => (
               <div
                 key={plan.id}
-                className={`bg-white rounded-xl shadow-lg p-6 border ${
+                className={`bg-white dark:bg-[#1E1E1E] rounded-xl p-6 border ${
                   membership?.planId === plan.id
-                    ? 'border-emerald-500'
-                    : 'border-gray-200 hover:border-emerald-200'
-                } transition-colors`}
+                    ? 'border-emerald-500 dark:border-emerald-400'
+                    : 'border-gray-200 dark:border-gray-800 hover:border-emerald-200 dark:hover:border-emerald-800'
+                } transition-all duration-300 hover:shadow-lg`}
               >
-                <h3 className="text-lg font-medium text-gray-900 mb-2">{plan.name}</h3>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">{plan.name}</h3>
                 <div className="flex items-baseline gap-1 mb-4">
-                  <span className="text-2xl font-bold text-gray-900">₹{plan.price}</span>
-                  <span className="text-gray-500">/{plan.duration}</span>
+                  <span className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">₹{plan.price}</span>
+                  <span className="text-gray-600 dark:text-gray-400">/{plan.duration}</span>
                 </div>
-                <p className="text-sm text-gray-500 mb-4">
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
                   Just ₹{plan.pricePerMonth} per month
                 </p>
                 <ul className="space-y-3 mb-6">
                   {plan.features.map((feature, index) => (
-                    <li key={index} className="flex items-start gap-2 text-sm text-gray-600">
-                      <span className="text-emerald-500">•</span>
-                      {feature}
+                    <li key={index} className="flex items-start gap-2">
+                      <Check className="w-5 h-5 text-emerald-500 dark:text-emerald-400 flex-shrink-0" />
+                      <span className="text-sm text-gray-600 dark:text-gray-300">{feature}</span>
                     </li>
                   ))}
                 </ul>
                 <button
-                  className={`w-full ${
+                  className={`w-full py-2.5 rounded-xl font-medium transition-all duration-300 ${
                     membership?.planId === plan.id
-                      ? 'bg-emerald-100 text-emerald-600 cursor-default'
-                      : 'bg-emerald-500 hover:bg-emerald-600 text-white'
-                  } py-2 rounded-lg font-medium transition-colors`}
+                      ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400 cursor-default'
+                      : 'bg-emerald-500 hover:bg-emerald-600 text-white dark:bg-gradient-to-r dark:from-emerald-400 dark:to-teal-400 dark:hover:from-emerald-500 dark:hover:to-teal-500 dark:text-black'
+                  }`}
                   disabled={membership?.planId === plan.id}
                 >
                   {membership?.planId === plan.id ? 'Current Plan' : 'Choose Plan'}

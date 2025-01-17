@@ -1,12 +1,14 @@
-import { ArrowLeft, Sun, Moon, Bell, Shield, HelpCircle, LogOut, User, Settings as SettingsIcon, CreditCard } from 'lucide-react';
+import { ArrowLeft, Sun, Moon, Bell, Shield, HelpCircle, LogOut, User, Settings as SettingsIcon, CreditCard, Monitor } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
+import { useState } from 'react';
 
 export default function Settings() {
   const navigate = useNavigate();
-  const { isDarkMode, toggleDarkMode } = useTheme();
+  const { themeMode, setThemeMode, isDarkMode } = useTheme();
   const { logout, user } = useAuth();
+  const [isThemeDropdownOpen, setIsThemeDropdownOpen] = useState(false);
 
   const handleLogout = async () => {
     try {
@@ -14,6 +16,28 @@ export default function Settings() {
       navigate('/welcome');
     } catch (error) {
       console.error('Logout failed:', error);
+    }
+  };
+
+  const getThemeIcon = () => {
+    switch (themeMode) {
+      case 'light':
+        return <Sun className="w-5 h-5 text-yellow-500" />;
+      case 'dark':
+        return <Moon className="w-5 h-5 text-blue-500" />;
+      case 'adaptive':
+        return <Monitor className="w-5 h-5 text-purple-500" />;
+    }
+  };
+
+  const getThemeText = () => {
+    switch (themeMode) {
+      case 'light':
+        return 'Light Mode';
+      case 'dark':
+        return 'Dark Mode';
+      case 'adaptive':
+        return 'System Theme';
     }
   };
 
@@ -94,28 +118,64 @@ export default function Settings() {
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Appearance</h2>
             </div>
             <div className="p-4">
-              <button
-                onClick={toggleDarkMode}
-                className="flex items-center justify-between w-full px-4 py-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
-              >
-                <div className="flex items-center gap-3">
-                  {isDarkMode ? (
-                    <Sun className="w-5 h-5 text-yellow-500" />
-                  ) : (
-                    <Moon className="w-5 h-5 text-blue-500" />
-                  )}
-                  <span className="text-gray-700 dark:text-gray-200 font-medium">
-                    {isDarkMode ? 'Light Mode' : 'Dark Mode'}
-                  </span>
-                </div>
-                <div className={`w-11 h-6 rounded-full transition-colors duration-200 ${
-                  isDarkMode ? 'bg-emerald-500' : 'bg-gray-200 dark:bg-gray-700'
-                } relative`}>
-                  <div className={`w-5 h-5 rounded-full bg-white shadow-sm absolute top-0.5 left-0.5 transition-transform duration-200 ${
-                    isDarkMode ? 'transform translate-x-5' : ''
-                  }`} />
-                </div>
-              </button>
+              <div className="relative">
+                <button
+                  onClick={() => setIsThemeDropdownOpen(!isThemeDropdownOpen)}
+                  className="flex items-center justify-between w-full px-4 py-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    {getThemeIcon()}
+                    <span className="text-gray-700 dark:text-gray-200 font-medium">
+                      {getThemeText()}
+                    </span>
+                  </div>
+                  <svg
+                    className={`w-5 h-5 text-gray-500 transition-transform duration-200 ${
+                      isThemeDropdownOpen ? 'rotate-180' : ''
+                    }`}
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+
+                {isThemeDropdownOpen && (
+                  <div className="absolute z-10 w-full mt-2 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 py-1">
+                    <button
+                      onClick={() => {
+                        setThemeMode('light');
+                        setIsThemeDropdownOpen(false);
+                      }}
+                      className="flex items-center gap-3 w-full px-4 py-2.5 text-left hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                    >
+                      <Sun className="w-5 h-5 text-yellow-500" />
+                      <span className="text-gray-700 dark:text-gray-200">Light Mode</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setThemeMode('dark');
+                        setIsThemeDropdownOpen(false);
+                      }}
+                      className="flex items-center gap-3 w-full px-4 py-2.5 text-left hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                    >
+                      <Moon className="w-5 h-5 text-blue-500" />
+                      <span className="text-gray-700 dark:text-gray-200">Dark Mode</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setThemeMode('adaptive');
+                        setIsThemeDropdownOpen(false);
+                      }}
+                      className="flex items-center gap-3 w-full px-4 py-2.5 text-left hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                    >
+                      <Monitor className="w-5 h-5 text-purple-500" />
+                      <span className="text-gray-700 dark:text-gray-200">System Theme</span>
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 

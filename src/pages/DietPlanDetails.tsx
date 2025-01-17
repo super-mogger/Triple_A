@@ -135,39 +135,39 @@ const FoodModal = memo(({ food, onClose }: { food: Food; onClose: () => void }) 
                 <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-4">Dietary Alternatives</h3>
                 <div className="space-y-4">
                   {food.alternatives.vegetarian && (
-                    <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                      <h4 className="font-medium text-green-700 dark:text-green-400 mb-2">
-                        Vegetarian Option: {food.alternatives.vegetarian.name}
-                      </h4>
-                      <p className="text-sm text-green-600 dark:text-green-500">
-                        {food.alternatives.vegetarian.changes}
-                        {food.alternatives.vegetarian.protein && (
-                          <span className="ml-2 font-medium">({food.alternatives.vegetarian.protein}g protein)</span>
-                        )}
-                      </p>
-                    </div>
+                  <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                    <h4 className="font-medium text-green-700 dark:text-green-400 mb-2">
+                      Vegetarian Option: {food.alternatives.vegetarian.name}
+                    </h4>
+                    <p className="text-sm text-green-600 dark:text-green-500">
+                      {food.alternatives.vegetarian.changes}
+                      {food.alternatives.vegetarian.protein && (
+                        <span className="ml-2 font-medium">({food.alternatives.vegetarian.protein}g protein)</span>
+                      )}
+                    </p>
+                  </div>
                   )}
 
                   {food.alternatives.glutenFree && (
-                    <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
-                      <h4 className="font-medium text-yellow-700 dark:text-yellow-400 mb-2">
-                        Gluten-Free Option: {food.alternatives.glutenFree.name}
-                      </h4>
-                      <p className="text-sm text-yellow-600 dark:text-yellow-500">
-                        {food.alternatives.glutenFree.changes}
-                      </p>
-                    </div>
+                  <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
+                    <h4 className="font-medium text-yellow-700 dark:text-yellow-400 mb-2">
+                      Gluten-Free Option: {food.alternatives.glutenFree.name}
+                    </h4>
+                    <p className="text-sm text-yellow-600 dark:text-yellow-500">
+                      {food.alternatives.glutenFree.changes}
+                    </p>
+                  </div>
                   )}
 
                   {food.alternatives.lactoseFree && (
-                    <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                      <h4 className="font-medium text-blue-700 dark:text-blue-400 mb-2">
-                        Lactose-Free Option: {food.alternatives.lactoseFree.name}
-                      </h4>
-                      <p className="text-sm text-blue-600 dark:text-blue-500">
-                        {food.alternatives.lactoseFree.changes}
-                      </p>
-                    </div>
+                  <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                    <h4 className="font-medium text-blue-700 dark:text-blue-400 mb-2">
+                      Lactose-Free Option: {food.alternatives.lactoseFree.name}
+                    </h4>
+                    <p className="text-sm text-blue-600 dark:text-blue-500">
+                      {food.alternatives.lactoseFree.changes}
+                    </p>
+                  </div>
                   )}
                 </div>
               </div>

@@ -139,8 +139,9 @@ export default function Profile() {
     const age = Number(profile.personalInfo.age);
     const gender = profile.personalInfo.gender;
 
+    // Calculate BMR using Mifflin-St Jeor Equation
     const bmr = (10 * weight) + (6.25 * height) - (5 * age);
-    return gender === 'male' ? Math.round(bmr + 5) : Math.round(bmr - 161);
+    return Math.round(gender === 'male' ? bmr + 5 : bmr - 161);
   }, [profile]);
 
   const bmr = calculateBMR();
@@ -253,198 +254,214 @@ export default function Profile() {
 
         {/* User Info Card */}
         <div className="bg-white dark:bg-[#1E1E1E] rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 transform transition-all duration-200 hover:shadow-xl">
-          <div className="p-8 flex items-center gap-6">
-            <div className="w-20 h-20 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-2xl flex items-center justify-center shadow-lg transform transition-transform duration-200 hover:scale-105">
-              {user?.photoURL ? (
-                <img src={user.photoURL} alt="Profile" className="w-full h-full rounded-2xl object-cover" />
-              ) : (
-                <span className="text-3xl font-bold text-white">{user?.email?.[0].toUpperCase()}</span>
-              )}
-            </div>
-            <div className="flex-1">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">{user?.displayName || user?.email}</h2>
-              <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
-                <Calendar className="w-4 h-4" />
-                <p>Member since {new Date(user?.metadata?.creationTime || '').toLocaleDateString()}</p>
-              </div>
-            </div>
-            <button
-              onClick={() => navigate('/profile/edit')}
-              className="flex items-center gap-2 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-6 py-3 rounded-xl hover:bg-emerald-500/20 transition-all duration-200 font-medium"
-            >
-              <Edit className="w-4 h-4" />
-              Edit Profile
-            </button>
-          </div>
-        </div>
-
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* BMI Card */}
-          <div className="bg-white dark:bg-[#1E1E1E] rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 p-6 transform transition-all duration-200 hover:shadow-xl">
-            <div className="flex items-center gap-3 mb-4">
-              <Scale className="w-5 h-5 text-emerald-500" />
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">BMI Status</h3>
-            </div>
-            {bmi && bmiInfo && (
-              <div className="space-y-4">
-                <div className="flex justify-between items-baseline">
-                  <span className="text-3xl font-bold text-gray-900 dark:text-white">{bmi}</span>
-                  <span className="text-lg font-medium text-emerald-500">{bmiInfo.category}</span>
-                </div>
-                <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-2.5">
-                  <div 
-                    className="bg-emerald-500 h-2.5 rounded-full transition-all duration-500 ease-out"
-                    style={{ width: bmiInfo.position }}
+          {/* Profile Header Section */}
+          <div className="p-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+              {/* Avatar and Name Section */}
+              <div className="flex items-center gap-4 w-full sm:w-auto">
+                <div className="relative">
+                  <img
+                    src={user?.photoURL || 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix'}
+                    alt="Profile"
+                    className="w-16 h-16 rounded-full object-cover border-2 border-emerald-500"
                   />
+                  {membership?.isActive && (
+                    <div className="absolute -top-1 -right-1">
+                      <Crown className="w-5 h-5 text-yellow-500" />
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1">
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                    {user?.displayName || 'User'}
+                  </h2>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Member since {user?.metadata?.creationTime ? new Date(user.metadata.creationTime).toLocaleDateString() : 'N/A'}
+                  </p>
                 </div>
               </div>
-            )}
-          </div>
-
-          {/* BMR Card */}
-          <div className="bg-white dark:bg-[#1E1E1E] rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 p-6 transform transition-all duration-200 hover:shadow-xl">
-            <div className="flex items-center gap-3 mb-4">
-              <Activity className="w-5 h-5 text-emerald-500" />
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Daily Calories</h3>
-            </div>
-            {bmr && (
-              <div className="space-y-2">
-                <div className="flex justify-between items-baseline">
-                  <span className="text-3xl font-bold text-gray-900 dark:text-white">{bmr}</span>
-                  <span className="text-sm text-gray-500 dark:text-gray-400">calories/day</span>
-                </div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Base Metabolic Rate</p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Active Membership Card */}
-        <div 
-          className="bg-white dark:bg-[#1E1E1E] rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 transform transition-all duration-200 hover:shadow-xl cursor-pointer"
-          onClick={() => navigate('/membership')}
-        >
-          <div className="px-8 py-6 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
-            <h2 className="text-xl font-bold flex items-center gap-3 text-gray-900 dark:text-white">
-              <Crown className="w-6 h-6 text-yellow-500" />
-              Active Membership
-            </h2>
-            {membership?.isActive ? (
-              <span className="bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-4 py-1.5 rounded-full text-sm font-medium">
-                Active
-              </span>
-            ) : (
-              <span className="bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 px-4 py-1.5 rounded-full text-sm font-medium">
-                Inactive
-              </span>
-            )}
-          </div>
-          <div className="p-8">
-            {membership?.isActive ? (
-              <div className="space-y-6">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-1">
-                      {plans.find(p => p.id === membership.planId)?.name}
-                    </h3>
-                    <p className="text-gray-500 dark:text-gray-400">Valid until {new Date(membership.endDate).toLocaleDateString()}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Days Remaining</p>
-                    <p className="text-3xl font-bold text-emerald-500">
-                      {Math.ceil((new Date(membership.endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))}
-                    </p>
-                  </div>
-                </div>
-                <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-2.5">
-                  <div 
-                    className="bg-emerald-500 h-2.5 rounded-full transition-all duration-500 ease-out"
-                    style={{
-                      width: `${(Math.ceil((new Date(membership.endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) / 
-                        Math.ceil((new Date(membership.endDate).getTime() - new Date(membership.startDate).getTime()) / (1000 * 60 * 60 * 24))) * 100}%`
-                    }}
-                  />
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-6">
-                <p className="text-gray-500 dark:text-gray-400 mb-4">No active membership. Click to view available plans.</p>
-                <button className="bg-emerald-500 text-white px-6 py-2 rounded-lg hover:bg-emerald-600 transition-colors">
-                  View Plans
+              
+              {/* Edit Profile Button - Right aligned on desktop, full width on mobile */}
+              <div className="w-full sm:w-auto mt-2 sm:mt-0 sm:ml-auto">
+                <button
+                  onClick={() => navigate('/profile/edit')}
+                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                >
+                  <Edit className="w-4 h-4" />
+                  <span>Edit Profile</span>
                 </button>
               </div>
-            )}
+            </div>
           </div>
-        </div>
 
-        {/* Dietary Preferences Card */}
-        <div className="bg-white dark:bg-[#1E1E1E] rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 transform transition-all duration-200 hover:shadow-xl">
-          <div className="px-8 py-6 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
-            <h2 className="text-xl font-bold flex items-center gap-3 text-gray-900 dark:text-white">
-              <Heart className="w-6 h-6 text-red-500" />
-              Dietary Preferences
-            </h2>
-            {!editingDietary && (
-              <button
-                onClick={() => setEditingDietary(true)}
-                className="flex items-center gap-2 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 px-4 py-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-              >
-                <Edit className="w-4 h-4" />
-                Edit
-              </button>
-            )}
+          {/* Stats Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* BMI Card */}
+            <div className="bg-white dark:bg-[#1E1E1E] rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 p-6 transform transition-all duration-200 hover:shadow-xl">
+              <div className="flex items-center gap-3 mb-4">
+                <Scale className="w-5 h-5 text-emerald-500" />
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">BMI Status</h3>
+              </div>
+              {bmi && bmiInfo && (
+                <div className="space-y-4">
+                  <div className="flex justify-between items-baseline">
+                    <span className="text-3xl font-bold text-gray-900 dark:text-white">{bmi}</span>
+                    <span className="text-lg font-medium text-emerald-500">{bmiInfo.category}</span>
+                  </div>
+                  <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-2.5">
+                    <div 
+                      className="bg-emerald-500 h-2.5 rounded-full transition-all duration-500 ease-out"
+                      style={{ width: bmiInfo.position }}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* BMR Card */}
+            <div className="bg-white dark:bg-[#1E1E1E] rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 p-6 transform transition-all duration-200 hover:shadow-xl">
+              <div className="flex items-center gap-3 mb-4">
+                <Activity className="w-5 h-5 text-emerald-500" />
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Daily Calories</h3>
+              </div>
+              {bmr && (
+                <div className="space-y-2">
+                  <div className="flex justify-between items-baseline">
+                    <span className="text-3xl font-bold text-gray-900 dark:text-white">{bmr}</span>
+                    <span className="text-sm text-gray-500 dark:text-gray-400">calories/day</span>
+                  </div>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Base Metabolic Rate</p>
+                </div>
+              )}
+            </div>
           </div>
-          <div className="p-8">
-            {editingDietary ? (
-              <div className="space-y-4">
-                <div className="flex flex-wrap gap-2">
-                  {dietaryOptions.map(option => (
+
+          {/* Active Membership Card */}
+          <div 
+            className="bg-white dark:bg-[#1E1E1E] rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 transform transition-all duration-200 hover:shadow-xl cursor-pointer"
+            onClick={() => navigate('/membership')}
+          >
+            <div className="px-8 py-6 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+              <h2 className="text-xl font-bold flex items-center gap-3 text-gray-900 dark:text-white">
+                <Crown className="w-6 h-6 text-yellow-500" />
+                Active Membership
+              </h2>
+              {membership?.isActive ? (
+                <span className="bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-4 py-1.5 rounded-full text-sm font-medium">
+                  Active
+                </span>
+              ) : (
+                <span className="bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 px-4 py-1.5 rounded-full text-sm font-medium">
+                  Inactive
+                </span>
+              )}
+            </div>
+            <div className="p-8">
+              {membership?.isActive ? (
+                <div className="space-y-6">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-1">
+                        {plans.find(p => p.id === membership.planId)?.name}
+                      </h3>
+                      <p className="text-gray-500 dark:text-gray-400">Valid until {new Date(membership.endDate).toLocaleDateString()}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Days Remaining</p>
+                      <p className="text-3xl font-bold text-emerald-500">
+                        {Math.ceil((new Date(membership.endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-2.5">
+                    <div 
+                      className="bg-emerald-500 h-2.5 rounded-full transition-all duration-500 ease-out"
+                      style={{
+                        width: `${(Math.ceil((new Date(membership.endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) / 
+                          Math.ceil((new Date(membership.endDate).getTime() - new Date(membership.startDate).getTime()) / (1000 * 60 * 60 * 24))) * 100}%`
+                      }}
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-6">
+                  <p className="text-gray-500 dark:text-gray-400 mb-4">No active membership. Click to view available plans.</p>
+                  <button className="bg-emerald-500 text-white px-6 py-2 rounded-lg hover:bg-emerald-600 transition-colors">
+                    View Plans
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Dietary Preferences Card */}
+          <div className="bg-white dark:bg-[#1E1E1E] rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 transform transition-all duration-200 hover:shadow-xl">
+            <div className="px-8 py-6 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+              <h2 className="text-xl font-bold flex items-center gap-3 text-gray-900 dark:text-white">
+                <Heart className="w-6 h-6 text-red-500" />
+                Dietary Preferences
+              </h2>
+              {!editingDietary && (
+                <button
+                  onClick={() => setEditingDietary(true)}
+                  className="flex items-center gap-2 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 px-4 py-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                >
+                  <Edit className="w-4 h-4" />
+                  Edit
+                </button>
+              )}
+            </div>
+            <div className="p-8">
+              {editingDietary ? (
+                <div className="space-y-4">
+                  <div className="flex flex-wrap gap-2">
+                    {dietaryOptions.map(option => (
+                      <button
+                        key={option}
+                        onClick={() => handleDietaryChange(option)}
+                        className={`px-4 py-2 rounded-lg transition-all duration-200 ${
+                          dietaryPreferences.includes(option)
+                            ? 'bg-emerald-500 text-white'
+                            : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                        }`}
+                      >
+                        {option}
+                      </button>
+                    ))}
+                  </div>
+                  {saveError && <p className="text-red-500 text-sm">{saveError}</p>}
+                  <div className="flex justify-end gap-3">
                     <button
-                      key={option}
-                      onClick={() => handleDietaryChange(option)}
-                      className={`px-4 py-2 rounded-lg transition-all duration-200 ${
-                        dietaryPreferences.includes(option)
-                          ? 'bg-emerald-500 text-white'
-                          : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
-                      }`}
+                      onClick={() => setEditingDietary(false)}
+                      className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
                     >
-                      {option}
+                      Cancel
                     </button>
-                  ))}
-                </div>
-                {saveError && <p className="text-red-500 text-sm">{saveError}</p>}
-                <div className="flex justify-end gap-3">
-                  <button
-                    onClick={() => setEditingDietary(false)}
-                    className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={saveDietaryPreferences}
-                    className="px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors"
-                  >
-                    Save
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="flex flex-wrap gap-2">
-                {profile?.preferences?.dietary && profile.preferences.dietary.length > 0 ? (
-                  profile.preferences.dietary.map((pref: string) => (
-                    <span
-                      key={pref}
-                      className="px-4 py-2 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-lg"
+                    <button
+                      onClick={saveDietaryPreferences}
+                      className="px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors"
                     >
-                      {pref}
-                    </span>
-                  ))
-                ) : (
-                  <p className="text-gray-500 dark:text-gray-400">No dietary preferences set</p>
-                )}
-              </div>
-            )}
+                      Save
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {profile?.preferences?.dietary && profile.preferences.dietary.length > 0 ? (
+                    profile.preferences.dietary.map((pref: string) => (
+                      <span
+                        key={pref}
+                        className="px-4 py-2 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-lg"
+                      >
+                        {pref}
+                      </span>
+                    ))
+                  ) : (
+                    <p className="text-gray-500 dark:text-gray-400">No dietary preferences set</p>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>

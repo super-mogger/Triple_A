@@ -97,9 +97,9 @@ const highProteinMealDatabase: Food[] = [
     calories: 325,
     servingSize: "300g",
     portion: "300g",
-    category: "High Protein",
+      category: "High Protein",
     difficulty: "Easy",
-    preparationTime: "10 mins",
+      preparationTime: "10 mins",
     cookingTime: "20 mins",
     imageUrl: "https://images.unsplash.com/photo-1532550907401-a500c9a57435",
     allergens: []
@@ -107,12 +107,12 @@ const highProteinMealDatabase: Food[] = [
   {
     name: "Protein Oatmeal",
     protein: 20,
-    carbs: 35,
+      carbs: 35,
     fats: 8,
     calories: 290,
     servingSize: "250g",
     portion: "250g",
-    category: "High Protein",
+      category: "High Protein",
     difficulty: "Easy",
     preparationTime: "5 mins",
     cookingTime: "10 mins",
@@ -120,13 +120,13 @@ const highProteinMealDatabase: Food[] = [
   },
   {
     name: "Salmon with Sweet Potato",
-    protein: 25,
+          protein: 25,
     carbs: 30,
     fats: 15,
     calories: 355,
     servingSize: "300g",
     portion: "300g",
-    category: "High Protein",
+      category: "High Protein",
     difficulty: "Medium",
     preparationTime: "10 mins",
     cookingTime: "25 mins",
@@ -146,9 +146,9 @@ const lowCalorieMealDatabase: Food[] = [
     category: "Low Calorie",
     difficulty: "Easy",
     preparationTime: "5 mins",
-    cookingTime: "15 mins",
-    alternatives: {
-      vegetarian: {
+      cookingTime: "15 mins",
+      alternatives: {
+        vegetarian: {
         name: "Grilled Tofu",
         protein: 20,
         carbs: 2,
@@ -253,23 +253,26 @@ const generateDietPlan = (profile: any, planType: string): WeeklyDietPlan => {
   const { weight, height, age, gender, activityLevel } = profile;
   
   // Calculate BMR using Mifflin-St Jeor Equation
-  const bmr = gender === 'male'
-    ? (10 * weight) + (6.25 * height) - (5 * age) + 5
-    : (10 * weight) + (6.25 * height) - (5 * age) - 161;
+  const bmr = Math.round(
+    gender === 'male'
+      ? (10 * weight) + (6.25 * height) - (5 * age) + 5
+      : (10 * weight) + (6.25 * height) - (5 * age) - 161
+  );
 
-  // Activity level multipliers
+  // Activity level multipliers with exact values
   const activityMultipliers: Record<string, number> = {
-    sedentary: 1.2,
-    light: 1.375,
-    moderate: 1.55,
-    active: 1.725,
-    veryActive: 1.9
+    sedentary: 1.2,      // Little or no exercise
+    light: 1.375,        // Light exercise/sports 1-3 days/week
+    moderate: 1.55,      // Moderate exercise/sports 3-5 days/week
+    active: 1.725,       // Hard exercise/sports 6-7 days/week
+    veryActive: 1.9      // Very hard exercise/sports & physical job or training twice per day
   };
 
   // Use a default multiplier if activityLevel is not found
   const multiplier = activityMultipliers[activityLevel] || activityMultipliers.moderate;
   const tdee = Math.round(bmr * multiplier);
 
+  // Set target calories based on goal
   let targetCalories: number;
   let proteinMultiplier: number;
   let carbsMultiplier: number;
@@ -281,9 +284,9 @@ const generateDietPlan = (profile: any, planType: string): WeeklyDietPlan => {
   switch (planType) {
     case 'weight-loss':
       targetCalories = tdee - 500; // 500 calorie deficit
-      proteinMultiplier = 2.2; // Higher protein for muscle preservation
-      carbsMultiplier = 2; 
-      fatsMultiplier = 0.8;
+      proteinMultiplier = 2.2;     // Higher protein for muscle preservation (g/kg)
+      carbsMultiplier = 2;         // Moderate carbs (g/kg)
+      fatsMultiplier = 0.8;        // Lower fats (g/kg)
       mealDatabase = lowCalorieMealDatabase;
       waterIntake = Math.round(weight * 0.04 * 100) / 100; // 40ml per kg of body weight
       supplementation = [
@@ -305,10 +308,10 @@ const generateDietPlan = (profile: any, planType: string): WeeklyDietPlan => {
       break;
 
     case 'muscle-gain':
-      targetCalories = tdee + 300; // Caloric surplus
-      proteinMultiplier = 2.4; // Higher protein for muscle growth
-      carbsMultiplier = 4;
-      fatsMultiplier = 0.9;
+      targetCalories = tdee + 300;  // Caloric surplus
+      proteinMultiplier = 2.4;      // Higher protein for muscle growth (g/kg)
+      carbsMultiplier = 4;          // Higher carbs for energy and recovery (g/kg)
+      fatsMultiplier = 0.9;         // Moderate fats (g/kg)
       mealDatabase = highProteinMealDatabase;
       waterIntake = Math.round(weight * 0.05 * 100) / 100; // 50ml per kg of body weight
       supplementation = [
@@ -331,9 +334,9 @@ const generateDietPlan = (profile: any, planType: string): WeeklyDietPlan => {
 
     default: // maintenance
       targetCalories = tdee;
-      proteinMultiplier = 2;
-      carbsMultiplier = 3;
-      fatsMultiplier = 1;
+      proteinMultiplier = 2;        // Moderate protein (g/kg)
+      carbsMultiplier = 3;          // Balanced carbs (g/kg)
+      fatsMultiplier = 1;           // Balanced fats (g/kg)
       mealDatabase = maintenanceMealDatabase;
       waterIntake = Math.round(weight * 0.035 * 100) / 100; // 35ml per kg of body weight
       supplementation = [
@@ -382,7 +385,7 @@ const generateDietPlan = (profile: any, planType: string): WeeklyDietPlan => {
     const meals: Meal[] = [
       {
         type: 'Breakfast',
-        time: '8:00 AM',
+              time: '8:00 AM',
         foods: [mealDb[0]],
         totalCalories: mealDb[0].calories,
         totalProtein: mealDb[0].protein,
@@ -391,7 +394,7 @@ const generateDietPlan = (profile: any, planType: string): WeeklyDietPlan => {
       },
       {
         type: 'Lunch',
-        time: '1:00 PM',
+              time: '1:00 PM',
         foods: [mealDb[1]],
         totalCalories: mealDb[1].calories,
         totalProtein: mealDb[1].protein,
@@ -400,7 +403,7 @@ const generateDietPlan = (profile: any, planType: string): WeeklyDietPlan => {
       },
       {
         type: 'Dinner',
-        time: '7:00 PM',
+              time: '7:00 PM',
         foods: [mealDb[2]],
         totalCalories: mealDb[2].calories,
         totalProtein: mealDb[2].protein,

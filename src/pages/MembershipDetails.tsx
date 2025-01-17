@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ArrowLeft, Crown, Check } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { usePayment } from '../context/PaymentContext';
+import { useTheme } from '../context/ThemeContext';
 
 interface Plan {
   id: string;
@@ -59,7 +60,10 @@ const plans: Plan[] = [
 
 export default function MembershipDetails() {
   const navigate = useNavigate();
-  const { membership } = usePayment();
+  const { membership, initiatePayment } = usePayment();
+  const { isDarkMode } = useTheme();
+  const [loading, setLoading] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
 
   // Calculate days remaining
   const daysRemaining = membership?.endDate 
@@ -73,6 +77,24 @@ export default function MembershipDetails() {
 
   // Get active plan details
   const activePlan = membership?.planId ? plans.find(p => p.id === membership.planId) : null;
+
+  const handlePayment = async (plan: Plan) => {
+    try {
+      setLoading(true);
+      setSelectedPlan(plan.id);
+      await initiatePayment({
+        amount: plan.price * 100, // Convert to paise
+        currency: 'INR',
+        description: `${plan.name} - ${plan.duration} Membership`,
+        planId: plan.id
+      });
+    } catch (error) {
+      console.error('Payment initiation failed:', error);
+    } finally {
+      setLoading(false);
+      setSelectedPlan(null);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#121212] py-8">
@@ -163,17 +185,29 @@ export default function MembershipDetails() {
                   ))}
                 </ul>
                 <button
+                  onClick={() => handlePayment(plan)}
+                  disabled={loading || membership?.planId === plan.id}
                   className={`w-full py-2.5 rounded-xl font-medium transition-all duration-300 ${
                     membership?.planId === plan.id
                       ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400 cursor-default'
+                      : loading && selectedPlan === plan.id
+                      ? 'bg-gray-300 text-gray-600 cursor-wait'
                       : 'bg-emerald-500 hover:bg-emerald-600 text-white dark:bg-gradient-to-r dark:from-emerald-400 dark:to-teal-400 dark:hover:from-emerald-500 dark:hover:to-teal-500 dark:text-black'
                   }`}
-                  disabled={membership?.planId === plan.id}
                 >
-                  {membership?.planId === plan.id ? 'Current Plan' : 'Choose Plan'}
+                  {membership?.planId === plan.id 
+                    ? 'Current Plan' 
+                    : loading && selectedPlan === plan.id 
+                    ? 'Processing...' 
+                    : 'Choose Plan'}
                 </button>
               </div>
             ))}
+          </div>
+          <div className="mt-6 text-center">
+            <p className="text-gray-500">
+              Secure payment powered by Razorpay
+            </p>
           </div>
         </div>
       </div>

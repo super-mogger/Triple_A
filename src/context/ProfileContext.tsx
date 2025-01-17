@@ -1,214 +1,132 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { doc, getDoc, setDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { useAuth } from './AuthContext';
+import { Membership } from '../types/payment';
 
 interface Profile {
-  uid: string;
+  userId: string;
   email: string;
   displayName: string;
-  photoURL: string;
+  photoURL?: string;
   personalInfo: {
-    age: number;
+    fullName: string;
     dateOfBirth: string;
     gender: 'male' | 'female';
-    bloodType: string;
-  };
-  stats: {
-    weight: number;
     height: number;
+    weight: number;
+    contact: string;
   };
   preferences: {
+    dietary: string[];
+    workoutDays: string[];
+    fitnessGoals: string[];
     fitnessLevel: string;
     activityLevel: 'sedentary' | 'light' | 'moderate' | 'active' | 'veryActive';
-    dietary: string[];
   };
-  goals: string[];
-  medicalInfo: {
-    conditions: string;
-  };
-  membership: {
-    planId: string;
-    startDate: string;
-    endDate: string;
-    isActive: boolean;
-    lastPaymentId: string;
-  };
+  membership?: Membership;
   createdAt: string;
-  lastUpdated: string;
+  updatedAt: string;
 }
 
 interface ProfileContextType {
   profile: Profile | null;
   loading: boolean;
-  error: string | null;
-  updateProfile: (updatedData: Partial<Profile>) => Promise<void>;
-  refreshProfile: () => Promise<void>;
+  error: Error | null;
+  updateProfile: (updates: Partial<Profile>) => Promise<void>;
 }
 
 const ProfileContext = createContext<ProfileContextType>({
   profile: null,
   loading: true,
   error: null,
-  updateProfile: async () => {},
-  refreshProfile: async () => {}
+  updateProfile: async () => {}
 });
 
 export const useProfile = () => useContext(ProfileContext);
 
-const MAX_RETRIES = 3;
-const RETRY_DELAY = 1000; // 1 second
-
 export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<Error | null>(null);
   const { user } = useAuth();
 
-  const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
-  const fetchProfileWithRetry = async (retryCount = 0): Promise<Profile | null> => {
-    try {
-      if (!user?.uid) {
-        throw new Error('No authenticated user found');
-      }
-
-      // First try to get the profile by UID
-      const docRef = doc(db, 'users', user.uid);
-      const docSnap = await getDoc(docRef);
-
-      if (docSnap.exists()) {
-        return docSnap.data() as Profile;
-      }
-
-      // If not found by UID, try to find by email
-      const usersRef = collection(db, 'users');
-      const q = query(usersRef, where('email', '==', user.email));
-      const querySnapshot = await getDocs(q);
-
-      if (!querySnapshot.empty) {
-        const existingProfile = querySnapshot.docs[0].data() as Profile;
-        // Update the document with the correct UID
-        await setDoc(docRef, { ...existingProfile, uid: user.uid }, { merge: true });
-        return existingProfile;
-      }
-
-      // If no profile exists, create a new one
-      const initialProfile: Profile = {
-        uid: user.uid,
-        email: user.email || '',
-        displayName: user.displayName || '',
-        photoURL: user.photoURL || '',
-        personalInfo: {
-          age: 0,
-          dateOfBirth: '',
-          gender: 'male',
-          bloodType: '',
-        },
-        stats: {
-          weight: 0,
-          height: 0,
-        },
-        preferences: {
-          fitnessLevel: '',
-          activityLevel: 'moderate',
-          dietary: [],
-        },
-        goals: [],
-        medicalInfo: {
-          conditions: '',
-        },
-        membership: {
-          planId: 'monthly',
-          startDate: new Date().toISOString(),
-          endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-          isActive: true,
-          lastPaymentId: 'initial_free_month'
-        },
-        createdAt: new Date().toISOString(),
-        lastUpdated: new Date().toISOString()
-      };
-
-      await setDoc(docRef, initialProfile);
-      return initialProfile;
-
-    } catch (error: any) {
-      console.error('Error fetching profile:', error);
-      
-      if (retryCount < MAX_RETRIES) {
-        await sleep(RETRY_DELAY * Math.pow(2, retryCount));
-        return fetchProfileWithRetry(retryCount + 1);
-      }
-      
-      throw error;
-    }
-  };
-
-  const refreshProfile = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const fetchedProfile = await fetchProfileWithRetry();
-      if (fetchedProfile) {
-        setProfile(fetchedProfile);
-      }
-    } catch (error: any) {
-      console.error('Error refreshing profile:', error);
-      setError(error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    if (user) {
-      refreshProfile();
-    } else {
-      setProfile(null);
-      setLoading(false);
-      setError(null);
-    }
+    const fetchProfile = async () => {
+      if (!user) {
+        setProfile(null);
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const profileRef = doc(db, 'profiles', user.uid);
+        const profileSnap = await getDoc(profileRef);
+
+        if (profileSnap.exists()) {
+          setProfile(profileSnap.data() as Profile);
+        } else {
+          // Create default profile
+          const defaultProfile: Profile = {
+            userId: user.uid,
+            email: user.email || '',
+            displayName: user.displayName || '',
+            photoURL: user.photoURL || '',
+            personalInfo: {
+              fullName: user.displayName || '',
+              dateOfBirth: '',
+              gender: 'male',
+              height: 0,
+              weight: 0,
+              contact: ''
+            },
+            preferences: {
+              dietary: [],
+              workoutDays: [],
+              fitnessGoals: [],
+              fitnessLevel: 'beginner',
+              activityLevel: 'moderate'
+            },
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          };
+
+          await setDoc(profileRef, defaultProfile);
+          setProfile(defaultProfile);
+        }
+      } catch (err) {
+        setError(err as Error);
+        console.error('Error fetching profile:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProfile();
   }, [user]);
 
-  const updateProfile = async (updatedData: Partial<Profile>) => {
-    if (!user?.uid) {
-      throw new Error('No authenticated user found');
-    }
-
-    setLoading(true);
-    setError(null);
+  const updateProfile = async (updates: Partial<Profile>) => {
+    if (!user || !profile) return;
 
     try {
-      const docRef = doc(db, 'users', user.uid);
-      const currentProfile = profile || await fetchProfileWithRetry();
-
-      if (!currentProfile) {
-        throw new Error('Failed to fetch current profile');
-      }
-
-      const updatedProfile: Profile = {
-        ...currentProfile,
-        ...updatedData,
-        uid: user.uid,
-        email: user.email || '',
-        displayName: user.displayName || '',
-        photoURL: user.photoURL || '',
-        lastUpdated: new Date().toISOString(),
+      const profileRef = doc(db, 'profiles', user.uid);
+      const updatedProfile = {
+        ...profile,
+        ...updates,
+        updatedAt: new Date().toISOString()
       };
 
-      await setDoc(docRef, updatedProfile);
+      await setDoc(profileRef, updatedProfile);
       setProfile(updatedProfile);
-    } catch (error: any) {
-      console.error('Error updating profile:', error);
-      setError(error.message);
-      throw error;
-    } finally {
-      setLoading(false);
+    } catch (err) {
+      setError(err as Error);
+      console.error('Error updating profile:', err);
+      throw err;
     }
   };
 
   return (
-    <ProfileContext.Provider value={{ profile, loading, error, updateProfile, refreshProfile }}>
+    <ProfileContext.Provider value={{ profile, loading, error, updateProfile }}>
       {children}
     </ProfileContext.Provider>
   );

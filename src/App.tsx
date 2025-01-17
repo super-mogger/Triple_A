@@ -20,7 +20,6 @@ import Workouts from './pages/Workouts';
 import ProfileEdit from './pages/ProfileEdit';
 import MembershipDetails from './pages/MembershipDetails';
 import PaymentHistory from './pages/PaymentHistory';
-import { PaymentPlans } from './components/PaymentPlans';
 import Achievements from './pages/Achievements';
 import Settings from './pages/Settings';
 
@@ -36,7 +35,6 @@ function App() {
               <Route path="/signup" element={<SignUp />} />
               <Route path="/user-info" element={<UserInfoForm />} />
               <Route path="/verify-email" element={<VerifyEmail />} />
-              <Route path="/plans" element={<PaymentPlans />} />
               <Route 
                 element={
                   <PrivateRoute>

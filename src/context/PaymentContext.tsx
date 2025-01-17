@@ -3,28 +3,29 @@ import { useAuth } from './AuthContext';
 import { useProfile } from './ProfileContext';
 import { doc, getDoc, setDoc, collection, query, where, getDocs, orderBy } from 'firebase/firestore';
 import { db } from '../config/firebase';
+import { loadRazorpayScript, initializeRazorpayPayment } from '../services/RazorpayService';
+import { Payment, Membership, Plan } from '../types/payment';
 
-interface Payment {
-  id: string;
-  userId: string;
-  date: string;
-  amount: number;
-  planId: string;
-  planName: string;
-  status: 'success' | 'failed' | 'pending';
-  transactionId: string;
-  paymentMethod: string;
-  orderId: string;
-  invoiceUrl?: string;
-}
-
-interface Membership {
-  planId: string;
-  startDate: string;
-  endDate: string;
-  isActive: boolean;
-  lastPaymentId: string;
-}
+const plans: Plan[] = [
+  {
+    id: 'monthly',
+    name: 'Monthly Plan',
+    duration: '1 month',
+    price: 699
+  },
+  {
+    id: 'quarterly',
+    name: 'Quarterly Plan',
+    duration: '3 months',
+    price: 1999
+  },
+  {
+    id: 'biannual',
+    name: '6 Month Plan',
+    duration: '6 months',
+    price: 3999
+  }
+];
 
 interface PaymentContextType {
   payments: Payment[];
@@ -32,6 +33,7 @@ interface PaymentContextType {
   loading: boolean;
   addPayment: (payment: Omit<Payment, 'id'>) => Promise<void>;
   updateMembership: (membership: Membership) => Promise<void>;
+  initiatePayment: (options: { amount: number; currency: string; description: string; planId: string }) => Promise<void>;
 }
 
 const PaymentContext = createContext<PaymentContextType>({
@@ -39,7 +41,8 @@ const PaymentContext = createContext<PaymentContextType>({
   membership: null,
   loading: true,
   addPayment: async () => {},
-  updateMembership: async () => {}
+  updateMembership: async () => {},
+  initiatePayment: async () => {}
 });
 
 export const usePayment = () => useContext(PaymentContext);
@@ -99,7 +102,7 @@ export const PaymentProvider: React.FC<{ children: React.ReactNode }> = ({ child
     fetchPayments();
   }, [user]);
 
-  const addPayment = async (payment: Omit<Payment, 'id'>) => {
+  const addPayment = async (payment: Omit<Payment, 'id'>): Promise<void> => {
     if (!user?.uid) return;
 
     try {
@@ -132,13 +135,109 @@ export const PaymentProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
+  const handlePaymentSuccess = async (response: any, planId: string, amount: number) => {
+    try {
+      // Create a new payment record
+      const payment: Omit<Payment, 'id'> = {
+        userId: user!.uid,
+        date: new Date().toISOString(),
+        amount: amount,
+        planId: planId,
+        planName: plans.find((p: Plan) => p.id === planId)?.name || '',
+        status: 'success',
+        transactionId: response.razorpay_payment_id,
+        paymentMethod: 'razorpay',
+        orderId: response.razorpay_order_id
+      };
+      await addPayment(payment);
+
+      // Calculate new membership dates
+      const plan = plans.find((p: Plan) => p.id === planId);
+      const durationInMonths = plan?.duration.includes('month') 
+        ? parseInt(plan.duration) 
+        : plan?.duration.includes('year') 
+          ? parseInt(plan.duration) * 12 
+          : 1;
+
+      const startDate = new Date();
+      const endDate = new Date();
+      endDate.setMonth(endDate.getMonth() + durationInMonths);
+
+      // Update membership
+      const newMembership: Membership = {
+        planId: planId,
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+        isActive: true,
+        lastPaymentId: response.razorpay_payment_id // Use payment ID from Razorpay response
+      };
+      await updateMembership(newMembership);
+    } catch (error) {
+      console.error('Error processing successful payment:', error);
+      throw error;
+    }
+  };
+
+  const initiatePayment = async (options: { amount: number; currency: string; description: string; planId: string }) => {
+    if (!user) throw new Error('User must be logged in to make a payment');
+
+    try {
+      // Load Razorpay script
+      const isLoaded = await loadRazorpayScript();
+      if (!isLoaded) throw new Error('Failed to load Razorpay script');
+
+      // Create a temporary order ID (in production, this should come from your backend)
+      const tempOrderId = `order_${Date.now()}`;
+
+      // Initialize payment
+      await initializeRazorpayPayment(
+        options.amount,
+        options.currency,
+        tempOrderId,
+        {
+          name: user.displayName || '',
+          email: user.email || '',
+          contact: profile?.personalInfo?.contact || ''
+        },
+        async (response) => {
+          try {
+            await handlePaymentSuccess(response, options.planId, options.amount);
+          } catch (error) {
+            console.error('Error processing successful payment:', error);
+            throw error;
+          }
+        },
+        (error) => {
+          // Add payment failure record
+          const failedPayment: Omit<Payment, 'id'> = {
+            userId: user.uid,
+            date: new Date().toISOString(),
+            amount: options.amount,
+            planId: options.planId,
+            planName: plans.find((p: Plan) => p.id === options.planId)?.name || '',
+            status: 'failed',
+            transactionId: 'failed_' + Date.now(),
+            paymentMethod: 'razorpay',
+            orderId: tempOrderId
+          };
+          addPayment(failedPayment).catch(console.error);
+          throw error;
+        }
+      );
+    } catch (error) {
+      console.error('Failed to initiate payment:', error);
+      throw error;
+    }
+  };
+
   return (
     <PaymentContext.Provider value={{
       payments,
       membership,
       loading,
       addPayment,
-      updateMembership
+      updateMembership,
+      initiatePayment
     }}>
       {children}
     </PaymentContext.Provider>

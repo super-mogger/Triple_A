@@ -4,13 +4,14 @@ import Header from './Header';
 import Navigation from './Navigation';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { PaymentPlans } from '../pages/PaymentPlans';
 
 export default function Layout() {
   const { logout } = useAuth();
   const { isDarkMode } = useTheme();
   const { pathname } = useLocation();
 
-  const showHeaderAndNav = !['profile', 'membership', 'achievements', 'profile/edit', 'settings'].some(path => 
+  const showHeaderAndNav = !['profile', 'membership', 'achievements', 'profile/edit', 'settings', 'plans'].some(path => 
     pathname.endsWith(path)
   );
 

@@ -2,6 +2,7 @@ import React from 'react';
 import { razorpayService } from '../services/RazorpayClientService';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Crown, Dumbbell, Users, Star, Shield, Zap } from 'lucide-react';
 
 interface Plan {
   id: string;
@@ -9,43 +10,55 @@ interface Plan {
   price: number;
   duration: string;
   features: string[];
+  popular?: boolean;
+  icon: React.ReactNode;
 }
 
 const plans: Plan[] = [
   {
     id: 'monthly',
-    name: 'Monthly Plan',
+    name: 'Basic Plan',
     price: 999,
     duration: '1 Month',
+    icon: <Dumbbell className="w-6 h-6 text-emerald-500" />,
     features: [
       'Full Gym Access',
       'Personal Trainer',
       'Diet Consultation',
-      'Progress Tracking'
+      'Progress Tracking',
+      'Basic Workout Plans',
+      'Mobile App Access'
     ]
   },
   {
     id: 'quarterly',
-    name: 'Quarterly Plan',
+    name: 'Pro Plan',
     price: 2499,
     duration: '3 Months',
+    popular: true,
+    icon: <Crown className="w-6 h-6 text-emerald-500" />,
     features: [
-      'All Monthly Features',
-      'Fitness Classes',
-      '15% Discount',
-      'Nutrition Plan'
+      'All Basic Features',
+      'Premium Workout Plans',
+      'Group Fitness Classes',
+      'Nutrition Planning',
+      '15% Supplement Discount',
+      'Priority Support'
     ]
   },
   {
     id: 'yearly',
-    name: 'Yearly Plan',
+    name: 'Elite Plan',
     price: 7999,
     duration: '12 Months',
+    icon: <Star className="w-6 h-6 text-emerald-500" />,
     features: [
-      'All Quarterly Features',
+      'All Pro Features',
+      'Personal Training Sessions',
+      'Custom Workout Plans',
       'Free Supplements',
-      '25% Discount',
-      'Priority Support'
+      '25% Store Discount',
+      'VIP Support'
     ]
   }
 ];
@@ -68,7 +81,6 @@ export const PaymentPlans: React.FC = () => {
   const [loading, setLoading] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
 
-  // Handle URL error parameters
   React.useEffect(() => {
     const errorParam = searchParams.get('error');
     if (errorParam) {
@@ -76,7 +88,6 @@ export const PaymentPlans: React.FC = () => {
     }
   }, [searchParams]);
 
-  // Redirect to login if not authenticated
   React.useEffect(() => {
     if (!authLoading && !user) {
       navigate('/login', { state: { from: '/plans' } });
@@ -92,7 +103,7 @@ export const PaymentPlans: React.FC = () => {
         amount: plan.price,
         planId: plan.id,
         name: 'Triple A Fitness',
-        description: `${plan.name} Membership`,
+        description: `${plan.name} Membership - ${plan.duration}`,
         prefill: {
           name: user?.displayName || undefined,
           email: user?.email || undefined,
@@ -124,95 +135,105 @@ export const PaymentPlans: React.FC = () => {
 
   if (authLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+      <div className="min-h-screen bg-[#121212] flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500"></div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      <div className="text-center">
-        <h2 className="text-3xl font-extrabold text-gray-900 sm:text-4xl">
-          Choose Your Membership Plan
-        </h2>
-        <p className="mt-4 text-xl text-gray-600">
-          Select the plan that best fits your fitness journey
-        </p>
-      </div>
+    <div className="min-h-screen bg-[#121212] py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto">
+        <div className="text-center">
+          <h2 className="text-3xl font-extrabold text-white sm:text-4xl">
+            Choose Your Fitness Journey
+          </h2>
+          <p className="mt-4 text-xl text-gray-400">
+            Select the plan that best fits your goals
+          </p>
+        </div>
 
-      {error && (
-        <div className="mt-8 max-w-md mx-auto bg-red-50 p-4 rounded-md">
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-              </svg>
+        {error && (
+          <div className="mt-8 max-w-md mx-auto bg-red-900/50 border border-red-500/50 p-4 rounded-xl">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <Shield className="h-5 w-5 text-red-400" />
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-red-400">{error}</p>
+              </div>
             </div>
-            <div className="ml-3">
-              <p className="text-sm font-medium text-red-800">{error}</p>
+          </div>
+        )}
+
+        <div className="mt-12 grid gap-8 lg:grid-cols-3 sm:gap-6">
+          {plans.map((plan) => (
+            <div
+              key={plan.id}
+              className={`relative bg-[#1E1E1E] rounded-2xl shadow-xl overflow-hidden border border-gray-800 ${
+                plan.popular ? 'ring-2 ring-emerald-500' : ''
+              }`}
+            >
+              {plan.popular && (
+                <div className="absolute top-0 right-0 bg-emerald-500 text-white text-xs font-medium px-3 py-1 rounded-bl-lg">
+                  Most Popular
+                </div>
+              )}
+              
+              <div className="p-6">
+                <div className="flex items-center gap-3 mb-4">
+                  {plan.icon}
+                  <h3 className="text-2xl font-bold text-white">{plan.name}</h3>
+                </div>
+                
+                <p className="text-gray-400 mb-8">{plan.duration}</p>
+                
+                <p className="flex items-baseline mb-8">
+                  <span className="text-5xl font-extrabold text-white">₹{plan.price}</span>
+                  <span className="ml-2 text-gray-400">/{plan.duration.toLowerCase()}</span>
+                </p>
+
+                <ul className="space-y-4 mb-8">
+                  {plan.features.map((feature, index) => (
+                    <li key={index} className="flex items-center text-gray-300">
+                      <Zap className="w-5 h-5 text-emerald-500 mr-3 flex-shrink-0" />
+                      {feature}
+                    </li>
+                  ))}
+                </ul>
+
+                <button
+                  onClick={() => handlePayment(plan)}
+                  disabled={!!loading || !user}
+                  className={`w-full bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-3 px-4 rounded-xl
+                    transition duration-150 ease-in-out flex items-center justify-center
+                    ${loading === plan.id ? 'opacity-75 cursor-not-allowed' : ''}
+                    ${!user ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  {loading === plan.id ? (
+                    <>
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                      Processing...
+                    </>
+                  ) : !user ? (
+                    'Please Login'
+                  ) : (
+                    'Get Started'
+                  )}
+                </button>
+              </div>
             </div>
+          ))}
+        </div>
+
+        <div className="mt-12 text-center">
+          <div className="inline-flex items-center gap-2 bg-[#1E1E1E] px-4 py-2 rounded-xl border border-gray-800">
+            <Shield className="w-5 h-5 text-emerald-500" />
+            <p className="text-sm text-gray-400">
+              Secure payment powered by Razorpay
+            </p>
           </div>
         </div>
-      )}
-
-      <div className="mt-12 grid gap-8 lg:grid-cols-3">
-        {plans.map((plan) => (
-          <div
-            key={plan.id}
-            className="relative bg-white rounded-lg shadow-lg overflow-hidden"
-          >
-            <div className="px-6 py-8">
-              <h3 className="text-2xl font-semibold text-gray-900">{plan.name}</h3>
-              <p className="mt-4 text-gray-500">{plan.duration}</p>
-              <p className="mt-8">
-                <span className="text-4xl font-extrabold text-gray-900">
-                  ₹{plan.price}
-                </span>
-              </p>
-
-              <ul className="mt-8 space-y-4">
-                {plan.features.map((feature, index) => (
-                  <li key={index} className="flex items-center">
-                    <svg
-                      className="w-5 h-5 text-green-500"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                    <span className="ml-3 text-gray-600">{feature}</span>
-                  </li>
-                ))}
-              </ul>
-
-              <button
-                onClick={() => handlePayment(plan)}
-                disabled={!!loading}
-                className={`mt-8 block w-full bg-indigo-600 hover:bg-indigo-700 
-                  text-white font-semibold py-3 px-4 rounded-md text-center
-                  transition duration-150 ease-in-out
-                  ${loading === plan.id ? 'opacity-75 cursor-not-allowed' : ''}
-                  ${!user ? 'opacity-50 cursor-not-allowed' : ''}`}
-              >
-                {loading === plan.id ? (
-                  <div className="flex items-center justify-center">
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                    Processing...
-                  </div>
-                ) : !user ? (
-                  'Please Login'
-                ) : (
-                  'Subscribe Now'
-                )}
-              </button>
-            </div>
-          </div>
-        ))}
       </div>
     </div>
   );

@@ -82,31 +82,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const signInWithGoogle = async () => {
+  const signInWithGoogle = async (): Promise<{ user: User | null; error: AuthError | null }> => {
     try {
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}`,
           queryParams: {
             access_type: 'offline',
-            prompt: 'consent',
+            prompt: 'select_account',
           },
-          scopes: 'email profile',
-        },
+          redirectTo: window.location.origin
+        }
       });
-      
+
       if (error) {
-        setError(error);
+        console.error('Google sign-in error:', error.message);
         return { user: null, error };
       }
-      
-      // Since this is OAuth, it will redirect and we won't get a user object immediately
+
+      // Since this is OAuth, we won't get the user immediately due to redirect
       return { user: null, error: null };
-    } catch (err) {
-      const error = err as AuthError;
-      setError(error);
-      return { user: null, error };
+    } catch (error) {
+      console.error('Authentication error:', error);
+      return { user: null, error: error as AuthError };
     }
   };
 

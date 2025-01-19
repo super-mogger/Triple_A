@@ -25,85 +25,126 @@ interface RazorpayOptions {
   };
   modal?: {
     ondismiss: () => void;
+    escape: boolean;
+    confirm_close: boolean;
   };
+  retry?: {
+    enabled: boolean;
+    max_count: number;
+  };
+  notes?: Record<string, string>;
+}
+
+interface PaymentResponse {
+  razorpay_payment_id: string;
+  razorpay_order_id: string;
+  razorpay_signature: string;
+}
+
+interface PaymentError {
+  code: string;
+  description: string;
+  source: string;
+  step: string;
+  reason: string;
+  metadata: Record<string, any>;
 }
 
 // Environment configuration
 const IS_DEV = import.meta.env.DEV;
 const RAZORPAY_KEY = IS_DEV 
-  ? 'rzp_test_GEZQfBnCrf1uyR'  // Development test key
-  : import.meta.env.VITE_RAZORPAY_KEY_ID; // Production key
+  ? import.meta.env.VITE_RAZORPAY_TEST_KEY_ID
+  : import.meta.env.VITE_RAZORPAY_KEY_ID;
 
-if (!RAZORPAY_KEY) {
-  console.error('Razorpay key is not configured!');
-}
+// Logging configuration
+const logPaymentEvent = (event: string, data?: any) => {
+  console.log(`[Razorpay] ${event}:`, data);
+};
 
-// Log environment and configuration
-console.log('Environment:', IS_DEV ? 'Development' : 'Production');
-console.log('Using Razorpay key:', RAZORPAY_KEY ? 'Key is set' : 'Key is missing');
+// Error handling
+const handlePaymentError = (error: PaymentError): never => {
+  logPaymentEvent('Error', error);
+  throw new Error(`Payment failed: ${error.description || error.reason}`);
+};
 
-export const loadRazorpayScript = (): Promise<boolean> => {
-  return new Promise((resolve) => {
+export const loadRazorpayScript = async (retryCount = 0): Promise<boolean> => {
+  const MAX_RETRIES = 3;
+  const RETRY_DELAY = 1000;
+
+  try {
     if (window.Razorpay) {
-      console.log('Razorpay already loaded');
-      resolve(true);
-      return;
+      logPaymentEvent('Script already loaded');
+      return true;
     }
 
-    const script = document.createElement('script');
-    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-    script.async = true;
-    script.onload = () => {
-      console.log('Razorpay script loaded successfully');
-      resolve(true);
-    };
-    script.onerror = (error) => {
-      console.error('Failed to load Razorpay script:', error);
-      resolve(false);
-    };
-    document.body.appendChild(script);
-  });
+    return new Promise((resolve) => {
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.async = true;
+
+      script.onload = () => {
+        logPaymentEvent('Script loaded successfully');
+        resolve(true);
+      };
+
+      script.onerror = async (error) => {
+        logPaymentEvent('Script load failed', error);
+        if (retryCount < MAX_RETRIES) {
+          await new Promise(r => setTimeout(r, RETRY_DELAY));
+          resolve(loadRazorpayScript(retryCount + 1));
+        } else {
+          resolve(false);
+        }
+      };
+
+      document.body.appendChild(script);
+    });
+  } catch (error) {
+    logPaymentEvent('Script load error', error);
+    return false;
+  }
 };
 
 export const createOrder = async (amount: number, planId: string, currency: string = 'INR') => {
   try {
     if (!RAZORPAY_KEY) {
-      throw new Error('Razorpay key is not configured');
+      throw new Error('Razorpay key is not configured. Please check your environment variables.');
     }
 
-    // Get the current user
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) {
       throw new Error('User not authenticated');
     }
 
-    // Create order on backend
-    const response = await fetch('/api/create-order', {
+    logPaymentEvent('Creating order', { amount, planId, currency, userId: session.user.id });
+
+    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/payment-functions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`,
+        'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
       },
-      body: JSON.stringify({ amount, currency }),
+      body: JSON.stringify({ 
+        path: 'create-order',
+        userId: session.user.id,
+        planId,
+        amount,
+        currency 
+      }),
     });
 
     if (!response.ok) {
-      throw new Error('Failed to create order');
+      const errorData = await response.json();
+      logPaymentEvent('Order creation failed', errorData);
+      throw new Error(errorData.error || `Failed to create order: ${response.status}`);
     }
 
-    const { id: orderId } = await response.json();
-
-    // Create payment record in Supabase
-    await createPaymentRecord(
-      user.id,
-      orderId,
-      amount,
-      planId,
-      currency
-    );
-
-    return orderId;
+    const data = await response.json();
+    logPaymentEvent('Order created', data);
+    return data.orderId;
   } catch (error) {
-    console.error('Error creating order:', error);
+    logPaymentEvent('Order creation error', error);
     throw error;
   }
 };
@@ -117,84 +158,125 @@ export const initializeRazorpayPayment = async (
     name: string;
     email: string;
     contact: string;
+    userId: string;
   },
-  onSuccess: (response: any) => void,
-  onFailure: (error: any) => void
+  onSuccess: (response: PaymentResponse) => void,
+  onFailure: (error: PaymentError) => void
 ) => {
-  if (!window.Razorpay) {
-    throw new Error('Razorpay script not loaded');
-  }
+  let retryCount = 0;
+  const MAX_RETRIES = 3;
+  const RETRY_DELAY = 1000;
 
-  if (!RAZORPAY_KEY) {
-    throw new Error('Razorpay key is not configured');
-  }
-
-  console.log('Initializing payment:', {
-    amount,
-    currency,
-    orderId,
-    userDetails: { ...userDetails, email: userDetails.email ? '***' : undefined }
-  });
-
-  const options: RazorpayOptions = {
-    key: RAZORPAY_KEY,
-    amount,
-    currency,
-    name: 'Triple A Fitness',
-    description: 'Membership Payment',
-    order_id: orderId,
-    handler: async function(response) {
-      try {
-        // Update payment status in Supabase
-        await updatePaymentStatus(orderId, 'success', response.razorpay_payment_id);
-        console.log('Payment successful:', response);
-        onSuccess(response);
-      } catch (error) {
-        console.error('Error updating payment status:', error);
-        onFailure(error);
-      }
-    },
-    prefill: {
-      name: userDetails.name || '',
-      email: userDetails.email || '',
-      contact: userDetails.contact || '',
-    },
-    theme: {
-      color: '#10B981'
-    },
-    modal: {
-      ondismiss: async function() {
-        try {
-          await updatePaymentStatus(orderId, 'failed');
-          console.log('Payment modal dismissed');
-          onFailure(new Error('Payment cancelled by user'));
-        } catch (error) {
-          console.error('Error updating payment status:', error);
-          onFailure(error);
+  const tryPayment = async (): Promise<void> => {
+    try {
+      if (!window.Razorpay) {
+        const loaded = await loadRazorpayScript();
+        if (!loaded) {
+          throw new Error('Failed to load Razorpay script');
         }
       }
+
+      if (!RAZORPAY_KEY) {
+        throw new Error('Razorpay key is not configured');
+      }
+
+      logPaymentEvent('Initializing payment', {
+        amount: amount * 100,
+        currency,
+        orderId,
+        userDetails: { ...userDetails, email: '***' }
+      });
+
+      const options: RazorpayOptions = {
+        key: RAZORPAY_KEY,
+        amount: amount * 100,
+        currency,
+        name: 'Triple A Fitness',
+        description: 'Membership Payment',
+        order_id: orderId,
+        handler: async function(response: PaymentResponse) {
+          try {
+            logPaymentEvent('Payment successful', response);
+            await updatePaymentStatus(orderId, 'success', response.razorpay_payment_id);
+            onSuccess(response);
+          } catch (error) {
+            logPaymentEvent('Status update failed', error);
+            onFailure(error as PaymentError);
+          }
+        },
+        prefill: {
+          name: userDetails.name || '',
+          email: userDetails.email || '',
+          contact: userDetails.contact || '',
+        },
+        theme: {
+          color: '#10B981'
+        },
+        modal: {
+          ondismiss: async function() {
+            try {
+              logPaymentEvent('Payment modal dismissed');
+              await updatePaymentStatus(orderId, 'failed');
+              onFailure({
+                code: 'PAYMENT_CANCELLED',
+                description: 'Payment cancelled by user',
+                source: 'user',
+                step: 'payment_initiation',
+                reason: 'modal_closed',
+                metadata: { orderId }
+              });
+            } catch (error) {
+              logPaymentEvent('Status update failed after dismiss', error);
+              onFailure(error as PaymentError);
+            }
+          },
+          escape: false,
+          confirm_close: true
+        },
+        retry: {
+          enabled: true,
+          max_count: 3
+        },
+        notes: {
+          user_id: userDetails.userId,
+          plan_id: planId
+        }
+      };
+
+      const razorpay = new window.Razorpay(options);
+
+      razorpay.on('payment.failed', async function(response: { error: PaymentError }) {
+        try {
+          logPaymentEvent('Payment failed', response.error);
+          await updatePaymentStatus(orderId, 'failed');
+          onFailure(response.error);
+        } catch (error) {
+          logPaymentEvent('Status update failed after payment failure', error);
+          onFailure(error as PaymentError);
+        }
+      });
+
+      razorpay.on('payment.error', function(error: PaymentError) {
+        logPaymentEvent('Payment error', error);
+        onFailure(error);
+      });
+
+      razorpay.on('payment.captured', function(response: PaymentResponse) {
+        logPaymentEvent('Payment captured', response);
+      });
+
+      logPaymentEvent('Opening payment modal');
+      razorpay.open();
+    } catch (error) {
+      logPaymentEvent('Payment initialization error', error);
+      if (retryCount < MAX_RETRIES) {
+        retryCount++;
+        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
+        return tryPayment();
+      }
+      onFailure(error as PaymentError);
     }
   };
 
-  try {
-    console.log('Creating Razorpay instance...');
-    const razorpay = new window.Razorpay(options);
-
-    razorpay.on('payment.failed', async function(response: any) {
-      try {
-        await updatePaymentStatus(orderId, 'failed');
-        console.error('Payment failed:', response.error);
-        onFailure(response.error);
-      } catch (error) {
-        console.error('Error updating payment status:', error);
-        onFailure(error);
-      }
-    });
-
-    console.log('Opening Razorpay modal...');
-    razorpay.open();
-  } catch (error) {
-    console.error('Error opening Razorpay:', error);
-    onFailure(error);
-  }
+  return tryPayment();
 }; 

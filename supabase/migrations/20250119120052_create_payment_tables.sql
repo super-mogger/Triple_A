@@ -86,3 +86,49 @@ INSERT INTO plans (id, name, description, price, duration, features) VALUES
   ('quarterly', 'Pro Plan', 'Quarterly membership plan', 1999, 90, '["All Monthly Plan features", "Nutrition guidance", "Progress tracking", "Priority booking for classes", "Guest passes (2)"]'),
   ('biannual', 'Elite Plan', 'Biannual membership plan', 3999, 180, '["All Quarterly Plan features", "Personalized workout plans", "Monthly body composition analysis", "Premium app features", "Unlimited guest passes"]')
 ON CONFLICT (id) DO NOTHING;
+
+-- Enable RLS
+alter table public.payments enable row level security;
+
+-- Enable Realtime for the payments table
+BEGIN;
+  -- Drop existing publication if it exists
+  DROP PUBLICATION IF EXISTS supabase_realtime;
+
+  -- Create a new publication
+  CREATE PUBLICATION supabase_realtime;
+
+  -- Add the payments table to the publication
+  ALTER PUBLICATION supabase_realtime ADD TABLE payments;
+COMMIT;
+
+-- Update RLS policies for payments
+DROP POLICY IF EXISTS "Enable read access for authenticated users" ON payments;
+DROP POLICY IF EXISTS "Enable insert access for authenticated users" ON payments;
+DROP POLICY IF EXISTS "Enable update access for authenticated users" ON payments;
+
+CREATE POLICY "Enable read access for authenticated users"
+  ON payments FOR SELECT
+  TO authenticated
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Enable insert access for authenticated users"
+  ON payments FOR INSERT
+  TO authenticated
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Enable update access for authenticated users"
+  ON payments FOR UPDATE
+  TO authenticated
+  USING (auth.uid() = user_id);
+
+-- Add table comment
+comment on table public.payments is 'Stores payment information for user memberships';
+
+-- Add column comments
+comment on column public.payments.user_id is 'References the user who made the payment';
+comment on column public.payments.razorpay_order_id is 'Razorpay order ID for reference';
+comment on column public.payments.razorpay_payment_id is 'Razorpay payment ID after successful payment';
+comment on column public.payments.amount is 'Payment amount in INR';
+comment on column public.payments.currency is 'Payment currency (default: INR)';
+comment on column public.payments.status is 'Payment status: created, success, failed';

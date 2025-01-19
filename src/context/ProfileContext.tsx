@@ -1,32 +1,35 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { db } from '../config/firebase';
+import { supabase } from '../config/supabase';
 import { useAuth } from './AuthContext';
 import { Membership } from '../types/payment';
 
 interface Profile {
-  userId: string;
+  id: string;
+  user_id: string;
   email: string;
-  displayName: string;
-  photoURL?: string;
-  personalInfo: {
-    fullName: string;
-    dateOfBirth: string;
+  full_name: string;
+  avatar_url?: string;
+  personal_info: {
+    date_of_birth: string;
     gender: 'male' | 'female';
     height: number;
     weight: number;
     contact: string;
+    blood_type?: string;
   };
   preferences: {
     dietary: string[];
-    workoutDays: string[];
-    fitnessGoals: string[];
-    fitnessLevel: string;
-    activityLevel: 'sedentary' | 'light' | 'moderate' | 'active' | 'veryActive';
+    workout_days: string[];
+    fitness_goals: string[];
+    fitness_level: string;
+    activity_level: 'sedentary' | 'light' | 'moderate' | 'active' | 'veryActive';
+  };
+  medical_info?: {
+    conditions: string;
   };
   membership?: Membership;
-  createdAt: string;
-  updatedAt: string;
+  created_at: string;
+  updated_at: string;
 }
 
 interface ProfileContextType {
@@ -60,42 +63,57 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
 
       try {
-        const profileRef = doc(db, 'profiles', user.uid);
-        const profileSnap = await getDoc(profileRef);
+        // Fetch profile from Supabase
+        const { data: existingProfile, error: fetchError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('user_id', user.id)
+          .single();
 
-        if (profileSnap.exists()) {
-          setProfile(profileSnap.data() as Profile);
+        if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116 is "no rows returned" error
+          throw fetchError;
+        }
+
+        if (existingProfile) {
+          setProfile(existingProfile as Profile);
         } else {
           // Create default profile
-          const defaultProfile: Profile = {
-            userId: user.uid,
+          const defaultProfile: Omit<Profile, 'id' | 'created_at' | 'updated_at'> = {
+            user_id: user.id,
             email: user.email || '',
-            displayName: user.displayName || '',
-            photoURL: user.photoURL || '',
-            personalInfo: {
-              fullName: user.displayName || '',
-              dateOfBirth: '',
+            full_name: user.user_metadata?.full_name || '',
+            avatar_url: user.user_metadata?.avatar_url || '',
+            personal_info: {
+              date_of_birth: '',
               gender: 'male',
               height: 0,
               weight: 0,
-              contact: ''
+              contact: '',
+              blood_type: ''
             },
             preferences: {
               dietary: [],
-              workoutDays: [],
-              fitnessGoals: [],
-              fitnessLevel: 'beginner',
-              activityLevel: 'moderate'
+              workout_days: [],
+              fitness_goals: [],
+              fitness_level: 'beginner',
+              activity_level: 'moderate'
             },
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
+            medical_info: {
+              conditions: ''
+            }
           };
 
-          await setDoc(profileRef, defaultProfile);
-          setProfile(defaultProfile);
+          const { data: newProfile, error: insertError } = await supabase
+            .from('profiles')
+            .insert([defaultProfile])
+            .select()
+            .single();
+
+          if (insertError) throw insertError;
+          setProfile(newProfile as Profile);
         }
       } catch (err) {
-        setError(err as Error);
+        setError(err instanceof Error ? err : new Error('Failed to fetch profile'));
         console.error('Error fetching profile:', err);
       } finally {
         setLoading(false);
@@ -109,17 +127,27 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (!user || !profile) return;
 
     try {
-      const profileRef = doc(db, 'profiles', user.uid);
-      const updatedProfile = {
-        ...profile,
-        ...updates,
-        updatedAt: new Date().toISOString()
-      };
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString()
+        })
+        .eq('user_id', user.id);
 
-      await setDoc(profileRef, updatedProfile);
-      setProfile(updatedProfile);
+      if (updateError) throw updateError;
+
+      // Fetch the updated profile
+      const { data: updatedProfile, error: fetchError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+
+      if (fetchError) throw fetchError;
+      setProfile(updatedProfile as Profile);
     } catch (err) {
-      setError(err as Error);
+      setError(err instanceof Error ? err : new Error('Failed to update profile'));
       console.error('Error updating profile:', err);
       throw err;
     }

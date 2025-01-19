@@ -1,4 +1,5 @@
-import { api } from './api';
+import { createPaymentRecord, updatePaymentStatus } from './supabaseService';
+import { supabase } from '../config/supabase';
 
 declare global {
   interface Window {
@@ -64,13 +65,43 @@ export const loadRazorpayScript = (): Promise<boolean> => {
   });
 };
 
-export const createOrder = async (amount: number, currency: string = 'INR') => {
+export const createOrder = async (amount: number, planId: string, currency: string = 'INR') => {
   try {
     if (!RAZORPAY_KEY) {
       throw new Error('Razorpay key is not configured');
     }
 
-    return await api.razorpay.createOrder(amount, currency);
+    // Get the current user
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
+
+    // Create order on backend
+    const response = await fetch('/api/create-order', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ amount, currency }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to create order');
+    }
+
+    const { id: orderId } = await response.json();
+
+    // Create payment record in Supabase
+    await createPaymentRecord(
+      user.id,
+      orderId,
+      amount,
+      planId,
+      currency
+    );
+
+    return orderId;
   } catch (error) {
     console.error('Error creating order:', error);
     throw error;
@@ -81,6 +112,7 @@ export const initializeRazorpayPayment = async (
   amount: number,
   currency: string,
   orderId: string,
+  planId: string,
   userDetails: {
     name: string;
     email: string;
@@ -111,9 +143,16 @@ export const initializeRazorpayPayment = async (
     name: 'Triple A Fitness',
     description: 'Membership Payment',
     order_id: orderId,
-    handler: function(response) {
-      console.log('Payment successful:', response);
-      onSuccess(response);
+    handler: async function(response) {
+      try {
+        // Update payment status in Supabase
+        await updatePaymentStatus(orderId, 'success', response.razorpay_payment_id);
+        console.log('Payment successful:', response);
+        onSuccess(response);
+      } catch (error) {
+        console.error('Error updating payment status:', error);
+        onFailure(error);
+      }
     },
     prefill: {
       name: userDetails.name || '',
@@ -124,9 +163,15 @@ export const initializeRazorpayPayment = async (
       color: '#10B981'
     },
     modal: {
-      ondismiss: function() {
-        console.log('Payment modal dismissed');
-        onFailure(new Error('Payment cancelled by user'));
+      ondismiss: async function() {
+        try {
+          await updatePaymentStatus(orderId, 'failed');
+          console.log('Payment modal dismissed');
+          onFailure(new Error('Payment cancelled by user'));
+        } catch (error) {
+          console.error('Error updating payment status:', error);
+          onFailure(error);
+        }
       }
     }
   };
@@ -135,9 +180,15 @@ export const initializeRazorpayPayment = async (
     console.log('Creating Razorpay instance...');
     const razorpay = new window.Razorpay(options);
 
-    razorpay.on('payment.failed', function(response: any) {
-      console.error('Payment failed:', response.error);
-      onFailure(response.error);
+    razorpay.on('payment.failed', async function(response: any) {
+      try {
+        await updatePaymentStatus(orderId, 'failed');
+        console.error('Payment failed:', response.error);
+        onFailure(response.error);
+      } catch (error) {
+        console.error('Error updating payment status:', error);
+        onFailure(error);
+      }
     });
 
     console.log('Opening Razorpay modal...');

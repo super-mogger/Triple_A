@@ -62,7 +62,7 @@ const plans: Plan[] = [
 
 export default function Profile() {
   const navigate = useNavigate();
-  const { profile, loading, error, refreshProfile, updateProfile } = useProfile();
+  const { profile, loading, error } = useProfile();
   const { user } = useAuth();
   const { membership } = usePayment();
   const { isDarkMode } = useTheme();
@@ -70,74 +70,24 @@ export default function Profile() {
   const [dietaryPreferences, setDietaryPreferences] = useState<string[]>([]);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  // Effect for error handling
-  useEffect(() => {
-    if (error) {
-      console.error('Profile error:', error);
-    }
-  }, [error]);
-
-  // Effect for dietary preferences
-  useEffect(() => {
-    if (profile?.preferences?.dietary) {
-      setDietaryPreferences(profile.preferences.dietary);
-    }
-  }, [profile]);
-
-  // Retry mechanism
-  const handleRetry = useCallback(async () => {
-    try {
-      await refreshProfile();
-    } catch (err) {
-      console.error('Failed to refresh profile:', err);
-    }
-  }, [refreshProfile]);
-
-  const handleDietaryChange = useCallback((option: string) => {
-    setDietaryPreferences(prev => 
-      prev.includes(option) 
-        ? prev.filter(pref => pref !== option)
-        : [...prev, option]
-    );
-  }, []);
-
-  const saveDietaryPreferences = useCallback(async () => {
-    if (!profile) return;
-    
-    try {
-      setSaveError(null);
-      const updatedPreferences = {
-        fitnessLevel: profile.preferences?.fitnessLevel || 'beginner',
-        activityLevel: profile.preferences?.activityLevel || 'sedentary',
-        dietary: dietaryPreferences
-      } as const;
-      
-      await updateProfile({
-        preferences: updatedPreferences
-      });
-      setEditingDietary(false);
-    } catch (error) {
-      console.error('Error saving dietary preferences:', error);
-      setSaveError('Failed to save preferences. Please try again.');
-    }
-  }, [profile, dietaryPreferences, updateProfile]);
-
   // Calculate BMI
   const calculateBMI = useCallback(() => {
-    if (!profile?.stats?.weight || !profile?.stats?.height) return null;
-    const weight = Number(profile.stats.weight);
-    const heightInMeters = Number(profile.stats.height) / 100;
+    if (!profile?.personal_info?.weight || !profile?.personal_info?.height) return null;
+    const weight = Number(profile.personal_info.weight);
+    const heightInMeters = Number(profile.personal_info.height) / 100;
     return (weight / (heightInMeters * heightInMeters)).toFixed(1);
   }, [profile]);
 
   // Calculate BMR
   const calculateBMR = useCallback(() => {
-    if (!profile?.stats?.weight || !profile?.stats?.height || !profile?.personalInfo?.age) return null;
+    if (!profile?.personal_info?.weight || !profile?.personal_info?.height || !profile?.personal_info?.date_of_birth) return null;
     
-    const weight = Number(profile.stats.weight);
-    const height = Number(profile.stats.height);
-    const age = Number(profile.personalInfo.age);
-    const gender = profile.personalInfo.gender;
+    const weight = Number(profile.personal_info.weight);
+    const height = Number(profile.personal_info.height);
+    const birthDate = new Date(profile.personal_info.date_of_birth);
+    const today = new Date();
+    const age = today.getFullYear() - birthDate.getFullYear();
+    const gender = profile.personal_info.gender;
 
     // Calculate BMR using Mifflin-St Jeor Equation
     const bmr = (10 * weight) + (6.25 * height) - (5 * age);
@@ -176,13 +126,7 @@ export default function Profile() {
             </svg>
           </div>
           <h2 className="text-xl font-bold text-gray-900 dark:text-white">Failed to load profile</h2>
-          <p className="text-gray-600 dark:text-gray-400">{error}</p>
-          <button
-            onClick={handleRetry}
-            className="bg-emerald-500 text-white px-6 py-2 rounded-lg hover:bg-emerald-600 transition-colors"
-          >
-            Try Again
-          </button>
+          <p className="text-gray-600 dark:text-gray-400">{error.message}</p>
         </div>
       </div>
     );
@@ -208,36 +152,6 @@ export default function Profile() {
     );
   }
 
-  // Mock active membership data (replace with actual data from backend)
-  const activeMembership = {
-    plan: 'quarterly',
-    startDate: '2024-01-08',
-    endDate: '2024-04-08',
-    isActive: false
-  };
-
-  const dietaryOptions = ['Vegetarian', 'Vegan', 'Gluten-free', 'Dairy-free', 'Keto'];
-
-  // Get activity multiplier with type safety
-  const getActivityMultiplier = (level: string): number => {
-    const activityMultipliers: { [key: string]: number } = {
-      sedentary: 1.2,
-      'lightly-active': 1.375,
-      'moderately-active': 1.55,
-      'very-active': 1.725
-    };
-    return activityMultipliers[level] || 1.2;
-  };
-
-  // Helper function to safely display dietary preferences
-  const renderDietaryPreferences = () => {
-    const preferences = profile?.preferences?.dietary;
-    if (!preferences || preferences.length === 0) {
-      return 'No dietary preferences set';
-    }
-    return preferences.join(', ');
-  };
-
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#121212] py-8">
       <div className="max-w-4xl mx-auto px-4 space-y-6">
@@ -261,7 +175,7 @@ export default function Profile() {
               <div className="flex items-center gap-4 w-full sm:w-auto">
                 <div className="relative">
                   <img
-                    src={user?.photoURL || 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix'}
+                    src={profile.avatar_url || 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix'}
                     alt="Profile"
                     className="w-16 h-16 rounded-full object-cover border-2 border-emerald-500"
                   />
@@ -269,28 +183,29 @@ export default function Profile() {
                     <div className="absolute -top-1 -right-1">
                       <Crown className="w-5 h-5 text-yellow-500" />
                     </div>
-              )}
-            </div>
-            <div className="flex-1">
+                  )}
+                </div>
+                <div className="flex-1">
                   <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                    {user?.displayName || 'User'}
+                    {profile.full_name || 'User'}
                   </h2>
                   <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Member since {user?.metadata?.creationTime ? new Date(user.metadata.creationTime).toLocaleDateString() : 'N/A'}
+                    Member since {new Date(profile.created_at).toLocaleDateString()}
                   </p>
                 </div>
               </div>
               
-              {/* Edit Profile Button - Right aligned on desktop, full width on mobile */}
+              {/* Edit Profile Button */}
               <div className="w-full sm:w-auto mt-2 sm:mt-0 sm:ml-auto">
-            <button
-              onClick={() => navigate('/profile/edit')}
+                <button
+                  onClick={() => navigate('/profile/edit')}
                   className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-            >
-              <Edit className="w-4 h-4" />
+                >
+                  <Edit className="w-4 h-4" />
                   <span>Edit Profile</span>
-            </button>
+                </button>
               </div>
+            </div>
           </div>
         </div>
 
@@ -362,7 +277,7 @@ export default function Profile() {
                 <div className="flex justify-between items-start">
                   <div>
                     <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-1">
-                      {plans.find(p => p.id === membership.planId)?.name}
+                      {membership.planName}
                     </h3>
                     <p className="text-gray-500 dark:text-gray-400">Valid until {new Date(membership.endDate).toLocaleDateString()}</p>
                   </div>
@@ -401,66 +316,28 @@ export default function Profile() {
               <Heart className="w-6 h-6 text-red-500" />
               Dietary Preferences
             </h2>
-            {!editingDietary && (
-              <button
-                onClick={() => setEditingDietary(true)}
-                className="flex items-center gap-2 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 px-4 py-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-              >
-                <Edit className="w-4 h-4" />
-                Edit
-              </button>
-            )}
+            <button
+              onClick={() => navigate('/profile/edit')}
+              className="flex items-center gap-2 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 px-4 py-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+            >
+              <Edit className="w-4 h-4" />
+              Edit
+            </button>
           </div>
           <div className="p-8">
-            {editingDietary ? (
-              <div className="space-y-4">
-                <div className="flex flex-wrap gap-2">
-                  {dietaryOptions.map(option => (
-                    <button
-                      key={option}
-                      onClick={() => handleDietaryChange(option)}
-                      className={`px-4 py-2 rounded-lg transition-all duration-200 ${
-                        dietaryPreferences.includes(option)
-                          ? 'bg-emerald-500 text-white'
-                          : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
-                      }`}
-                    >
-                      {option}
-                    </button>
-                  ))}
-                </div>
-                {saveError && <p className="text-red-500 text-sm">{saveError}</p>}
-                <div className="flex justify-end gap-3">
-                  <button
-                    onClick={() => setEditingDietary(false)}
-                    className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+            <div className="flex flex-wrap gap-2">
+              {profile.preferences?.dietary && profile.preferences.dietary.length > 0 ? (
+                profile.preferences.dietary.map((pref: string) => (
+                  <span
+                    key={pref}
+                    className="px-4 py-2 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-lg"
                   >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={saveDietaryPreferences}
-                    className="px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors"
-                  >
-                    Save
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="flex flex-wrap gap-2">
-                  {profile?.preferences?.dietary && profile.preferences.dietary.length > 0 ? (
-                    profile.preferences.dietary.map((pref: string) => (
-                    <span
-                      key={pref}
-                      className="px-4 py-2 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-lg"
-                    >
-                      {pref}
-                    </span>
-                  ))
-                ) : (
-                  <p className="text-gray-500 dark:text-gray-400">No dietary preferences set</p>
-                )}
-              </div>
-            )}
+                    {pref}
+                  </span>
+                ))
+              ) : (
+                <p className="text-gray-500 dark:text-gray-400">No dietary preferences set</p>
+              )}
             </div>
           </div>
         </div>

@@ -1,168 +1,194 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { 
-  User,
-  signInWithEmailAndPassword,
-  signOut,
-  onAuthStateChanged,
-  GoogleAuthProvider,
-  signInWithPopup,
-  createUserWithEmailAndPassword,
-  sendEmailVerification,
-  sendPasswordResetEmail as firebaseSendPasswordResetEmail
-} from 'firebase/auth';
-import { auth } from '../config/firebase';
-import { createUserProfile } from '../services/database';
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { User, AuthError } from '@supabase/supabase-js';
+import { supabase } from '../config/supabase';
 
 interface AuthContextType {
   user: User | null;
-  isAuthenticated: boolean;
-  isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  loginWithGoogle: () => Promise<void>;
-  logout: () => Promise<void>;
-  signup: (email: string, password: string) => Promise<void>;
-  error: string | null;
-  sendVerificationEmail: () => Promise<void>;
-  isEmailVerified: boolean;
-  sendPasswordResetEmail: (email: string) => Promise<void>;
+  loading: boolean;
+  error: AuthError | null;
+  signUp: (email: string, password: string) => Promise<{ user: User | null; error: AuthError | null }>;
+  signIn: (email: string, password: string) => Promise<{ user: User | null; error: AuthError | null }>;
+  signInWithGoogle: () => Promise<{ user: User | null; error: AuthError | null }>;
+  signOut: () => Promise<void>;
+  resetPassword: (email: string) => Promise<{ error: AuthError | null }>;
+  updatePassword: (newPassword: string) => Promise<{ error: AuthError | null }>;
+  updateProfile: (data: { full_name?: string; avatar_url?: string }) => Promise<{ error: AuthError | null }>;
 }
 
-const AuthContext = createContext<AuthContextType | null>(null);
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
-      setIsLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, []);
-
-  const login = async (email: string, password: string) => {
-    try {
-      setError(null);
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      
-      if (!userCredential.user.emailVerified) {
-        setError('Please verify your email before signing in');
-        await signOut(auth);
-        return;
-      }
-      
-      setUser(userCredential.user);
-      navigate('/');
-    } catch (err) {
-      setError('Invalid email or password');
-      throw err;
-    }
-  };
-
-  const loginWithGoogle = async () => {
-    try {
-      setError(null);
-      const provider = new GoogleAuthProvider();
-      const userCredential = await signInWithPopup(auth, provider);
-      setUser(userCredential.user);
-      navigate('/dashboard');
-    } catch (err) {
-      setError('Failed to sign in with Google');
-      throw err;
-    }
-  };
-
-  const logout = async () => {
-    try {
-      await signOut(auth);
-      setUser(null);
-      navigate('/welcome');
-    } catch (err) {
-      setError('Failed to log out');
-      throw err;
-    }
-  };
-
-  const signup = async (email: string, password: string) => {
-    try {
-      setError(null);
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      
-      // Create user profile in Firestore
-      await createUserProfile({
-        uid: userCredential.user.uid,
-        email: userCredential.user.email!,
-        displayName: userCredential.user.displayName || undefined,
-        photoURL: userCredential.user.photoURL || undefined,
-        joinDate: new Date(),
-        lastUpdated: new Date()
-      });
-      
-      // Send verification email
-      await sendEmailVerification(userCredential.user);
-      setUser(userCredential.user);
-      
-      navigate('/verify-email');
-    } catch (err: any) {
-      if (err.code === 'auth/email-already-in-use') {
-        setError('An account with this email already exists');
-      } else {
-        setError('Failed to create an account');
-      }
-      throw err;
-    }
-  };
-
-  const sendVerificationEmail = async () => {
-    if (user && !user.emailVerified) {
-      try {
-        await sendEmailVerification(user);
-      } catch (err) {
-        setError('Failed to send verification email');
-        throw err;
-      }
-    }
-  };
-
-  const sendPasswordResetEmail = async (email: string) => {
-    try {
-      await firebaseSendPasswordResetEmail(auth, email);
-    } catch (err) {
-      setError('Failed to send password reset email');
-      throw err;
-    }
-  };
-
-  return (
-    <AuthContext.Provider 
-      value={{ 
-        user, 
-        isAuthenticated: !!user, 
-        isLoading, 
-        login, 
-        loginWithGoogle, 
-        logout, 
-        signup, 
-        error,
-        sendVerificationEmail,
-        isEmailVerified: user?.emailVerified ?? false,
-        sendPasswordResetEmail,
-      }}
-    >
-      {!isLoading && children}
-    </AuthContext.Provider>
-  );
-}
-
-export function useAuth() {
+export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
-}
+};
+
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<AuthError | null>(null);
+
+  useEffect(() => {
+    // Check active sessions and sets the user
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
+
+    // Listen for changes on auth state (signed in, signed out, etc.)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const signUp = async (email: string, password: string) => {
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+      });
+      if (error) {
+        setError(error);
+        return { user: null, error };
+      }
+      return { user: data.user, error: null };
+    } catch (err) {
+      const error = err as AuthError;
+      setError(error);
+      return { user: null, error };
+    }
+  };
+
+  const signIn = async (email: string, password: string) => {
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (error) {
+        setError(error);
+        return { user: null, error };
+      }
+      return { user: data.user, error: null };
+    } catch (err) {
+      const error = err as AuthError;
+      setError(error);
+      return { user: null, error };
+    }
+  };
+
+  const signInWithGoogle = async () => {
+    try {
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
+          scopes: 'email profile',
+        },
+      });
+      
+      if (error) {
+        setError(error);
+        return { user: null, error };
+      }
+      
+      // Since this is OAuth, it will redirect and we won't get a user object immediately
+      return { user: null, error: null };
+    } catch (err) {
+      const error = err as AuthError;
+      setError(error);
+      return { user: null, error };
+    }
+  };
+
+  const signOut = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        setError(error);
+      }
+    } catch (err) {
+      const error = err as AuthError;
+      setError(error);
+    }
+  };
+
+  const resetPassword = async (email: string) => {
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error) {
+        setError(error);
+      }
+      return { error };
+    } catch (err) {
+      const error = err as AuthError;
+      setError(error);
+      return { error };
+    }
+  };
+
+  const updatePassword = async (newPassword: string) => {
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+      if (error) {
+        setError(error);
+      }
+      return { error };
+    } catch (err) {
+      const error = err as AuthError;
+      setError(error);
+      return { error };
+    }
+  };
+
+  const updateProfile = async (data: { full_name?: string; avatar_url?: string }) => {
+    try {
+      const { error } = await supabase.auth.updateUser({
+        data: {
+          full_name: data.full_name,
+          avatar_url: data.avatar_url,
+        },
+      });
+      if (error) {
+        setError(error);
+      }
+      return { error };
+    } catch (err) {
+      const error = err as AuthError;
+      setError(error);
+      return { error };
+    }
+  };
+
+  const value = {
+    user,
+    loading,
+    error,
+    signUp,
+    signIn,
+    signInWithGoogle,
+    signOut,
+    resetPassword,
+    updatePassword,
+    updateProfile,
+  };
+
+  return (
+    <AuthContext.Provider value={value}>
+      {!loading && children}
+    </AuthContext.Provider>
+  );
+};

@@ -1,244 +1,167 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
-import { useProfile } from './ProfileContext';
-import { doc, getDoc, setDoc, collection, query, where, getDocs, orderBy } from 'firebase/firestore';
-import { db } from '../config/firebase';
-import { loadRazorpayScript, initializeRazorpayPayment, createOrder } from '../services/RazorpayService';
-import { Payment, Membership, Plan } from '../types/payment';
+import { supabase } from '../config/supabase';
 
-const plans: Plan[] = [
-  {
-    id: 'monthly',
-    name: 'Monthly Plan',
-    duration: '1 month',
-    price: 699
-  },
-  {
-    id: 'quarterly',
-    name: 'Quarterly Plan',
-    duration: '3 months',
-    price: 1999
-  },
-  {
-    id: 'biannual',
-    name: '6 Month Plan',
-    duration: '6 months',
-    price: 3999
-  }
-];
-
-interface PaymentContextType {
-  payments: Payment[];
-  membership: Membership | null;
-  loading: boolean;
-  addPayment: (payment: Omit<Payment, 'id'>) => Promise<void>;
-  updateMembership: (membership: Membership) => Promise<void>;
-  initiatePayment: (options: { amount: number; currency: string; description: string; planId: string }) => Promise<void>;
+export interface Membership {
+  id: string;
+  user_id: string;
+  plan_id: string;
+  plan_name: string;
+  amount: number;
+  start_date: string;
+  end_date: string;
+  status: 'active' | 'expired' | 'cancelled';
+  created_at: string;
+  updated_at: string;
 }
 
-const PaymentContext = createContext<PaymentContextType>({
-  payments: [],
-  membership: null,
-  loading: true,
-  addPayment: async () => {},
-  updateMembership: async () => {},
-  initiatePayment: async () => {}
-});
+interface Payment {
+  id: string;
+  user_id: string;
+  membership_id: string;
+  razorpay_payment_id: string;
+  razorpay_order_id: string;
+  amount: number;
+  currency: string;
+  status: 'created' | 'authorized' | 'captured' | 'failed' | 'refunded';
+  payment_method: string;
+  created_at: string;
+  updated_at: string;
+}
 
-export const usePayment = () => useContext(PaymentContext);
+interface PaymentContextType {
+  membership: Membership | null;
+  loading: boolean;
+  error: Error | null;
+  createOrder: (planId: string, amount: number) => Promise<{ orderId: string }>;
+  verifyPayment: (paymentId: string, orderId: string, signature: string) => Promise<void>;
+  loadMembership: () => Promise<void>;
+}
+
+const PaymentContext = createContext<PaymentContextType | undefined>(undefined);
+
+export const usePayment = () => {
+  const context = useContext(PaymentContext);
+  if (!context) {
+    throw new Error('usePayment must be used within a PaymentProvider');
+  }
+  return context;
+};
 
 export const PaymentProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [payments, setPayments] = useState<Payment[]>([]);
   const [membership, setMembership] = useState<Membership | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
   const { user } = useAuth();
-  const { profile, updateProfile } = useProfile();
 
-  // Immediately update membership when profile changes
-  useEffect(() => {
-    if (profile?.membership) {
-      setMembership(profile.membership);
-    } else if (user?.uid) {
-      // If no membership exists, create a default one
-      const defaultMembership: Membership = {
-        planId: 'monthly',
-        startDate: new Date().toISOString(),
-        endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-        isActive: true,
-        lastPaymentId: 'initial_free_month'
-      };
-      updateProfile({ membership: defaultMembership });
-      setMembership(defaultMembership);
-    }
-  }, [profile, user]);
-
-  useEffect(() => {
-    const fetchPayments = async () => {
-      if (!user?.uid) {
+  const loadMembership = async () => {
+    if (!user) {
+      setMembership(null);
         setLoading(false);
         return;
       }
 
       try {
-        // Fetch payments
-        const paymentsQuery = query(
-          collection(db, 'payments'),
-          where('userId', '==', user.uid),
-          orderBy('date', 'desc')
-        );
-        const paymentsSnapshot = await getDocs(paymentsQuery);
-        const paymentsData = paymentsSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as Payment[];
-        setPayments(paymentsData);
-        setLoading(false);
-      } catch (error) {
-        console.error('Error fetching payments:', error);
-        setLoading(false);
-      }
-    };
+      const { data: memberships, error: membershipError } = await supabase
+        .from('memberships')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
 
-    fetchPayments();
+      if (membershipError && membershipError.code !== 'PGRST116') {
+        throw membershipError;
+      }
+
+      setMembership(memberships as Membership);
+    } catch (err) {
+      console.error('Error loading membership:', err);
+      setError(err instanceof Error ? err : new Error('Failed to load membership'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadMembership();
   }, [user]);
 
-  const addPayment = async (payment: Omit<Payment, 'id'>): Promise<void> => {
-    if (!user?.uid) return;
+  const createOrder = async (planId: string, amount: number) => {
+    if (!user) throw new Error('User not authenticated');
 
     try {
-      const paymentsRef = collection(db, 'payments');
-      const newPaymentRef = doc(paymentsRef);
-      const newPayment = {
-        ...payment,
-        id: newPaymentRef.id
-      };
-
-      await setDoc(newPaymentRef, newPayment);
-      setPayments(prev => [newPayment as Payment, ...prev]);
-    } catch (error) {
-      console.error('Error adding payment:', error);
-      throw error;
-    }
-  };
-
-  const updateMembership = async (newMembership: Membership) => {
-    if (!user?.uid) return;
-
-    try {
-      await updateProfile({
-        membership: newMembership
+      const { data: { session } } = await supabase.auth.getSession();
+      const response = await fetch('https://gjuecyugpchcwznewohb.supabase.co/functions/v1/payment-functions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({
+          path: 'create-order',
+          planId,
+          amount,
+          userId: user.id,
+        }),
       });
+
+      if (!response.ok) {
+        throw new Error('Failed to create order');
+      }
+
+      const data = await response.json();
+      return { orderId: data.orderId };
+    } catch (err) {
+      console.error('Error creating order:', err);
+      throw err;
+    }
+  };
+
+  const verifyPayment = async (paymentId: string, orderId: string, signature: string) => {
+    if (!user) throw new Error('User not authenticated');
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const response = await fetch('https://gjuecyugpchcwznewohb.supabase.co/functions/v1/payment-functions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({
+          path: 'verify-payment',
+          paymentId,
+          orderId,
+          signature,
+          userId: user.id,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Payment verification failed');
+      }
+
+      const { membership: newMembership } = await response.json();
       setMembership(newMembership);
-    } catch (error) {
-      console.error('Error updating membership:', error);
-      throw error;
-    }
-  };
-
-  const handlePaymentSuccess = async (response: any, planId: string, amount: number) => {
-    try {
-      // Create a new payment record
-      const payment: Omit<Payment, 'id'> = {
-        userId: user!.uid,
-        date: new Date().toISOString(),
-        amount: amount,
-        planId: planId,
-        planName: plans.find((p: Plan) => p.id === planId)?.name || '',
-        status: 'success',
-        transactionId: response.razorpay_payment_id,
-        paymentMethod: 'razorpay',
-        orderId: response.razorpay_order_id
-      };
-      await addPayment(payment);
-
-      // Calculate new membership dates
-      const plan = plans.find((p: Plan) => p.id === planId);
-      const durationInMonths = plan?.duration.includes('month') 
-        ? parseInt(plan.duration) 
-        : plan?.duration.includes('year') 
-          ? parseInt(plan.duration) * 12 
-          : 1;
-
-      const startDate = new Date();
-      const endDate = new Date();
-      endDate.setMonth(endDate.getMonth() + durationInMonths);
-
-      // Update membership
-      const newMembership: Membership = {
-        planId: planId,
-        startDate: startDate.toISOString(),
-        endDate: endDate.toISOString(),
-        isActive: true,
-        lastPaymentId: response.razorpay_payment_id // Use payment ID from Razorpay response
-      };
-      await updateMembership(newMembership);
-    } catch (error) {
-      console.error('Error processing successful payment:', error);
-      throw error;
-    }
-  };
-
-  const initiatePayment = async (options: { amount: number; currency: string; description: string; planId: string }) => {
-    if (!user) throw new Error('User must be logged in to make a payment');
-
-    try {
-      // Load Razorpay script
-      const isLoaded = await loadRazorpayScript();
-      if (!isLoaded) throw new Error('Failed to load Razorpay script');
-
-      // Create order
-      const orderId = await createOrder(options.amount, options.currency);
-
-      // Initialize payment
-      await initializeRazorpayPayment(
-        options.amount,
-        options.currency,
-        orderId,
-        {
-          name: user.displayName || '',
-          email: user.email || '',
-          contact: profile?.personalInfo?.contact || ''
-        },
-        async (response) => {
-          try {
-            await handlePaymentSuccess(response, options.planId, options.amount);
-          } catch (error) {
-            console.error('Error processing successful payment:', error);
-            throw error;
-          }
-        },
-        (error) => {
-          // Add payment failure record
-          const failedPayment: Omit<Payment, 'id'> = {
-            userId: user.uid,
-            date: new Date().toISOString(),
-            amount: options.amount,
-            planId: options.planId,
-            planName: plans.find((p: Plan) => p.id === options.planId)?.name || '',
-            status: 'failed',
-            transactionId: 'failed_' + Date.now(),
-            paymentMethod: 'razorpay',
-            orderId: orderId
-          };
-          addPayment(failedPayment).catch(console.error);
-          throw error;
-        }
-      );
-    } catch (error) {
-      console.error('Failed to initiate payment:', error);
-      throw error;
+    } catch (err) {
+      console.error('Error verifying payment:', err);
+      throw err;
     }
   };
 
   return (
-    <PaymentContext.Provider value={{
-      payments,
+    <PaymentContext.Provider
+      value={{
       membership,
       loading,
-      addPayment,
-      updateMembership,
-      initiatePayment
-    }}>
+        error,
+        createOrder,
+        verifyPayment,
+        loadMembership,
+      }}
+    >
       {children}
     </PaymentContext.Provider>
   );

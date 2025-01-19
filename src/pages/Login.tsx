@@ -9,21 +9,41 @@ export default function Login() {
   const [showResetModal, setShowResetModal] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
   const [resetStatus, setResetStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null);
-  const { login, loginWithGoogle, error, sendPasswordResetEmail } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const { signIn, signInWithGoogle, error, resetPassword } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await login(email, password);
+      setLoading(true);
+      const { error } = await signIn(email, password);
+      if (error) throw error;
     } catch (err) {
       console.error('Login failed:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    try {
+      setLoading(true);
+      const { error } = await signInWithGoogle();
+      if (error) throw error;
+    } catch (err) {
+      console.error('Google sign in failed:', err);
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await sendPasswordResetEmail(resetEmail);
+      setLoading(true);
+      const { error } = await resetPassword(resetEmail);
+      if (error) throw error;
+      
       setResetStatus({
         type: 'success',
         message: 'Password reset email sent! Please check your inbox.'
@@ -38,6 +58,8 @@ export default function Login() {
         type: 'error',
         message: 'Failed to send reset email. Please try again.'
       });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -54,7 +76,7 @@ export default function Login() {
 
         {error && (
           <div className="mb-4 p-3 rounded bg-red-100 text-red-700 text-sm">
-            {error}
+            {error.message}
           </div>
         )}
 
@@ -73,6 +95,7 @@ export default function Login() {
                 className="w-full pl-11 pr-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
                 placeholder="Enter your email"
                 required
+                disabled={loading}
               />
             </div>
           </div>
@@ -91,19 +114,25 @@ export default function Login() {
                 className="w-full pl-11 pr-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
                 placeholder="Enter your password"
                 required
+                disabled={loading}
               />
             </div>
           </div>
 
           <div className="flex items-center justify-between">
             <label className="flex items-center space-x-2">
-              <input type="checkbox" className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500" />
+              <input 
+                type="checkbox" 
+                className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                disabled={loading}
+              />
               <span className="text-sm text-gray-600">Remember me</span>
             </label>
             <button 
               type="button" 
               onClick={() => setShowResetModal(true)}
               className="text-sm text-emerald-600 hover:text-emerald-700"
+              disabled={loading}
             >
               Forgot Password?
             </button>
@@ -111,9 +140,10 @@ export default function Login() {
 
           <button
             type="submit"
-            className="w-full bg-emerald-600 text-white py-3 rounded-lg font-medium hover:bg-emerald-700 transition-colors flex items-center justify-center space-x-2 group"
+            disabled={loading}
+            className="w-full bg-emerald-600 text-white py-3 rounded-lg font-medium hover:bg-emerald-700 transition-colors flex items-center justify-center space-x-2 group disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <span>Sign In</span>
+            <span>{loading ? 'Signing in...' : 'Sign In'}</span>
             <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
           </button>
 
@@ -128,10 +158,12 @@ export default function Login() {
 
           <button
             type="button"
-            onClick={loginWithGoogle}
-            className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+            onClick={handleGoogleSignIn}
+            disabled={loading}
+            className="w-full bg-white border-2 border-gray-300 py-3 rounded-lg font-medium hover:bg-gray-50 transition-colors flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Login with Google
+            <img src="https://www.google.com/favicon.ico" alt="Google" className="w-5 h-5" />
+            <span className="text-gray-700">{loading ? 'Connecting...' : 'Continue with Google'}</span>
           </button>
         </form>
 
@@ -155,6 +187,7 @@ export default function Login() {
                 setResetEmail('');
               }}
               className="absolute right-4 top-4 text-gray-400 hover:text-gray-600"
+              disabled={loading}
             >
               <X className="w-5 h-5" />
             </button>
@@ -188,15 +221,17 @@ export default function Login() {
                     className="w-full pl-11 pr-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
                     placeholder="Enter your email"
                     required
+                    disabled={loading}
                   />
                 </div>
               </div>
 
               <button
                 type="submit"
-                className="w-full bg-emerald-600 text-white py-3 rounded-lg font-medium hover:bg-emerald-700 transition-colors"
+                disabled={loading}
+                className="w-full bg-emerald-600 text-white py-3 rounded-lg font-medium hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Send Reset Instructions
+                {loading ? 'Sending...' : 'Send Reset Instructions'}
               </button>
             </form>
           </div>

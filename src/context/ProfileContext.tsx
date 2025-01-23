@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
-import { getProfile as getFirestoreProfile, updateProfile as updateFirestoreProfile, createProfile as createFirestoreProfile } from '../services/firestoreService';
+import { getProfile as getFirestoreProfile, updateProfile as updateFirestoreProfile, createProfile as createFirestoreProfile } from '../services/FirestoreService';
 import { toast } from 'react-hot-toast';
 import { Profile } from '../types/profile';
 import { Timestamp } from 'firebase/firestore';

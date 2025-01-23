@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
-import { getProfile, getMembership } from '../services/firestoreService';
+import { getProfile, getMembership } from '../services/FirestoreService';
 import type { FirestoreProfile, FirestoreMembership } from '../types/firestore.types';
 
 export default function Profile() {

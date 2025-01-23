@@ -15,7 +15,7 @@ import {
 } from 'firebase/auth';
 import { auth } from '../config/firebase';
 import { toast } from 'react-hot-toast';
-import { createProfile, getProfile } from '../services/firestoreService';
+import { createProfile, getProfile } from '../services/FirestoreService';
 import { useNavigate } from 'react-router-dom';
 
 interface AuthContextType {

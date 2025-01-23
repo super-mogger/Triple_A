@@ -61,12 +61,16 @@ service cloud.firestore {
     
     // Allow users to read and write their own profile
     match /profiles/{userId} {
-      allow read, write: if isUserOwned(userId);
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow write: if request.auth != null && request.auth.uid == userId;
     }
 
     // Allow users to read their own membership details
-    match /memberships/{userId} {
-      allow read, write: if isUserOwned(userId);
+    match /memberships/{membershipId} {
+      allow read: if request.auth != null && resource.data.user_id == request.auth.uid;
+      allow create: if true;  // Temporarily allow creation for testing
+      allow update: if request.auth != null && resource.data.user_id == request.auth.uid;
+      allow delete: if request.auth != null && resource.data.user_id == request.auth.uid;
     }
 
     // Payment history collection (for querying)

@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Dumbbell, Mail, Lock, ArrowRight, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { toast } from 'react-hot-toast';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -10,16 +11,27 @@ export default function Login() {
   const [resetEmail, setResetEmail] = useState('');
   const [resetStatus, setResetStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null);
   const [loading, setLoading] = useState(false);
-  const { signIn, signInWithGoogle, error, resetPassword } = useAuth();
+  const { signIn, signInWithGoogle, resetPassword, user } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // Only redirect if user is on the login page
+  useEffect(() => {
+    if (user) {
+      console.log('User authenticated, redirecting to dashboard');
+      navigate('/dashboard', { replace: true });
+    }
+  }, [user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       setLoading(true);
-      const { error } = await signIn(email, password);
-      if (error) throw error;
+      console.log('Attempting email/password login');
+      await signIn(email, password);
     } catch (err) {
       console.error('Login failed:', err);
+      // Error toast is handled in AuthContext
     } finally {
       setLoading(false);
     }
@@ -28,10 +40,11 @@ export default function Login() {
   const handleGoogleSignIn = async () => {
     try {
       setLoading(true);
-      const { error } = await signInWithGoogle();
-      if (error) throw error;
+      console.log('Attempting Google sign in');
+      await signInWithGoogle();
     } catch (err) {
       console.error('Google sign in failed:', err);
+      // Error toast is handled in AuthContext
     } finally {
       setLoading(false);
     }
@@ -41,6 +54,7 @@ export default function Login() {
     e.preventDefault();
     try {
       setLoading(true);
+      console.log('Attempting password reset');
       const { error } = await resetPassword(resetEmail);
       if (error) throw error;
       
@@ -54,6 +68,7 @@ export default function Login() {
         setResetEmail('');
       }, 3000);
     } catch (err) {
+      console.error('Password reset failed:', err);
       setResetStatus({
         type: 'error',
         message: 'Failed to send reset email. Please try again.'
@@ -73,12 +88,6 @@ export default function Login() {
           <h1 className="text-2xl font-bold text-gray-800">Welcome Back</h1>
           <p className="text-gray-600 mt-2">Sign in to continue your fitness journey</p>
         </div>
-
-        {error && (
-          <div className="mb-4 p-3 rounded bg-red-100 text-red-700 text-sm">
-            {error.message}
-          </div>
-        )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
@@ -167,7 +176,6 @@ export default function Login() {
           </button>
         </form>
 
-        {/* Link to Signup Page */}
         <div className="mt-6 text-center">
           <span className="text-sm text-gray-600">Don't have an account? </span>
           <Link to="/signup" className="text-sm text-emerald-600 hover:text-emerald-700">

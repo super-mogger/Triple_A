@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Settings, Dumbbell } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
@@ -16,8 +16,8 @@ export default function Header() {
         : 'bg-white/80 border-gray-200/50'
     } border-b backdrop-blur-md backdrop-saturate-150 transition-colors duration-200`}>
       <div className="max-w-7xl mx-auto flex justify-between items-center px-4 py-3 md:py-4">
-        <button 
-          onClick={() => navigate('/')}
+        <Link 
+          to="/dashboard"
           className="flex items-center gap-2 touch-manipulation"
         >
           <Dumbbell className={`w-6 h-6 ${isDarkMode ? 'text-emerald-400' : 'text-emerald-600'}`} />
@@ -28,18 +28,18 @@ export default function Header() {
           }`}>
             Triple A
           </h1>
-        </button>
+        </Link>
 
         {user && (
           <div className="flex items-center gap-3">
             {/* Profile Button */}
-            <button 
+            <Link 
+              to="/profile"
               className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200 touch-manipulation ${
                 isDarkMode 
                   ? 'hover:bg-gray-800/50 active:bg-gray-800/70' 
                   : 'hover:bg-gray-100/50 active:bg-gray-100/70'
               }`}
-              onClick={() => navigate('/profile')}
             >
               <span className={`text-sm font-medium hidden md:block ${
                 isDarkMode ? 'text-gray-200' : 'text-gray-700'
@@ -53,11 +53,11 @@ export default function Header() {
                   className="w-full h-full object-cover"
                 />
               </div>
-            </button>
+            </Link>
 
             {/* Settings Button */}
-            <button
-              onClick={() => navigate('/settings')}
+            <Link
+              to="/settings"
               className={`p-2.5 rounded-xl transition-all duration-200 ${
                 isDarkMode 
                   ? 'hover:bg-gray-800/50 active:bg-gray-800/70 text-gray-200' 
@@ -65,7 +65,7 @@ export default function Header() {
               }`}
             >
               <Settings className="w-5 h-5" />
-            </button>
+            </Link>
           </div>
         )}
       </div>

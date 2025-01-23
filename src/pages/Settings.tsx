@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { useState } from 'react';
-import TestPayment from '../components/TestPayment';
 
 export default function Settings() {
   const navigate = useNavigate();
@@ -221,10 +220,19 @@ export default function Settings() {
           {/* Support */}
           <div className="bg-white dark:bg-[#1E1E1E] rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800">
             <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Test Payment</h2>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Support</h2>
             </div>
             <div className="p-4">
-              <TestPayment />
+              <button
+                onClick={() => navigate('/support')}
+                className="flex items-center w-full px-4 py-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+              >
+                <Shield className="w-5 h-5 text-purple-500 mr-3" />
+                <div className="flex-1 text-left">
+                  <p className="text-gray-700 dark:text-gray-200 font-medium">Help & Support</p>
+                  <p className="text-sm text-gray-500">Get help with your account</p>
+                </div>
+              </button>
             </div>
           </div>
 

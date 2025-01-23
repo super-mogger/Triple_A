@@ -2,16 +2,20 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useProfile } from '../context/ProfileContext';
 import { ArrowLeft, Check, Calendar, User2, Activity, Heart, Scale, Stethoscope } from 'lucide-react';
+import { toast } from 'react-hot-toast';
+import { Profile } from '../types/profile';
+
+type FormData = Omit<Profile, 'id' | 'user_id' | 'created_at' | 'updated_at'>;
 
 export default function ProfileEdit() {
   const navigate = useNavigate();
   const { profile, updateProfile } = useProfile();
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormData>({
     personal_info: {
       date_of_birth: profile?.personal_info?.date_of_birth || '',
-      gender: profile?.personal_info?.gender || '',
-      height: profile?.personal_info?.height || '',
-      weight: profile?.personal_info?.weight || '',
+      gender: profile?.personal_info?.gender || 'male',
+      height: Number(profile?.personal_info?.height) || 0,
+      weight: Number(profile?.personal_info?.weight) || 0,
       contact: profile?.personal_info?.contact || '',
       blood_type: profile?.personal_info?.blood_type || ''
     },
@@ -23,7 +27,7 @@ export default function ProfileEdit() {
       workout_days: profile?.preferences?.workout_days || [],
       fitness_goals: profile?.preferences?.fitness_goals || [],
       fitness_level: profile?.preferences?.fitness_level || '',
-      activity_level: profile?.preferences?.activity_level || ''
+      activity_level: profile?.preferences?.activity_level || 'moderate'
     }
   });
 
@@ -33,9 +37,9 @@ export default function ProfileEdit() {
       setFormData({
         personal_info: {
           date_of_birth: profile.personal_info?.date_of_birth || '',
-          gender: profile.personal_info?.gender || '',
-          height: profile.personal_info?.height || '',
-          weight: profile.personal_info?.weight || '',
+          gender: profile.personal_info?.gender || 'male',
+          height: Number(profile.personal_info?.height) || 0,
+          weight: Number(profile.personal_info?.weight) || 0,
           contact: profile.personal_info?.contact || '',
           blood_type: profile.personal_info?.blood_type || ''
         },
@@ -47,7 +51,7 @@ export default function ProfileEdit() {
           workout_days: profile.preferences?.workout_days || [],
           fitness_goals: profile.preferences?.fitness_goals || [],
           fitness_level: profile.preferences?.fitness_level || '',
-          activity_level: profile.preferences?.activity_level || ''
+          activity_level: profile.preferences?.activity_level || 'moderate'
         }
       });
     }
@@ -85,22 +89,28 @@ export default function ProfileEdit() {
       ? currentDietary.filter((p: string) => p !== preference)
       : [...currentDietary, preference];
 
-    setFormData({
-      ...formData,
+    setFormData(prevData => ({
+      ...prevData,
       preferences: {
-        ...formData.preferences,
+        ...prevData.preferences,
         dietary: updatedDietary
       }
-    });
+    }));
   };
 
-  const handleChange = (section: string, field: string, value: string | number) => {
-    setFormData({
-      ...formData,
-      [section]: {
-        ...formData[section as keyof typeof formData],
-        [field]: value
+  const handleChange = (section: string, field: string, value: any) => {
+    setFormData(prevData => {
+      const sectionData = prevData[section as keyof FormData];
+      if (typeof sectionData === 'object' && sectionData !== null) {
+        return {
+          ...prevData,
+          [section]: {
+            ...sectionData,
+            [field]: value
+          }
+        };
       }
+      return prevData;
     });
   };
 
@@ -108,13 +118,19 @@ export default function ProfileEdit() {
     e.preventDefault();
     try {
       await updateProfile({
-        personal_info: formData.personal_info,
+        personal_info: {
+          ...formData.personal_info,
+          height: Number(formData.personal_info.height),
+          weight: Number(formData.personal_info.weight)
+        },
         medical_info: formData.medical_info,
         preferences: formData.preferences
       });
+      toast.success('Profile updated successfully');
       navigate('/profile');
     } catch (error) {
       console.error('Failed to update profile:', error);
+      toast.error('Failed to update profile');
     }
   };
 
@@ -263,7 +279,7 @@ export default function ProfileEdit() {
                 <input
                   type="number"
                   value={formData.personal_info.weight}
-                  onChange={(e) => handleChange('personal_info', 'weight', Number(e.target.value))}
+                  onChange={(e) => handleChange('personal_info', 'weight', e.target.value)}
                   className="w-full bg-gray-50 dark:bg-[#282828] rounded-xl px-4 py-3 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors"
                   placeholder="65"
                   min="30"
@@ -276,7 +292,7 @@ export default function ProfileEdit() {
                 <input
                   type="number"
                   value={formData.personal_info.height}
-                  onChange={(e) => handleChange('personal_info', 'height', Number(e.target.value))}
+                  onChange={(e) => handleChange('personal_info', 'height', e.target.value)}
                   className="w-full bg-gray-50 dark:bg-[#282828] rounded-xl px-4 py-3 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors"
                   placeholder="170"
                   min="100"

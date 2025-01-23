@@ -1,4 +1,7 @@
 import { useProfile } from '../context/ProfileContext';
+import { db } from '../config/firebase';
+import { collection, query, where, getDocs, addDoc, Timestamp, doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { format, subDays, differenceInDays } from 'date-fns';
 
 // Export all necessary interfaces
 export interface DietaryAlternative {
@@ -86,6 +89,25 @@ export interface Supplement {
   timing: string;
   notes: string;
   benefits?: string;
+}
+
+export interface AttendanceStats {
+  userId: string;
+  totalPresent: number;
+  totalAbsent: number;
+  currentStreak: number;
+  longestStreak: number;
+  lastAttendance: Date | null;
+  lastUpdated: Date;
+}
+
+export interface AttendanceRecord {
+  id?: string;
+  userId: string;
+  date: Date;
+  time: string;
+  status: 'present' | 'absent';
+  createdAt: Date;
 }
 
 const highProteinMealDatabase: Food[] = [
@@ -249,229 +271,411 @@ const calculateMealTotals = (foods: Food[]): {
   });
 };
 
-const generateDietPlan = (profile: any, planType: string): WeeklyDietPlan => {
-  const { weight, height, age, gender, activityLevel } = profile;
+interface UserProfile {
+  weight: number;
+  height: number;
+  age: number;
+  gender: string;
+  activityLevel: string;
+}
+
+export const useDietService = () => {
+  const generateDietPlan = (profile: UserProfile, planType: string): WeeklyDietPlan => {
+    console.log('Generating diet plan for:', { profile, planType });
   
   // Calculate BMR using Mifflin-St Jeor Equation
-  const bmr = Math.round(
-    gender === 'male'
-      ? (10 * weight) + (6.25 * height) - (5 * age) + 5
-      : (10 * weight) + (6.25 * height) - (5 * age) - 161
-  );
+    const bmr = profile.gender === 'male'
+      ? (10 * profile.weight) + (6.25 * profile.height) - (5 * profile.age) + 5
+      : (10 * profile.weight) + (6.25 * profile.height) - (5 * profile.age) - 161;
 
-  // Activity level multipliers with exact values
-  const activityMultipliers: Record<string, number> = {
-    sedentary: 1.2,      // Little or no exercise
-    light: 1.375,        // Light exercise/sports 1-3 days/week
-    moderate: 1.55,      // Moderate exercise/sports 3-5 days/week
-    active: 1.725,       // Hard exercise/sports 6-7 days/week
-    veryActive: 1.9      // Very hard exercise/sports & physical job or training twice per day
-  };
+    // Calculate TDEE (Total Daily Energy Expenditure)
+    const activityMultipliers = {
+      sedentary: 1.2,
+      light: 1.375,
+      moderate: 1.55,
+      active: 1.725,
+      veryActive: 1.9
+    };
+    const tdee = bmr * (activityMultipliers[profile.activityLevel as keyof typeof activityMultipliers] || 1.55);
 
-  // Use a default multiplier if activityLevel is not found
-  const multiplier = activityMultipliers[activityLevel] || activityMultipliers.moderate;
-  const tdee = Math.round(bmr * multiplier);
-
-  // Set target calories based on goal
-  let targetCalories: number;
-  let proteinMultiplier: number;
-  let carbsMultiplier: number;
-  let fatsMultiplier: number;
-  let mealDatabase: Food[];
-  let waterIntake: number;
-  let supplementation: Supplement[];
-
-  switch (planType) {
-    case 'weight-loss':
-      targetCalories = tdee - 500; // 500 calorie deficit
-      proteinMultiplier = 2.2;     // Higher protein for muscle preservation (g/kg)
-      carbsMultiplier = 2;         // Moderate carbs (g/kg)
-      fatsMultiplier = 0.8;        // Lower fats (g/kg)
-      mealDatabase = lowCalorieMealDatabase;
-      waterIntake = Math.round(weight * 0.04 * 100) / 100; // 40ml per kg of body weight
-      supplementation = [
-        {
-          name: "CLA (Conjugated Linoleic Acid)",
-          dosage: "3g",
-          timing: "With meals",
-          notes: "May help with fat loss while preserving muscle mass",
-          benefits: "Supports fat metabolism and lean muscle preservation"
-        },
-        {
-          name: "Green Tea Extract",
-          dosage: "500mg",
-          timing: "Before exercise",
-          notes: "Contains EGCG which may boost metabolism",
-          benefits: "Supports metabolism and fat oxidation"
-        }
-      ];
-      break;
-
-    case 'muscle-gain':
-      targetCalories = tdee + 300;  // Caloric surplus
-      proteinMultiplier = 2.4;      // Higher protein for muscle growth (g/kg)
-      carbsMultiplier = 4;          // Higher carbs for energy and recovery (g/kg)
-      fatsMultiplier = 0.9;         // Moderate fats (g/kg)
-      mealDatabase = highProteinMealDatabase;
-      waterIntake = Math.round(weight * 0.05 * 100) / 100; // 50ml per kg of body weight
-      supplementation = [
-        {
-          name: "Whey Protein",
-          dosage: "25-30g",
-          timing: "Post-workout",
-          notes: "High-quality protein source for muscle recovery",
-          benefits: "Supports muscle growth and recovery"
-        },
-        {
-          name: "Creatine Monohydrate",
-          dosage: "5g",
-          timing: "Daily",
-          notes: "Take with water, no loading phase needed",
-          benefits: "Increases strength and muscle mass"
-        }
-      ];
-      break;
-
-    default: // maintenance
-      targetCalories = tdee;
-      proteinMultiplier = 2;        // Moderate protein (g/kg)
-      carbsMultiplier = 3;          // Balanced carbs (g/kg)
-      fatsMultiplier = 1;           // Balanced fats (g/kg)
-      mealDatabase = maintenanceMealDatabase;
-      waterIntake = Math.round(weight * 0.035 * 100) / 100; // 35ml per kg of body weight
-      supplementation = [
-        {
-          name: "Multivitamin",
-          dosage: "1 tablet",
-          timing: "With breakfast",
-          notes: "Covers potential nutritional gaps",
-          benefits: "Supports overall health and wellness"
-        },
-        {
-          name: "Fish Oil",
-          dosage: "2-3g",
-          timing: "With meals",
-          notes: "Rich in omega-3 fatty acids",
-          benefits: "Supports heart and brain health"
-        }
-      ];
-  }
-
-  // Calculate macronutrient goals
-  const proteinGrams = Math.round(weight * proteinMultiplier);
-  const proteinCalories = proteinGrams * 4;
-  const fatsGrams = Math.round(weight * fatsMultiplier);
-  const fatsCalories = fatsGrams * 9;
-  const carbsGrams = Math.round((targetCalories - proteinCalories - fatsCalories) / 4);
-
-  const nutritionalGoals: NutritionalGoals = {
-    calories: targetCalories,
-    protein: {
-      grams: proteinGrams,
-      percentage: Math.round((proteinCalories / targetCalories) * 100)
-    },
-    carbs: {
-      grams: carbsGrams,
-      percentage: Math.round((carbsGrams * 4 / targetCalories) * 100)
-    },
-    fats: {
-      grams: fatsGrams,
-      percentage: Math.round((fatsCalories / targetCalories) * 100)
+    // Adjust calories based on plan type
+    let targetCalories = tdee;
+    switch (planType) {
+      case 'weight-loss':
+        targetCalories = tdee - 500; // 500 calorie deficit
+        break;
+      case 'muscle-gain':
+        targetCalories = tdee + 300; // 300 calorie surplus
+        break;
+      case 'maintenance':
+        targetCalories = tdee;
+        break;
     }
-  };
 
-  // Generate daily meals with totals
-  const generateDailyMeals = (mealDb: Food[]): Meal[] => {
-    const meals: Meal[] = [
-      {
-        type: 'Breakfast',
-              time: '8:00 AM',
-        foods: [mealDb[0]],
-        totalCalories: mealDb[0].calories,
-        totalProtein: mealDb[0].protein,
-        totalCarbs: mealDb[0].carbs,
-        totalFats: mealDb[0].fats
+    // Calculate macronutrient goals
+    const nutritionalGoals = {
+      calories: Math.round(targetCalories),
+      protein: {
+        grams: Math.round(profile.weight * 2.2), // 1g per lb of body weight
+        percentage: 30
       },
-      {
-        type: 'Lunch',
-              time: '1:00 PM',
-        foods: [mealDb[1]],
-        totalCalories: mealDb[1].calories,
-        totalProtein: mealDb[1].protein,
-        totalCarbs: mealDb[1].carbs,
-        totalFats: mealDb[1].fats
+      carbs: {
+        grams: Math.round((targetCalories * 0.4) / 4), // 40% of calories from carbs
+        percentage: 40
       },
-      {
-        type: 'Dinner',
-              time: '7:00 PM',
-        foods: [mealDb[2]],
-        totalCalories: mealDb[2].calories,
-        totalProtein: mealDb[2].protein,
-        totalCarbs: mealDb[2].carbs,
-        totalFats: mealDb[2].fats
+      fats: {
+        grams: Math.round((targetCalories * 0.3) / 9), // 30% of calories from fats
+        percentage: 30
       }
-    ];
-    return meals;
-  };
+    };
 
-  // Generate weekly plan
-  const weeklyPlan = Array(7).fill(null).map((_, index) => ({
-    day: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][index],
-    meals: generateDailyMeals(mealDatabase)
-  }));
+    // Generate the weekly plan
+    const weeklyPlan = generateWeeklyPlan(nutritionalGoals, planType);
+
+    return {
+      title: `${planType.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')} Diet Plan`,
+      description: getDescription(planType),
+      level: 'Intermediate',
+      duration: '12 weeks',
+      type: planType,
+      goal: getGoal(planType),
+      color: getColor(planType),
+      waterIntake: Math.round(profile.weight * 0.033 * 1000), // ml per day
+      supplementation: getSupplementation(planType),
+      nutritionalGoals,
+      weeklyPlan
+    };
+  };
 
   return {
-    title: `${planType.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')} Diet Plan`,
-    description: getDescription(planType),
-    level: "Intermediate",
-    duration: "12 weeks",
-    type: planType,
-    goal: getGoal(planType),
-    color: getColor(planType),
-    waterIntake,
-    supplementation,
-    nutritionalGoals,
-    weeklyPlan
+    generateDietPlan
   };
+};
+
+// Helper functions
+const generateWeeklyPlan = (goals: NutritionalGoals, planType: string): DailyMeals[] => {
+  // Select appropriate meal database based on plan type
+  let mealDatabase: Food[];
+  switch (planType) {
+    case 'weight-loss':
+      mealDatabase = lowCalorieMealDatabase;
+      break;
+    case 'muscle-gain':
+      mealDatabase = highProteinMealDatabase;
+      break;
+    default:
+      mealDatabase = maintenanceMealDatabase;
+  }
+
+  // Generate a week's worth of meals
+  const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  
+  return daysOfWeek.map(day => {
+    // Create three meals for each day
+    const breakfast: Meal = {
+      type: 'Breakfast',
+      time: '8:00 AM',
+      foods: [mealDatabase[1]], // Using protein oatmeal or similar
+      ...calculateMealTotals([mealDatabase[1]])
+    };
+
+    const lunch: Meal = {
+      type: 'Lunch',
+      time: '1:00 PM',
+      foods: [mealDatabase[0]], // Using main protein dish
+      ...calculateMealTotals([mealDatabase[0]])
+    };
+
+    const dinner: Meal = {
+      type: 'Dinner',
+      time: '7:00 PM',
+      foods: [mealDatabase[2]], // Using evening meal
+      ...calculateMealTotals([mealDatabase[2]])
+    };
+
+    // Add snacks based on plan type
+    const meals = [breakfast, lunch, dinner];
+
+    // For muscle gain, add pre and post workout meals
+    if (planType === 'muscle-gain') {
+      const preWorkout: Meal = {
+        type: 'Pre-Workout',
+        time: '4:00 PM',
+        foods: [{
+          name: "Banana with Peanut Butter",
+          protein: 7,
+          carbs: 27,
+          fats: 8,
+          calories: 200,
+          servingSize: "1 medium banana + 1 tbsp peanut butter",
+          portion: "1 serving"
+        }],
+        ...calculateMealTotals([{
+          name: "Banana with Peanut Butter",
+          protein: 7,
+          carbs: 27,
+          fats: 8,
+          calories: 200,
+          servingSize: "1 medium banana + 1 tbsp peanut butter",
+          portion: "1 serving"
+        }])
+      };
+      meals.splice(2, 0, preWorkout);
+    }
+
+    return {
+      day,
+      meals
+    };
+  });
+};
+
+const getSupplementation = (planType: string): Supplement[] => {
+  const baseSupplements: Supplement[] = [
+    {
+      name: 'Multivitamin',
+      dosage: '1 tablet',
+      timing: 'Morning with breakfast',
+      notes: 'Covers basic micronutrient needs',
+      benefits: 'Supports overall health and fills potential nutritional gaps'
+    }
+  ];
+
+  switch (planType) {
+    case 'muscle-gain':
+      return [
+        ...baseSupplements,
+        {
+          name: 'Whey Protein',
+          dosage: '25-30g',
+          timing: 'Post-workout or between meals',
+          notes: 'High-quality protein source',
+          benefits: 'Supports muscle recovery and growth'
+        },
+        {
+          name: 'Creatine Monohydrate',
+          dosage: '5g daily',
+          timing: 'Any time of day',
+          notes: 'Most researched supplement for muscle gain',
+          benefits: 'Improves strength, power, and muscle growth'
+        }
+      ];
+    case 'weight-loss':
+      return [
+        ...baseSupplements,
+        {
+          name: 'Whey Protein',
+          dosage: '20-25g',
+          timing: 'Between meals or as meal replacement',
+          notes: 'Helps maintain muscle mass during weight loss',
+          benefits: 'Supports satiety and preserves lean mass'
+        }
+      ];
+    default:
+      return baseSupplements;
+  }
 };
 
 const getDescription = (planType: string): string => {
   switch (planType) {
     case 'weight-loss':
-      return "A calorie-controlled diet plan focused on sustainable fat loss while preserving muscle mass";
+      return 'A calorie-controlled diet plan focused on sustainable fat loss while preserving muscle mass.';
     case 'muscle-gain':
-      return "A high-protein diet plan designed to support muscle growth and strength gains";
+      return 'A high-protein diet plan designed to support muscle growth and strength gains.';
+    case 'maintenance':
+      return 'A balanced diet plan to maintain weight and support overall health.';
     default:
-      return "A balanced diet plan to maintain weight and support overall health";
+      return 'A personalized diet plan tailored to your goals.';
   }
 };
 
 const getGoal = (planType: string): string => {
   switch (planType) {
     case 'weight-loss':
-      return "Lose fat while maintaining muscle";
+      return 'Lose Fat';
     case 'muscle-gain':
-      return "Build muscle and increase strength";
+      return 'Build Muscle';
+    case 'maintenance':
+      return 'Stay Healthy';
     default:
-      return "Maintain weight and improve health";
+      return 'General Health';
   }
 };
 
 const getColor = (planType: string): string => {
   switch (planType) {
     case 'weight-loss':
-      return "red";
+      return 'red';
     case 'muscle-gain':
-      return "blue";
+      return 'blue';
+    case 'maintenance':
+      return 'green';
     default:
-      return "green";
+      return 'gray';
   }
 };
 
-export const useDietService = () => {
-  const { profile } = useProfile();
+export const useAttendanceService = () => {
+  const markAttendance = async (userId: string): Promise<{ success: boolean; message: string }> => {
+    try {
+      const today = new Date();
+      const formattedDate = format(today, 'yyyy-MM-dd');
+      const formattedTime = format(today, 'HH:mm:ss');
+
+      // Check if attendance already marked
+      const attendanceRef = collection(db, 'attendance');
+      const q = query(
+        attendanceRef,
+        where('userId', '==', userId),
+        where('date', '==', formattedDate)
+      );
+      const querySnapshot = await getDocs(q);
+
+      if (!querySnapshot.empty) {
+        return { success: false, message: 'Attendance already marked for today' };
+      }
+
+      // Add attendance record
+      const attendanceRecord: Omit<AttendanceRecord, 'id'> = {
+        userId,
+        date: today,
+        time: formattedTime,
+        status: 'present',
+        createdAt: today
+      };
+
+      await addDoc(attendanceRef, {
+        ...attendanceRecord,
+        date: Timestamp.fromDate(today),
+        createdAt: Timestamp.fromDate(today)
+      });
+
+      // Update attendance stats
+      await updateAttendanceStats(userId, true);
+
+      // Clean up old records
+      await cleanupOldRecords(userId);
+
+      return { success: true, message: 'Attendance marked successfully' };
+    } catch (error) {
+      console.error('Error marking attendance:', error);
+      return { success: false, message: 'Failed to mark attendance' };
+    }
+  };
+
+  const updateAttendanceStats = async (userId: string, isPresent: boolean) => {
+    try {
+      const statsRef = collection(db, 'attendanceStats');
+      const q = query(statsRef, where('userId', '==', userId));
+      const querySnapshot = await getDocs(q);
+
+      const today = new Date();
+      let stats: AttendanceStats;
+
+      if (querySnapshot.empty) {
+        // Create new stats
+        stats = {
+          userId,
+          totalPresent: isPresent ? 1 : 0,
+          totalAbsent: isPresent ? 0 : 1,
+          currentStreak: isPresent ? 1 : 0,
+          longestStreak: isPresent ? 1 : 0,
+          lastAttendance: isPresent ? today : null,
+          lastUpdated: today
+        };
+        await addDoc(statsRef, {
+          ...stats,
+          lastAttendance: stats.lastAttendance ? Timestamp.fromDate(stats.lastAttendance) : null,
+          lastUpdated: Timestamp.fromDate(stats.lastUpdated)
+        });
+      } else {
+        const docRef = doc(db, 'attendanceStats', querySnapshot.docs[0].id);
+        const existingStats = querySnapshot.docs[0].data() as AttendanceStats;
+
+        // Calculate streak
+        let currentStreak = existingStats.currentStreak;
+        if (isPresent) {
+          if (existingStats.lastAttendance) {
+            const daysSinceLastAttendance = differenceInDays(today, existingStats.lastAttendance);
+            if (daysSinceLastAttendance === 1) {
+              currentStreak++;
+            } else if (daysSinceLastAttendance > 1) {
+              currentStreak = 1;
+            }
+          } else {
+            currentStreak = 1;
+          }
+        } else {
+          currentStreak = 0;
+        }
+
+        stats = {
+          ...existingStats,
+          totalPresent: isPresent ? existingStats.totalPresent + 1 : existingStats.totalPresent,
+          totalAbsent: !isPresent ? existingStats.totalAbsent + 1 : existingStats.totalAbsent,
+          currentStreak,
+          longestStreak: Math.max(currentStreak, existingStats.longestStreak),
+          lastAttendance: isPresent ? today : existingStats.lastAttendance,
+          lastUpdated: today
+        };
+
+        await updateDoc(docRef, {
+          ...stats,
+          lastAttendance: stats.lastAttendance ? Timestamp.fromDate(stats.lastAttendance) : null,
+          lastUpdated: Timestamp.fromDate(stats.lastUpdated)
+        });
+      }
+
+      return stats;
+    } catch (error) {
+      console.error('Error updating attendance stats:', error);
+      throw error;
+    }
+  };
+
+  const cleanupOldRecords = async (userId: string) => {
+    try {
+      const cutoffDate = subDays(new Date(), 100);
+      const attendanceRef = collection(db, 'attendance');
+      const q = query(
+        attendanceRef,
+        where('userId', '==', userId),
+        where('date', '<=', Timestamp.fromDate(cutoffDate))
+      );
+
+      const querySnapshot = await getDocs(q);
+      const deletePromises = querySnapshot.docs.map(doc => deleteDoc(doc.ref));
+      await Promise.all(deletePromises);
+    } catch (error) {
+      console.error('Error cleaning up old records:', error);
+    }
+  };
+
+  const getAttendanceStats = async (userId: string): Promise<AttendanceStats | null> => {
+    try {
+      const statsRef = collection(db, 'attendanceStats');
+      const q = query(statsRef, where('userId', '==', userId));
+      const querySnapshot = await getDocs(q);
+
+      if (querySnapshot.empty) {
+        return null;
+      }
+
+      const data = querySnapshot.docs[0].data();
+      return {
+        ...data,
+        lastAttendance: data.lastAttendance?.toDate() || null,
+        lastUpdated: data.lastUpdated.toDate()
+      } as AttendanceStats;
+    } catch (error) {
+      console.error('Error fetching attendance stats:', error);
+      return null;
+    }
+  };
 
   return {
-    generateDietPlan: (profileData: any, planType: string) => generateDietPlan(profileData, planType)
+    markAttendance,
+    getAttendanceStats,
+    updateAttendanceStats
   };
 }; 

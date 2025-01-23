@@ -17,13 +17,13 @@ export interface WorkoutPlan {
   title: string;
   description: string;
   imageUrl: string;
+  level: string;
   duration: string;
   goal: string;
-  level: string;
   equipment: string;
-  splitType?: 'bro-split' | 'push-pull-legs' | 'upper-lower';
-  showSplitMenu?: boolean;
   schedule?: WeeklySchedule;
+  showSplitMenu?: boolean;
+  splitType?: 'bro-split' | 'push-pull-legs' | 'upper-lower';
 }
 
 export interface ExerciseDetails extends Exercise {
@@ -333,9 +333,9 @@ export const scrapeWorkoutPlans = async (): Promise<WorkoutPlan[]> => {
       title: 'Strength Builder',
       description: 'A comprehensive program focused on building strength and muscle mass',
       imageUrl: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48',
+      level: 'Intermediate',
       duration: '12 weeks',
       goal: 'Strength',
-      level: 'Intermediate',
       equipment: 'Full Gym',
       splitType: 'push-pull-legs' as const
     },
@@ -344,9 +344,9 @@ export const scrapeWorkoutPlans = async (): Promise<WorkoutPlan[]> => {
       title: 'Muscle Builder',
       description: 'Focused on muscle growth through high-volume training',
       imageUrl: 'https://images.unsplash.com/photo-1583454110551-21f2fa2afe61',
+      level: 'Intermediate',
       duration: '8 weeks',
       goal: 'Build Muscle',
-      level: 'Intermediate',
       equipment: 'Full Gym',
       splitType: 'bro-split' as const
     },
@@ -355,9 +355,9 @@ export const scrapeWorkoutPlans = async (): Promise<WorkoutPlan[]> => {
       title: 'Beginner Basics',
       description: 'Perfect for those just starting their fitness journey',
       imageUrl: 'https://images.unsplash.com/photo-1574680096145-d05b474e2155',
+      level: 'Beginner',
       duration: '4 weeks',
       goal: 'Build Muscle',
-      level: 'Beginner',
       equipment: 'Minimal Equipment',
       splitType: 'upper-lower' as const
     }
@@ -393,9 +393,9 @@ export const generatePersonalizedWorkoutPlan = (profileData: any): WorkoutPlan =
     title: 'Your Custom Plan',
     description: 'A workout plan tailored to your goals and preferences',
     imageUrl: 'https://images.unsplash.com/photo-1594737625785-a6cbdabd333c',
+    level: 'Intermediate',
     duration: '8 weeks',
     goal: 'Custom',
-    level: 'Intermediate',
     equipment: 'Full Gym',
     splitType: 'push-pull-legs'
   };

@@ -81,7 +81,35 @@ export async function getProfile(userId: string) {
     const profileSnap = await getDoc(profileRef);
     
     if (profileSnap.exists()) {
-      return { data: profileSnap.data() as Profile, error: null };
+      const data = profileSnap.data();
+      // Convert Firestore timestamps to our Profile type
+      return { 
+        data: {
+          ...data,
+          created_at: data.created_at,
+          updated_at: data.updated_at,
+          personal_info: {
+            ...data.personal_info,
+            date_of_birth: data.personal_info?.date_of_birth || '',
+            gender: data.personal_info?.gender || 'male',
+            height: data.personal_info?.height || 0,
+            weight: data.personal_info?.weight || 0,
+            contact: data.personal_info?.contact || '',
+            blood_type: data.personal_info?.blood_type || ''
+          },
+          medical_info: {
+            conditions: data.medical_info?.conditions || ''
+          },
+          preferences: {
+            dietary: data.preferences?.dietary || [],
+            workout_days: data.preferences?.workout_days || [],
+            fitness_goals: data.preferences?.fitness_goals || [],
+            fitness_level: data.preferences?.fitness_level || '',
+            activity_level: data.preferences?.activity_level || 'moderate'
+          }
+        } as Profile,
+        error: null 
+      };
     }
     return { data: null, error: null };
   } catch (error) {
@@ -93,10 +121,24 @@ export async function getProfile(userId: string) {
 export async function updateProfile(userId: string, data: Partial<Profile>) {
   try {
     const profileRef = doc(db, 'profiles', userId);
-    await setDoc(profileRef, {
+    const updateData = {
       ...data,
-      updated_at: Timestamp.now()
-    }, { merge: true });
+      updated_at: Timestamp.now(),
+      // Ensure nested objects are properly merged
+      personal_info: data.personal_info ? {
+        ...data.personal_info,
+        height: Number(data.personal_info.height) || 0,
+        weight: Number(data.personal_info.weight) || 0
+      } : undefined,
+      preferences: data.preferences ? {
+        ...data.preferences,
+        dietary: Array.isArray(data.preferences.dietary) ? data.preferences.dietary : [],
+        workout_days: Array.isArray(data.preferences.workout_days) ? data.preferences.workout_days : [],
+        fitness_goals: Array.isArray(data.preferences.fitness_goals) ? data.preferences.fitness_goals : []
+      } : undefined
+    };
+    
+    await setDoc(profileRef, updateData, { merge: true });
     return { error: null };
   } catch (error) {
     console.error('Error updating profile:', error);
@@ -116,28 +158,38 @@ export async function createProfile(userId: string, data: Profile) {
 }
 
 // Membership Operations
-export async function getMembership(userId: string) {
+export const getMembership = async (userId: string) => {
   try {
-    const membershipRef = collection(db, 'memberships');
-    const q = query(
-      membershipRef,
-      where('user_id', '==', userId),
-      where('is_active', '==', true)
-    );
-    const querySnapshot = await getDocs(q);
-    if (querySnapshot.empty) {
-      return { data: null, error: 'No active membership found' };
+    // First try to get from user's membership subcollection
+    const userMembershipRef = doc(db, 'users', userId, 'membership', 'current');
+    const userMembershipDoc = await getDoc(userMembershipRef);
+    
+    if (userMembershipDoc.exists()) {
+      const membership = {
+        id: userMembershipDoc.id,
+        ...userMembershipDoc.data()
+      } as FirestoreMembership;
+      return { data: membership, error: null };
     }
-    const membership = {
-      id: querySnapshot.docs[0].id,
-      ...querySnapshot.docs[0].data()
-    } as Membership;
-    return { data: membership, error: null };
+
+    // If not found in subcollection, try the main memberships collection
+    const membershipRef = doc(db, 'memberships', userId);
+    const membershipDoc = await getDoc(membershipRef);
+    
+    if (membershipDoc.exists()) {
+      const membership = {
+        id: membershipDoc.id,
+        ...membershipDoc.data()
+      } as FirestoreMembership;
+      return { data: membership, error: null };
+    }
+
+    return { data: null, error: null };
   } catch (error) {
     console.error('Error getting membership:', error);
-    return { data: null, error };
+    return { data: null, error: error instanceof Error ? error : new Error('Failed to get membership') };
   }
-}
+};
 
 export async function createMembership(userId: string, membershipData: Partial<Membership>) {
   try {

@@ -1,9 +1,10 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import { useProfile } from '../context/ProfileContext';
 import { usePayment } from '../context/PaymentContext';
 import { useDietService } from '../services/DietService';
+import { toast } from 'react-hot-toast';
 
 interface DietPlanCardProps {
   title: string;
@@ -126,14 +127,27 @@ export default function DietPlan() {
   const [selectedPlan, setSelectedPlan] = useState<DietPlanType | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
 
+  const isActiveMembership = useMemo(() => {
+    if (membershipLoading) return false;
+    if (!membership) return false;
+    return membership.is_active;
+  }, [membership, membershipLoading]);
+
+  useEffect(() => {
+    if (!membershipLoading && !isActiveMembership) {
+      navigate('/membership');
+      return;
+    }
+  }, [isActiveMembership, membershipLoading, navigate]);
+
   const isPremium = useMemo(() => {
     if (membershipLoading) return false;
     if (!membership) return false;
     
     const now = new Date().getTime();
-    const endDate = new Date(membership.endDate).getTime();
+    const endDate = membership.end_date.toDate().getTime();
     
-    return membership.isActive && now < endDate;
+    return membership.is_active && now < endDate;
   }, [membership, membershipLoading]);
 
   const dietPlans = useMemo<DietPlanType[]>(() => [
@@ -175,11 +189,11 @@ export default function DietPlan() {
       
       // Generate personalized diet plan based on profile and selected plan type
       const dietPlan = generateDietPlan({
-        weight: profile.stats.weight,
-        height: profile.stats.height,
-        age: profile.personalInfo.age,
-        gender: profile.personalInfo.gender,
-        activityLevel: profile.preferences?.activityLevel || 'moderate'
+        weight: profile.personal_info?.weight || 0,
+        height: profile.personal_info?.height || 0,
+        age: profile.personal_info?.date_of_birth ? calculateAge(profile.personal_info.date_of_birth) : 25,
+        gender: profile.personal_info?.gender || 'male',
+        activityLevel: profile.preferences?.activity_level || 'moderate'
       }, selectedPlan.type);
       
       // Store both the plan type and the generated plan
@@ -196,11 +210,23 @@ export default function DietPlan() {
       navigate('/diet/plan-details');
     } catch (error) {
       console.error('Error generating diet plan:', error);
-      // Handle error appropriately
+      toast.error('Failed to generate diet plan. Please try again.');
     } finally {
       setIsGenerating(false);
     }
   }, [selectedPlan, profile, generateDietPlan, navigate]);
+
+  // Helper function to calculate age from date of birth
+  const calculateAge = (dateOfBirth: string) => {
+    const today = new Date();
+    const birthDate = new Date(dateOfBirth);
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const m = today.getMonth() - birthDate.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    return age;
+  };
 
   if (!profile) {
     return (
@@ -223,15 +249,14 @@ export default function DietPlan() {
 
   if (membershipLoading) {
     return (
-      <div className={`min-h-screen ${isDarkMode ? 'bg-[#121212] text-white' : 'bg-gray-50 text-gray-900'}`}>
-        <div className="max-w-4xl mx-auto px-4 py-8">
-          <div className="text-center">
-            <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-            <p>Loading membership status...</p>
-                </div>
-                </div>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
       </div>
     );
+  }
+
+  if (!isActiveMembership) {
+    return null; // Will redirect in useEffect
   }
 
   return (
@@ -244,7 +269,7 @@ export default function DietPlan() {
           <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
             Select a diet plan that aligns with your fitness goals
           </p>
-          </div>
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {dietPlans.map((plan) => (
@@ -258,7 +283,7 @@ export default function DietPlan() {
               onStartPlan={handleStartPlan}
             />
           ))}
-            </div>
+        </div>
 
         {!isPremium && (
           <div className="text-center mt-8">

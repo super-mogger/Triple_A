@@ -5,10 +5,9 @@ import {
   generatePersonalizedWorkoutPlan, 
   getExerciseDetails, 
   generateWeeklySchedule,
-  WorkoutPlan,
-  DayWorkout,
-  WeeklySchedule,
-  ExerciseDetails
+  type WorkoutPlan,
+  type DayWorkout,
+  type WeeklySchedule
 } from '../services/WorkoutService';
 import { Dumbbell, Filter, ChevronDown, X, Clock, Target, Gauge, Wrench, Calendar, Play, Info, BarChart } from 'lucide-react';
 import { usePayment } from '../context/PaymentContext';
@@ -16,35 +15,9 @@ import { useProfile } from '../context/ProfileContext';
 import { useNavigate } from 'react-router-dom';
 import { MuscleRadarChart } from '../components/MuscleRadarChart';
 import { exerciseDatabase } from '../data/exerciseDatabase';
-import type { Exercise } from '../types/exercise';
-
-interface Exercise {
-  name: string;
-  videoUrl: string;
-  targetMuscles: string[];
-  secondaryMuscles: string[];
-  equipment: string[];
-  difficulty: string;
-  category: string;
-  instructions: string[];
-  tips: string[];
-  notes: string;
-  sets: number;
-  reps: string;
-  muscleGroup: string;
-}
-
-interface MuscleData {
-  muscle: string;
-  value: number;
-}
+import type { Exercise, ExerciseDetails } from '../types/exercise';
 
 type SplitType = 'bro-split' | 'push-pull-legs' | 'upper-lower';
-
-type WorkoutPlan = WorkoutPlan & {
-  showSplitMenu?: boolean;
-  splitType: SplitType;
-};
 
 const splitTypes = {
   'bro-split': {
@@ -59,7 +32,12 @@ const splitTypes = {
     name: "Upper/Lower",
     description: "Alternate between upper and lower body"
   }
-};
+} as const;
+
+interface MuscleData {
+  muscle: string;
+  value: number;
+}
 
 interface Filters {
   level: string;
@@ -275,6 +253,16 @@ export default function Workouts() {
     return days[new Date().getDay()];
   });
 
+  const { profile } = useProfile();
+  const { membership, loading: membershipLoading } = usePayment();
+  const navigate = useNavigate();
+
+  const isActiveMembership = useMemo(() => {
+    if (membershipLoading) return false;
+    if (!membership) return false;
+    return membership.is_active;
+  }, [membership, membershipLoading]);
+
   // Initial states
   const [workouts, setWorkouts] = useState<WorkoutPlan[]>([]);
   const [filteredWorkouts, setFilteredWorkouts] = useState<WorkoutPlan[]>([]);
@@ -307,7 +295,7 @@ export default function Workouts() {
     console.log('Looking for workout on:', currentDayLower);
     
     const workout = selectedWorkout.schedule.days.find(
-      day => day.day.toLowerCase() === currentDayLower
+      (day: DayWorkout) => day.day.toLowerCase() === currentDayLower
     );
 
     if (workout) {
@@ -372,6 +360,18 @@ export default function Workouts() {
     applyFilters();
   }, [applyFilters]);
 
+  useEffect(() => {
+    if (!membershipLoading && !isActiveMembership) {
+      navigate('/membership');
+      return;
+    }
+
+    // Only fetch workouts if we have an active membership
+    if (isActiveMembership) {
+      fetchWorkouts();
+    }
+  }, [isActiveMembership, membershipLoading, navigate]);
+
   // Optimized workout plan selection
   const selectWorkoutPlan = React.useCallback(async (workout: WorkoutPlan) => {
     try {
@@ -379,7 +379,7 @@ export default function Workouts() {
       setError(null);
 
       if (!workout.splitType || !Object.keys(splitTypes).includes(workout.splitType)) {
-        throw new Error('Please select a valid workout split type');
+        workout.splitType = 'bro-split'; // Set default split type if not specified
       }
 
       const days = generateWeeklySchedule(
@@ -389,7 +389,7 @@ export default function Workouts() {
         workout.splitType as SplitType
       );
 
-      if (!days?.length || !days.some(day => day.exercises?.length)) {
+      if (!days?.length) {
         throw new Error('Failed to generate workout schedule');
       }
 
@@ -404,9 +404,6 @@ export default function Workouts() {
     } catch (err) {
       console.error('Error selecting workout plan:', err);
       setError(err instanceof Error ? err.message : 'Failed to load workout details');
-      setSelectedWorkout(null);
-      setExercises([]);
-      localStorage.removeItem('selectedWorkout');
     } finally {
       setLoading(false);
     }
@@ -426,7 +423,7 @@ export default function Workouts() {
         throw new Error(`Exercise ${exercise.name} not found`);
       }
 
-      setSelectedExercise(details as ExerciseDetails);
+      setSelectedExercise(details as unknown as Exercise);
     } catch (err) {
       console.error('Error loading exercise details:', err);
       setError('Failed to load exercise details');
@@ -445,9 +442,46 @@ export default function Workouts() {
     setShowWorkoutList(true);
   }, []);
 
-  const { profileData } = useProfile();
-  const { membership } = usePayment();
-  const navigate = useNavigate();
+  const selectWorkout = (workout: WorkoutPlan) => {
+    selectWorkoutPlan(workout).catch(err => {
+      console.error('Error in selectWorkout:', err);
+      setError('Failed to select workout plan');
+    });
+  };
+
+  if (membershipLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (!isActiveMembership) {
+    return (
+      <div className="min-h-screen bg-white dark:bg-[#121212] text-gray-900 dark:text-white py-8">
+        <div className="max-w-3xl mx-auto px-4">
+          <div className="bg-white dark:bg-[#1E1E1E] rounded-3xl shadow-sm border border-gray-100 dark:border-gray-800 p-8">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-red-50 dark:bg-red-500/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <Dumbbell className="w-8 h-8 text-red-500" />
+              </div>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Active Membership Required</h2>
+              <p className="text-gray-600 dark:text-gray-400 mb-6">
+                You need an active membership to access workout plans
+              </p>
+              <button
+                onClick={() => navigate('/membership')}
+                className="px-6 py-3 bg-red-500 text-white rounded-2xl hover:bg-red-600 transition-colors font-medium"
+              >
+                View Membership Plans
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   useEffect(() => {
     const loadInitialWorkout = async () => {
@@ -554,8 +588,8 @@ export default function Workouts() {
       console.log('Fetched workout plans:', data);
       
       // Generate personal plan if profile data exists
-      if (profileData) {
-        const personalPlan = generatePersonalizedWorkoutPlan(profileData);
+      if (profile) {
+        const personalPlan = generatePersonalizedWorkoutPlan(profile);
         console.log('Generated personal plan:', personalPlan);
         
         // Check if a personal plan already exists
@@ -755,12 +789,6 @@ export default function Workouts() {
     );
   };
 
-  const selectWorkout = (workout: WorkoutPlan) => {
-    setSelectedWorkout(workout);
-    setShowWorkoutList(false);
-    localStorage.setItem('selectedWorkout', JSON.stringify(workout));
-  };
-
   const renderWorkoutCard = (workout: WorkoutPlan) => {
     return (
       <div className="bg-[#1E1E1E] rounded-xl overflow-hidden">
@@ -803,7 +831,7 @@ export default function Workouts() {
     );
   };
 
-  if (!membership?.isActive) {
+  if (!membership?.is_active) {
     return (
       <div className="min-h-screen bg-white dark:bg-[#121212] text-gray-900 dark:text-white py-8">
         <div className="max-w-3xl mx-auto px-4">

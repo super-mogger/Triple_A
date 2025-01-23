@@ -1,38 +1,33 @@
-const { initializeApp } = require('firebase/app');
-const { getFirestore, collection, addDoc, Timestamp } = require('firebase/firestore');
+const { initializeApp, cert } = require('firebase-admin/app');
+const { getFirestore, Timestamp } = require('firebase-admin/firestore');
 
-const firebaseConfig = {
-  // Your Firebase config here
-  apiKey: "AIzaSyDqcqDYwK7yVH6n0WvE-FFxrSFp7Zz8QZc",
-  authDomain: "triple-a-b8605.firebaseapp.com",
-  projectId: "triple-a-b8605",
-  storageBucket: "triple-a-b8605.appspot.com",
-  messagingSenderId: "1080982739990",
-  appId: "1:1080982739990:web:c2f4c7e5f8a8f8b8e8d8d8"
-};
+// Initialize Firebase Admin with service account
+const serviceAccount = require('./triple-a-b8605-firebase-adminsdk-h9m98-f92afe1544.json');
+initializeApp({
+  credential: cert(serviceAccount)
+});
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+const db = getFirestore();
 
 async function createMembership() {
-  const userId = '0i37VgxfNdaqBMFLY8HOYnQuvB03';
+  const userId = 'BbYkrpcPNrarNbXCCpQd1AvUaLu2';
   const now = Timestamp.now();
   const endDate = Timestamp.fromDate(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000));
   
   const membershipData = {
     user_id: userId,
-    plan_name: 'Premium Monthly',
+    plan_name: 'Monthly Plan',
     plan_id: 'monthly',
     start_date: now,
     end_date: endDate,
     is_active: true,
-    amount_paid: 999,
+    amount_paid: 699,
     payment_status: 'completed',
     features: [
-      'Unlimited gym access',
+      'Access to all gym equipment',
       'Personal trainer consultation',
-      'Locker access',
+      'Group fitness classes',
+      'Locker room access',
       'Fitness assessment'
     ],
     created_at: now,
@@ -40,9 +35,29 @@ async function createMembership() {
   };
 
   try {
-    const membershipRef = collection(db, 'memberships');
-    const docRef = await addDoc(membershipRef, membershipData);
-    console.log('Membership created with ID:', docRef.id);
+    // Create batch write
+    const batch = db.batch();
+
+    // 1. Create in memberships collection
+    const membershipRef = db.collection('memberships').doc(userId);
+    batch.set(membershipRef, membershipData);
+
+    // 2. Create in user's membership subcollection
+    const userMembershipRef = db.collection('users').doc(userId).collection('membership').doc('current');
+    batch.set(userMembershipRef, membershipData);
+
+    // 3. Update user's profile with membership status
+    const userRef = db.collection('users').doc(userId);
+    batch.update(userRef, {
+      'membership_status': 'active',
+      'membership_end_date': endDate,
+      'membership_plan': 'monthly',
+      'updated_at': now
+    });
+
+    // Commit all writes
+    await batch.commit();
+    console.log('Membership created and synced successfully for user:', userId);
     process.exit(0);
   } catch (error) {
     console.error('Error creating membership:', error);

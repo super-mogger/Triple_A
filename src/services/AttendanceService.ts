@@ -1,6 +1,7 @@
 import { db } from '../config/firebase';
 import { collection, query, where, getDocs, addDoc, Timestamp, doc, updateDoc, deleteDoc, onSnapshot, orderBy } from 'firebase/firestore';
 import { format, subDays, differenceInDays, startOfDay, endOfDay } from 'date-fns';
+import { checkAttendanceAchievements } from './AchievementService';
 
 export interface AttendanceStats {
   id?: string;
@@ -175,7 +176,15 @@ class AttendanceService {
       this.addToRecentAttendance(recordWithId);
 
       // Update attendance stats
-      await this.updateAttendanceStats(userId, true);
+      const stats = await this.updateAttendanceStats(userId, true);
+
+      // Check for achievements if stats were updated
+      if (stats) {
+        const { updated } = checkAttendanceAchievements(stats.totalPresent, stats.currentStreak);
+        if (updated) {
+          // You could add a toast notification here if you want to show achievement unlocks
+        }
+      }
 
       // Clean up old records
       await this.cleanupOldRecords(userId);
@@ -247,7 +256,7 @@ class AttendanceService {
     }
   }
 
-  private async updateAttendanceStats(userId: string, isPresent: boolean) {
+  private async updateAttendanceStats(userId: string, isPresent: boolean): Promise<AttendanceStats | null> {
     try {
       const statsRef = collection(db, 'attendanceStats');
       const q = query(statsRef, where('userId', '==', userId));
@@ -255,9 +264,11 @@ class AttendanceService {
 
       const now = Timestamp.now();
       let stats: AttendanceStats;
+      let docRef;
 
       if (querySnapshot.empty) {
-        stats = {
+        // Create new stats
+        const newStats = {
           userId,
           totalPresent: isPresent ? 1 : 0,
           totalAbsent: isPresent ? 0 : 1,
@@ -266,45 +277,54 @@ class AttendanceService {
           lastAttendance: isPresent ? now : null,
           lastUpdated: now
         };
-        await addDoc(statsRef, stats);
+        docRef = await addDoc(statsRef, newStats);
+        stats = { ...newStats, id: docRef.id };
       } else {
-        const docRef = doc(db, 'attendanceStats', querySnapshot.docs[0].id);
-        const existingStats = querySnapshot.docs[0].data() as AttendanceStats;
-
-        let currentStreak = existingStats.currentStreak;
+        // Update existing stats
+        const doc = querySnapshot.docs[0];
+        const existingStats = doc.data() as AttendanceStats;
+        
+        let newStreak = existingStats.currentStreak;
         if (isPresent) {
+          // Check if this is a consecutive day
           if (existingStats.lastAttendance) {
-            const lastAttendanceDate = existingStats.lastAttendance.toDate();
-            const daysSinceLastAttendance = differenceInDays(new Date(), lastAttendanceDate);
-            if (daysSinceLastAttendance === 1) {
-              currentStreak++;
-            } else if (daysSinceLastAttendance > 1) {
-              currentStreak = 1;
+            const lastDate = existingStats.lastAttendance.toDate();
+            const today = now.toDate();
+            const diffDays = differenceInDays(today, lastDate);
+            
+            if (diffDays === 1) {
+              // Consecutive day
+              newStreak++;
+            } else if (diffDays > 1) {
+              // Streak broken
+              newStreak = 1;
             }
           } else {
-            currentStreak = 1;
+            // First attendance
+            newStreak = 1;
           }
         } else {
-          currentStreak = 0;
+          // Absent breaks the streak
+          newStreak = 0;
         }
 
         const updatedStats = {
-          totalPresent: isPresent ? existingStats.totalPresent + 1 : existingStats.totalPresent,
-          totalAbsent: !isPresent ? existingStats.totalAbsent + 1 : existingStats.totalAbsent,
-          currentStreak,
-          longestStreak: Math.max(currentStreak, existingStats.longestStreak),
+          totalPresent: existingStats.totalPresent + (isPresent ? 1 : 0),
+          totalAbsent: existingStats.totalAbsent + (isPresent ? 0 : 1),
+          currentStreak: newStreak,
+          longestStreak: Math.max(existingStats.longestStreak, newStreak),
           lastAttendance: isPresent ? now : existingStats.lastAttendance,
           lastUpdated: now
         };
 
-        await updateDoc(docRef, updatedStats);
-        stats = { ...existingStats, ...updatedStats };
+        await updateDoc(doc.ref, updatedStats);
+        stats = { ...existingStats, ...updatedStats, id: doc.id };
       }
 
       return stats;
     } catch (error) {
       console.error('Error updating attendance stats:', error);
-      throw error;
+      return null;
     }
   }
 

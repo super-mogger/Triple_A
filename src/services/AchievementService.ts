@@ -7,7 +7,7 @@ export interface Achievement {
   icon: string;
   unlocked: boolean;
   date?: string;
-  category: 'streak' | 'workout' | 'strength' | 'nutrition';
+  category: 'streak' | 'workout' | 'strength' | 'nutrition' | 'attendance';
   rarity: 'common' | 'rare' | 'epic' | 'legendary';
 }
 
@@ -62,6 +62,52 @@ export const updateAchievement = (achievementId: string, unlocked: boolean = tru
   
   localStorage.setItem('achievements', JSON.stringify(updatedAchievements));
   return { achievements: updatedAchievements, unlocked: achievementUnlocked };
+};
+
+// Check and update attendance achievements
+export const checkAttendanceAchievements = (totalPresent: number, currentStreak: number) => {
+  const attendanceMilestones = {
+    'first-attendance': 1,
+    'week-regular': 7,
+    'gym-enthusiast': 21,
+    'monthly-dedication': 30,
+    'fitness-warrior': 50,
+    'gym-legend': 100
+  };
+
+  const streakMilestones = {
+    'streak-first-attendance': 1,
+    'streak-week-regular': 7,
+    'streak-gym-enthusiast': 21,
+    'streak-monthly-dedication': 30
+  };
+
+  let updated = false;
+  let achievements = getAchievements();
+
+  // Check total attendance achievements
+  Object.entries(attendanceMilestones).forEach(([id, milestone]) => {
+    if (totalPresent >= milestone) {
+      const result = updateAchievement(id);
+      achievements = result.achievements;
+      if (result.unlocked) {
+        updated = true;
+      }
+    }
+  });
+
+  // Check streak achievements
+  Object.entries(streakMilestones).forEach(([id, milestone]) => {
+    if (currentStreak >= milestone) {
+      const result = updateAchievement(id);
+      achievements = result.achievements;
+      if (result.unlocked) {
+        updated = true;
+      }
+    }
+  });
+
+  return { achievements, updated };
 };
 
 // Check and update streak achievements

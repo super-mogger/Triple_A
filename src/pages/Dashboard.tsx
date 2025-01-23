@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { usePayment } from '../context/PaymentContext';
 import StreakCounter from '../components/StreakCounter';
 import { getAchievements, updateAchievement, checkStreakAchievements, checkWorkoutAchievements } from '../services/AchievementService';
+import { attendanceService } from '../services/AttendanceService';
 
 interface Achievement {
   id: string;
@@ -15,6 +16,13 @@ interface Achievement {
   date?: string;
 }
 
+interface AttendanceStats {
+  totalPresent: number;
+  currentStreak: number;
+  longestStreak: number;
+  lastAttendance: any;
+}
+
 export default function Dashboard() {
   const { profile, loading } = useProfile();
   const { membership } = usePayment();
@@ -23,51 +31,69 @@ export default function Dashboard() {
   const [lastWorkoutDate, setLastWorkoutDate] = useState<string | null>(null);
   const [showStreakBrokenAlert, setShowStreakBrokenAlert] = useState(false);
   const [achievements, setAchievements] = useState<Achievement[]>([]);
+  const [attendanceStats, setAttendanceStats] = useState<AttendanceStats | null>(null);
 
   useEffect(() => {
-    // Load saved streak and achievements
-    const savedStreak = localStorage.getItem('workoutStreak');
-    const savedLastWorkoutDate = localStorage.getItem('lastWorkoutDate');
-    
-    if (savedStreak) {
-      setStreak(parseInt(savedStreak));
-    }
-    if (savedLastWorkoutDate) {
-      setLastWorkoutDate(savedLastWorkoutDate);
-    }
+    if (!profile?.id) return;
 
+    // Load attendance stats
+    const loadAttendanceStats = async () => {
+      try {
+        const stats = await attendanceService.getAttendanceStats(profile.id);
+        setAttendanceStats(stats);
+        
+        // Update streak from attendance stats
+        if (stats) {
+          setStreak(stats.currentStreak);
+          if (stats.lastAttendance) {
+            setLastWorkoutDate(stats.lastAttendance.toDate().toISOString().split('T')[0]);
+          }
+        }
+      } catch (error) {
+        console.error('Error loading attendance stats:', error);
+      }
+    };
+
+    loadAttendanceStats();
+    
     // Load achievements
     setAchievements(getAchievements());
 
-    // Check for streak break
-    if (savedLastWorkoutDate) {
-      const lastDate = new Date(savedLastWorkoutDate);
-      const today = new Date();
-      const diffDays = Math.floor((today.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
-      
-      if (diffDays > 1) {
-        handleStreakBroken();
-      }
-    }
-  }, []);
+    // Setup realtime listener for attendance
+    attendanceService.setupRealtimeListener(profile.id);
 
-  // Update achievements based on streak
+    return () => {
+      attendanceService.cleanup();
+    };
+  }, [profile?.id]);
+
+  // Update achievements based on attendance stats
   useEffect(() => {
+    if (!attendanceStats) return;
+
     const milestones = [
-      { days: 1, id: 'first-day' },
-      { days: 7, id: 'week-warrior' },
-      { days: 21, id: 'habit-former' },
-      { days: 30, id: 'monthly-master' },
-      { days: 50, id: 'half-centurion' },
-      { days: 100, id: 'centurion' }
+      { days: 1, id: 'first-attendance' },
+      { days: 7, id: 'week-regular' },
+      { days: 21, id: 'gym-enthusiast' },
+      { days: 30, id: 'monthly-dedication' },
+      { days: 50, id: 'fitness-warrior' },
+      { days: 100, id: 'gym-legend' }
     ];
 
-    const milestone = milestones.find(m => m.days === streak);
-    if (milestone) {
-      const { achievements: updatedAchievements } = updateAchievement(milestone.id);
+    // Check total attendance achievements
+    const totalMilestone = milestones.find(m => m.days === attendanceStats.totalPresent);
+    if (totalMilestone) {
+      const { achievements: updatedAchievements } = updateAchievement(totalMilestone.id);
       setAchievements(updatedAchievements);
     }
-  }, [streak]);
+
+    // Check streak achievements
+    const streakMilestone = milestones.find(m => m.days === attendanceStats.currentStreak);
+    if (streakMilestone) {
+      const { achievements: updatedAchievements } = updateAchievement(`streak-${streakMilestone.id}`);
+      setAchievements(updatedAchievements);
+    }
+  }, [attendanceStats]);
 
   const handleStreakBroken = () => {
     const audio = new Audio('/sounds/streak-broken.mp3');
@@ -141,34 +167,71 @@ export default function Dashboard() {
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-2 gap-4 mb-8">
-          {/* Streak Card */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          {/* Attendance Streak Card */}
           <div className="bg-white dark:bg-[#1E1E1E] rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-800">
             <div className="flex items-center justify-between mb-2">
-              <h2 className="text-base font-medium text-gray-900 dark:text-white">Workout Streak</h2>
+              <h2 className="text-base font-medium text-gray-900 dark:text-white">Attendance Streak</h2>
               <Activity className="w-5 h-5 text-emerald-500" />
             </div>
             <div className="mt-2">
               <div className="flex items-baseline">
-                <span className="text-3xl font-semibold text-emerald-500">{streak}</span>
+                <span className="text-3xl font-semibold text-emerald-500">
+                  {attendanceStats?.currentStreak || 0}
+                </span>
                 <span className="ml-1 text-sm text-gray-600 dark:text-gray-400">days</span>
               </div>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Keep it going!</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Current Streak</p>
             </div>
           </div>
 
-          {/* Today's Goal */}
+          {/* Total Present Days */}
           <div className="bg-white dark:bg-[#1E1E1E] rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-800">
             <div className="flex items-center justify-between mb-2">
-              <h2 className="text-base font-medium text-gray-900 dark:text-white">Today's Goal</h2>
-              <Target className="w-5 h-5 text-blue-500" />
+              <h2 className="text-base font-medium text-gray-900 dark:text-white">Total Present</h2>
+              <Calendar className="w-5 h-5 text-blue-500" />
             </div>
             <div className="mt-2">
               <div className="flex items-baseline">
-                <span className="text-3xl font-semibold text-blue-500">1</span>
-                <span className="ml-1 text-sm text-gray-600 dark:text-gray-400">workout</span>
+                <span className="text-3xl font-semibold text-blue-500">
+                  {attendanceStats?.totalPresent || 0}
+                </span>
+                <span className="ml-1 text-sm text-gray-600 dark:text-gray-400">days</span>
               </div>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">30 minutes target</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Total Attendance</p>
+            </div>
+          </div>
+
+          {/* Longest Streak */}
+          <div className="bg-white dark:bg-[#1E1E1E] rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-800">
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-base font-medium text-gray-900 dark:text-white">Best Streak</h2>
+              <Crown className="w-5 h-5 text-yellow-500" />
+            </div>
+            <div className="mt-2">
+              <div className="flex items-baseline">
+                <span className="text-3xl font-semibold text-yellow-500">
+                  {attendanceStats?.longestStreak || 0}
+                </span>
+                <span className="ml-1 text-sm text-gray-600 dark:text-gray-400">days</span>
+              </div>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Longest Streak</p>
+            </div>
+          </div>
+
+          {/* Last Visit */}
+          <div className="bg-white dark:bg-[#1E1E1E] rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-800">
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-base font-medium text-gray-900 dark:text-white">Last Visit</h2>
+              <Clock className="w-5 h-5 text-purple-500" />
+            </div>
+            <div className="mt-2">
+              <div className="text-sm text-gray-600 dark:text-gray-400">
+                {attendanceStats?.lastAttendance 
+                  ? new Date(attendanceStats.lastAttendance.toDate()).toLocaleDateString()
+                  : 'No visits yet'}
+              </div>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Last Check-in</p>
             </div>
           </div>
         </div>

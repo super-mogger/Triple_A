@@ -44,6 +44,7 @@ function AppRoutes() {
   return (
     <Routes>
       {/* Public routes */}
+      <Route path="/" element={<Navigate to="/welcome" replace />} />
       <Route path="/welcome" element={user ? <Navigate to="/dashboard" replace /> : <GetStarted />} />
       <Route path="/login" element={user ? <Navigate to="/dashboard" replace /> : <Login />} />
       <Route path="/signup" element={user ? <Navigate to="/dashboard" replace /> : <SignUp />} />
@@ -61,7 +62,6 @@ function AppRoutes() {
           <Layout />
         </PrivateRoute>
       }>
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/workouts" element={<Workouts />} />
         <Route path="/diet" element={<DietPlan />} />
@@ -77,7 +77,7 @@ function AppRoutes() {
       </Route>
 
       {/* Catch-all route */}
-      <Route path="*" element={user ? <Navigate to="/dashboard" replace /> : <Navigate to="/welcome" replace />} />
+      <Route path="*" element={<Navigate to="/welcome" replace />} />
     </Routes>
   );
 }

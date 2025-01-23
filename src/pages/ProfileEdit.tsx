@@ -116,8 +116,15 @@ export default function ProfileEdit() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!profile) {
+      toast.error('Profile not found');
+      return;
+    }
+
     try {
-      await updateProfile({
+      // Preserve the id and user_id from the existing profile
+      const updatedProfile: Profile = {
+        ...profile,
         personal_info: {
           ...formData.personal_info,
           height: Number(formData.personal_info.height),
@@ -125,8 +132,9 @@ export default function ProfileEdit() {
         },
         medical_info: formData.medical_info,
         preferences: formData.preferences
-      });
-      toast.success('Profile updated successfully');
+      };
+
+      await updateProfile(updatedProfile);
       navigate('/profile');
     } catch (error) {
       console.error('Failed to update profile:', error);

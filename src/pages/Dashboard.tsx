@@ -16,7 +16,7 @@ interface Achievement {
 }
 
 export default function Dashboard() {
-  const { profileData, loading } = useProfile();
+  const { profile, loading } = useProfile();
   const { membership } = usePayment();
   const navigate = useNavigate();
   const [streak, setStreak] = useState(0);
@@ -135,7 +135,7 @@ export default function Dashboard() {
         {/* Welcome Section */}
         <div className="mb-8">
           <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">
-            Hi, {profileData?.displayName || 'Athlete'}
+            Hi, Athlete
           </h1>
           <p className="text-gray-600 dark:text-gray-300 mt-1">Let's stay active today</p>
         </div>
@@ -211,7 +211,7 @@ export default function Dashboard() {
                   </div>
                   <div>
                     <p className="text-sm text-gray-600 dark:text-gray-400">Weight</p>
-                    <p className="font-medium text-gray-900 dark:text-white">{profileData?.stats?.weight || 73} kg</p>
+                    <p className="font-medium text-gray-900 dark:text-white">{profile?.personal_info?.weight || 0} kg</p>
                   </div>
                 </div>
 
@@ -222,7 +222,7 @@ export default function Dashboard() {
                   </div>
                   <div>
                     <p className="text-sm text-gray-600 dark:text-gray-400">Fitness Level</p>
-                    <p className="font-medium text-gray-900 dark:text-white">{profileData?.preferences?.fitnessLevel || 'Intermediate'}</p>
+                    <p className="font-medium text-gray-900 dark:text-white">{profile?.preferences?.fitness_level || 'Intermediate'}</p>
                   </div>
                 </div>
               </div>
@@ -235,7 +235,7 @@ export default function Dashboard() {
                   </div>
                   <div>
                     <p className="text-sm text-gray-600 dark:text-gray-400">Activity Level</p>
-                    <p className="font-medium text-gray-900 dark:text-white">{profileData?.preferences?.activityLevel || 'Moderately-Active'}</p>
+                    <p className="font-medium text-gray-900 dark:text-white">{profile?.preferences?.activity_level || 'Moderate'}</p>
                   </div>
                 </div>
 
@@ -284,7 +284,7 @@ export default function Dashboard() {
           </div>
 
           {/* Membership Alert */}
-          {!membership?.isActive && (
+          {!membership?.is_active && (
             <div className="bg-white dark:bg-[#1E1E1E] rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-800">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">

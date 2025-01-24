@@ -2,7 +2,6 @@ import { Edit, Crown, ArrowLeft, Activity, Calendar, User2, Scale, Heart } from 
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useState, useEffect } from 'react';
-import { toast } from 'react-hot-toast';
 import { getProfile, getMembership } from '../services/FirestoreService';
 import type { FirestoreProfile, FirestoreMembership } from '../types/firestore.types';
 
@@ -36,11 +35,8 @@ export default function Profile() {
         if (!membershipError && membershipData) {
           setMembership(membershipData);
         }
-
-        toast.success('Profile loaded successfully');
       } catch (error: any) {
         console.error('Error loading profile:', error);
-        toast.error(error.message || 'Failed to load profile');
       } finally {
         setLoading(false);
       }

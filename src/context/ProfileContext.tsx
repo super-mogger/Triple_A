@@ -72,12 +72,10 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
         if (createError) throw createError;
         
         setProfile(defaultProfile);
-        toast.success('Profile created successfully');
       }
     } catch (err) {
       console.error('Error fetching profile:', err);
       setError(err as Error);
-      toast.error('Failed to load profile');
     } finally {
       setLoading(false);
     }
@@ -85,7 +83,6 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
 
   const updateProfile = async (data: Partial<Profile>) => {
     if (!user?.uid) {
-      toast.error('User not found');
       return;
     }
 
@@ -98,10 +95,8 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
       if (updateError) throw updateError;
       
       await fetchProfile(); // Refresh profile data
-      toast.success('Profile updated successfully');
     } catch (err) {
       console.error('Error updating profile:', err);
-      toast.error('Failed to update profile');
       throw err;
     }
   };

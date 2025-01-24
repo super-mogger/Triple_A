@@ -88,7 +88,6 @@ const Attendance = () => {
       setStats(stats);
     } catch (error) {
       console.error('Error loading attendance data:', error);
-      toast.error('Failed to load attendance data');
     } finally {
       setLoading(false);
     }
@@ -107,12 +106,12 @@ const Attendance = () => {
 
   const handleScanSuccess = async (result: string) => {
     if (!profile?.id) {
-      toast.error('Please sign in to mark attendance');
+      navigate('/login');
       return;
     }
 
     if (result !== 'triple-a676789') {
-      toast.error('Invalid QR code');
+      console.error('Invalid QR code');
       return;
     }
 

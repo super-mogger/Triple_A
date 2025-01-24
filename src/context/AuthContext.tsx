@@ -55,113 +55,81 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     try {
-      const result = await signInWithEmailAndPassword(auth, email, password);
-      setUser(result.user);
-      toast.success('Successfully signed in!');
-      return result;
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      setUser(userCredential.user);
+      return { error: null };
     } catch (error: any) {
       console.error('Sign in error:', error);
-      toast.error(error.message || 'Failed to sign in');
-      throw error;
+      return { error };
     }
   };
 
   const signUp = async (email: string, password: string) => {
     try {
-      const result = await createUserWithEmailAndPassword(auth, email, password);
-      setUser(result.user);
-      
-      // Create a profile in Firestore
-      await createProfile(result.user.uid, {
-        email: result.user.email || '',
-        full_name: result.user.displayName || ''
-      });
-      
-      toast.success('Account created successfully!');
-      return result;
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      setUser(userCredential.user);
+      return { error: null };
     } catch (error: any) {
       console.error('Sign up error:', error);
-      toast.error(error.message || 'Failed to create account');
-      throw error;
+      return { error };
     }
   };
 
   const signInWithGoogle = async () => {
     try {
       const provider = new GoogleAuthProvider();
-      provider.setCustomParameters({ prompt: 'select_account' });
-      const result = await signInWithPopup(auth, provider, browserPopupRedirectResolver);
-      setUser(result.user);
-
-      // Check if profile exists, if not create one
-      const { data: profile } = await getProfile(result.user.uid);
-      if (!profile) {
-        await createProfile(result.user.uid, {
-          email: result.user.email || '',
-          full_name: result.user.displayName || '',
-          avatar_url: result.user.photoURL || ''
-        });
-      }
-
-      toast.success('Successfully signed in with Google!');
-      return result;
+      const userCredential = await signInWithPopup(auth, provider);
+      setUser(userCredential.user);
+      return { error: null };
     } catch (error: any) {
       console.error('Google sign in error:', error);
-      toast.error(error.message || 'Failed to sign in with Google');
-      throw error;
+      return { error };
     }
   };
 
   const signOut = async () => {
     try {
-      await firebaseSignOut(auth);
+      await auth.signOut();
       setUser(null);
-      toast.success('Successfully signed out!');
-      navigate('/login');
+      return { error: null };
     } catch (error: any) {
       console.error('Sign out error:', error);
-      toast.error(error.message || 'Failed to sign out');
-      throw error;
+      return { error };
     }
   };
 
   const resetPassword = async (email: string) => {
     try {
       await sendPasswordResetEmail(auth, email);
-      toast.success('Password reset email sent!');
       return { error: null };
-    } catch (err) {
-      console.error('Password reset error:', err);
-      const error = err as Error;
-      toast.error(error.message);
+    } catch (error: any) {
+      console.error('Password reset error:', error);
       return { error };
     }
   };
 
-  const handleUpdatePassword = async (newPassword: string) => {
+  const updatePassword = async (password: string) => {
     try {
-      if (!auth.currentUser) throw new Error('No user logged in');
-      await updateUserPassword(auth.currentUser, newPassword);
-      toast.success('Password updated successfully!');
-      return { error: null };
-    } catch (err) {
-      console.error('Password update error:', err);
-      const error = err as Error;
-      toast.error(error.message);
+      if (user) {
+        await updateUserPassword(user, password);
+        return { error: null };
+      }
+      return { error: new Error('No user logged in') };
+    } catch (error: any) {
+      console.error('Update password error:', error);
       return { error };
     }
   };
 
-  const handleUpdateProfile = async (data: { displayName?: string; photoURL?: string }) => {
+  const updateProfile = async (data: { displayName?: string; photoURL?: string }) => {
     try {
-      if (!auth.currentUser) throw new Error('No user logged in');
-      await updateProfile(auth.currentUser, data);
-      toast.success('Profile updated successfully!');
-      return { error: null };
-    } catch (err) {
-      console.error('Profile update error:', err);
-      const error = err as Error;
-      toast.error(error.message);
+      if (user) {
+        await updateProfile(user, data);
+        return { error: null };
+      }
+      return { error: new Error('No user logged in') };
+    } catch (error: any) {
+      console.error('Update profile error:', error);
       return { error };
     }
   };
@@ -175,8 +143,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signInWithGoogle,
     signOut,
     resetPassword,
-    updatePassword: handleUpdatePassword,
-    updateProfile: handleUpdateProfile,
+    updatePassword,
+    updateProfile,
   };
 
   if (loading) {

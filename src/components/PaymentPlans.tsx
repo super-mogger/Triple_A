@@ -4,7 +4,6 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Crown, Dumbbell, Users, Star, Shield, Zap } from 'lucide-react';
 import { usePayment } from '../context/PaymentContext';
-import toast from 'react-hot-toast';
 
 interface Plan {
   id: string;
@@ -116,27 +115,39 @@ export default function PaymentPlans() {
           email: user.email || '',
           contact: user.phoneNumber || '',
         },
-        (response) => {
-          console.log('Payment successful:', response);
-          toast.success('Payment successful! Redirecting...');
-          navigate('/profile');
-        },
-        (error) => {
-          console.error('Payment failed:', error);
-          const errorMessage = getErrorMessage(error);
-          setError(errorMessage);
-          toast.error(errorMessage);
-        }
+        handlePaymentSuccess,
+        handlePaymentError
       );
     } catch (error) {
       console.error('Payment flow error:', error);
       const errorMessage = getErrorMessage(error);
       setError(errorMessage);
-      toast.error(errorMessage);
     } finally {
       setLoading(null);
     }
   }, [user, navigate]);
+
+  const handlePaymentSuccess = async (response: any) => {
+    try {
+      const { data: membership, error } = await verifyPayment(response);
+      if (error) {
+        throw error;
+      }
+      if (membership) {
+        navigate('/dashboard');
+      }
+    } catch (error: any) {
+      console.error('Payment verification error:', error);
+      const errorMessage = error.message || 'Payment verification failed';
+      setError(errorMessage);
+    }
+  };
+
+  const handlePaymentError = (error: any) => {
+    console.error('Payment error:', error);
+    const errorMessage = error.message || 'Payment failed';
+    setError(errorMessage);
+  };
 
   if (authLoading) {
     return (

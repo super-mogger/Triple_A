@@ -133,12 +133,62 @@ export default function DietPlan() {
     return membership.is_active;
   }, [membership, membershipLoading]);
 
-  useEffect(() => {
-    if (!membershipLoading && !isActiveMembership) {
-      navigate('/membership');
-      return;
-    }
-  }, [isActiveMembership, membershipLoading, navigate]);
+  // If user has no membership, show upgrade message
+  if (!isActiveMembership && !membershipLoading) {
+    return (
+      <div className="min-h-screen bg-white dark:bg-[#121212] p-4">
+        <div className="max-w-2xl mx-auto mt-8 text-center">
+          <div className="bg-white dark:bg-[#1E1E1E] rounded-3xl p-8 shadow-sm border border-gray-100 dark:border-gray-800">
+            <svg 
+              className="w-12 h-12 text-emerald-500 mx-auto mb-4"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+            </svg>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+              Upgrade to Access Diet Plans
+            </h1>
+            <p className="text-gray-600 dark:text-gray-300 mb-6">
+              Get access to personalized diet plans, nutrition tracking, and meal recommendations with a membership.
+            </p>
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 text-gray-600 dark:text-gray-300">
+                <svg className="w-5 h-5 text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+                </svg>
+                <span>Personalized meal plans</span>
+              </div>
+              <div className="flex items-center gap-3 text-gray-600 dark:text-gray-300">
+                <svg className="w-5 h-5 text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M12 20v-6M6 20V10M18 20V4"/>
+                </svg>
+                <span>Nutrition tracking</span>
+              </div>
+              <div className="flex items-center gap-3 text-gray-600 dark:text-gray-300">
+                <svg className="w-5 h-5 text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M12 2L2 7l10 5 10-5z"/>
+                  <path d="M2 17l10 5 10-5"/>
+                  <path d="M2 12l10 5 10-5"/>
+                </svg>
+                <span>Expert recommendations</span>
+              </div>
+            </div>
+            <button
+              onClick={() => navigate('/membership')}
+              className="mt-8 px-6 py-3 bg-emerald-500 text-white rounded-xl font-medium hover:bg-emerald-600 transition-colors"
+            >
+              View Membership Plans
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const isPremium = useMemo(() => {
     if (membershipLoading) return false;
@@ -253,10 +303,6 @@ export default function DietPlan() {
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
       </div>
     );
-  }
-
-  if (!isActiveMembership) {
-    return null; // Will redirect in useEffect
   }
 
   return (

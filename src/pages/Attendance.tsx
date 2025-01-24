@@ -7,14 +7,57 @@ import { Trophy, Clock, Calendar as CalendarIcon, CheckCircle2, XCircle } from '
 import toast from 'react-hot-toast';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
+import { usePayment } from '../context/PaymentContext';
+import { useNavigate } from 'react-router-dom';
 
 const Attendance = () => {
   const { profile } = useProfile();
+  const { membership } = usePayment();
+  const navigate = useNavigate();
   const [showScanner, setShowScanner] = useState(false);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<any>(null);
   const [recentAttendance, setRecentAttendance] = useState<any[]>([]);
   const [allAttendance, setAllAttendance] = useState<AttendanceRecord[]>([]);
+
+  // If user has no membership, show upgrade message
+  if (!membership?.is_active) {
+    return (
+      <div className="min-h-screen bg-white dark:bg-[#121212] p-4">
+        <div className="max-w-2xl mx-auto mt-8 text-center">
+          <div className="bg-white dark:bg-[#1E1E1E] rounded-3xl p-8 shadow-sm border border-gray-100 dark:border-gray-800">
+            <CalendarIcon className="w-12 h-12 text-emerald-500 mx-auto mb-4" />
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+              Upgrade to Track Attendance
+            </h1>
+            <p className="text-gray-600 dark:text-gray-300 mb-6">
+              Get access to attendance tracking, streak monitoring, and achievement unlocks with a membership.
+            </p>
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 text-gray-600 dark:text-gray-300">
+                <Trophy className="w-5 h-5 text-emerald-500" />
+                <span>Track your gym streaks</span>
+              </div>
+              <div className="flex items-center gap-3 text-gray-600 dark:text-gray-300">
+                <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+                <span>Mark daily attendance</span>
+              </div>
+              <div className="flex items-center gap-3 text-gray-600 dark:text-gray-300">
+                <Clock className="w-5 h-5 text-emerald-500" />
+                <span>View attendance history</span>
+              </div>
+            </div>
+            <button
+              onClick={() => navigate('/membership')}
+              className="mt-8 px-6 py-3 bg-emerald-500 text-white rounded-xl font-medium hover:bg-emerald-600 transition-colors"
+            >
+              View Membership Plans
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   useEffect(() => {
     if (!profile?.id) return;

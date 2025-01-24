@@ -247,6 +247,7 @@ function WeekdaySchedule({ schedule, currentDay, setCurrentDay }: WeekdaySchedul
   );
 }
 
+// Initial states
 export default function Workouts() {
   const [currentDay, setCurrentDay] = useState<string>(() => {
     const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -256,6 +257,7 @@ export default function Workouts() {
   const { profile } = useProfile();
   const { membership, loading: membershipLoading } = usePayment();
   const navigate = useNavigate();
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   const isActiveMembership = useMemo(() => {
     if (membershipLoading) return false;
@@ -263,7 +265,6 @@ export default function Workouts() {
     return membership.is_active;
   }, [membership, membershipLoading]);
 
-  // Initial states
   const [workouts, setWorkouts] = useState<WorkoutPlan[]>([]);
   const [filteredWorkouts, setFilteredWorkouts] = useState<WorkoutPlan[]>([]);
   const [selectedWorkout, setSelectedWorkout] = useState<WorkoutPlan | null>(null);
@@ -276,13 +277,32 @@ export default function Workouts() {
   const [showFilters, setShowFilters] = useState(false);
   const [showWorkoutList, setShowWorkoutList] = useState(true);
 
-  // Memoize filters to prevent unnecessary re-renders
   const [filters, setFilters] = useState<Filters>({
     level: '',
     duration: '',
     goal: '',
     equipment: ''
   });
+
+  // Define applyFilters at the top level
+  const applyFilters = useCallback(() => {
+    let filtered = [...workouts];
+
+    if (filters.level) {
+      filtered = filtered.filter(w => w.level.toLowerCase().includes(filters.level.toLowerCase()));
+    }
+    if (filters.goal) {
+      filtered = filtered.filter(w => w.goal.toLowerCase().includes(filters.goal.toLowerCase()));
+    }
+    if (filters.duration) {
+      filtered = filtered.filter(w => w.duration.toLowerCase().includes(filters.duration.toLowerCase()));
+    }
+    if (filters.equipment) {
+      filtered = filtered.filter(w => w.equipment.toLowerCase().includes(filters.equipment.toLowerCase()));
+    }
+
+    setFilteredWorkouts(filtered);
+  }, [workouts, filters]);
 
   // Memoize the getCurrentDayWorkout function
   const getCurrentDayWorkout = React.useCallback(() => {
@@ -310,25 +330,21 @@ export default function Workouts() {
     return workout;
   }, [selectedWorkout, currentDay]);
 
-  // Memoize the filtered workouts calculation
-  const applyFilters = React.useCallback(() => {
-    let filtered = [...workouts];
-
-    if (filters.level) {
-      filtered = filtered.filter(w => w.level.toLowerCase().includes(filters.level.toLowerCase()));
+  // Add fetchWorkouts function
+  const fetchWorkouts = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const workoutPlans = await scrapeWorkoutPlans();
+      setWorkouts(workoutPlans);
+      setFilteredWorkouts(workoutPlans);
+    } catch (err) {
+      console.error('Error fetching workouts:', err);
+      setError('Failed to load workout plans');
+    } finally {
+      setLoading(false);
     }
-    if (filters.goal) {
-      filtered = filtered.filter(w => w.goal.toLowerCase().includes(filters.goal.toLowerCase()));
-    }
-    if (filters.duration) {
-      filtered = filtered.filter(w => w.duration.toLowerCase().includes(filters.duration.toLowerCase()));
-    }
-    if (filters.equipment) {
-      filtered = filtered.filter(w => w.equipment.toLowerCase().includes(filters.equipment.toLowerCase()));
-    }
-
-    setFilteredWorkouts(filtered);
-  }, [workouts, filters]);
+  }, []);
 
   // Load initial workout from localStorage
   useEffect(() => {
@@ -355,22 +371,17 @@ export default function Workouts() {
     }
   }, [selectedWorkout, getCurrentDayWorkout, currentDay]);
 
+  // Fetch workouts when membership is active
+  useEffect(() => {
+    if (isActiveMembership) {
+      fetchWorkouts();
+    }
+  }, [isActiveMembership, fetchWorkouts]);
+
   // Apply filters when workouts or filters change
   useEffect(() => {
     applyFilters();
   }, [applyFilters]);
-
-  useEffect(() => {
-    if (!membershipLoading && !isActiveMembership) {
-      navigate('/membership');
-      return;
-    }
-
-    // Only fetch workouts if we have an active membership
-    if (isActiveMembership) {
-      fetchWorkouts();
-    }
-  }, [isActiveMembership, membershipLoading, navigate]);
 
   // Optimized workout plan selection
   const selectWorkoutPlan = React.useCallback(async (workout: WorkoutPlan) => {
@@ -449,410 +460,48 @@ export default function Workouts() {
     });
   };
 
+  if (!membership?.is_active) {
+    return (
+      <div className="min-h-screen bg-white dark:bg-[#121212] p-4">
+        <div className="max-w-2xl mx-auto mt-8 text-center">
+          <div className="bg-white dark:bg-[#1E1E1E] rounded-3xl p-8 shadow-sm border border-gray-100 dark:border-gray-800">
+            <Dumbbell className="w-12 h-12 text-emerald-500 mx-auto mb-4" />
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+              Upgrade to Access Workouts
+            </h1>
+            <p className="text-gray-600 dark:text-gray-300 mb-6">
+              Get access to personalized workout plans, exercise tracking, and more with a membership.
+            </p>
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 text-gray-600 dark:text-gray-300">
+                <Target className="w-5 h-5 text-emerald-500" />
+                <span>Personalized workout plans</span>
+              </div>
+              <div className="flex items-center gap-3 text-gray-600 dark:text-gray-300">
+                <Calendar className="w-5 h-5 text-emerald-500" />
+                <span>Weekly workout schedules</span>
+              </div>
+              <div className="flex items-center gap-3 text-gray-600 dark:text-gray-300">
+                <BarChart className="w-5 h-5 text-emerald-500" />
+                <span>Progress tracking</span>
+              </div>
+            </div>
+            <button
+              onClick={() => navigate('/membership')}
+              className="mt-8 px-6 py-3 bg-emerald-500 text-white rounded-xl font-medium hover:bg-emerald-600 transition-colors"
+            >
+              View Membership Plans
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (membershipLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
-
-  if (!isActiveMembership) {
-    return (
-      <div className="min-h-screen bg-white dark:bg-[#121212] text-gray-900 dark:text-white py-8">
-        <div className="max-w-3xl mx-auto px-4">
-          <div className="bg-white dark:bg-[#1E1E1E] rounded-3xl shadow-sm border border-gray-100 dark:border-gray-800 p-8">
-            <div className="text-center">
-              <div className="w-16 h-16 bg-red-50 dark:bg-red-500/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <Dumbbell className="w-8 h-8 text-red-500" />
-              </div>
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Active Membership Required</h2>
-              <p className="text-gray-600 dark:text-gray-400 mb-6">
-                You need an active membership to access workout plans
-              </p>
-              <button
-                onClick={() => navigate('/membership')}
-                className="px-6 py-3 bg-red-500 text-white rounded-2xl hover:bg-red-600 transition-colors font-medium"
-              >
-                View Membership Plans
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  useEffect(() => {
-    const loadInitialWorkout = async () => {
-      try {
-        const savedWorkout = localStorage.getItem('selectedWorkout');
-        if (savedWorkout) {
-          console.log('Found saved workout in localStorage');
-          const parsedWorkout = JSON.parse(savedWorkout);
-          
-          // Validate the workout data
-          if (!parsedWorkout.splitType || !Object.keys(splitTypes).includes(parsedWorkout.splitType)) {
-            console.error('Invalid split type in saved workout');
-            localStorage.removeItem('selectedWorkout');
-            return;
-          }
-          
-          // Regenerate schedule to ensure exercises are properly formatted
-          const days = generateWeeklySchedule(
-            parsedWorkout.level || 'Intermediate',
-            parsedWorkout.goal || 'Build Muscle',
-            parsedWorkout.equipment || 'Full Gym',
-            parsedWorkout.splitType as 'bro-split' | 'push-pull-legs' | 'upper-lower'
-          );
-          
-          if (!days || days.length === 0) {
-            console.error('Failed to regenerate schedule');
-            localStorage.removeItem('selectedWorkout');
-            return;
-          }
-          
-          const fullWorkout = {
-            ...parsedWorkout,
-            schedule: { days }
-          };
-          
-          console.log('Loaded workout with regenerated schedule:', {
-            id: fullWorkout.id,
-            title: fullWorkout.title,
-            splitType: fullWorkout.splitType,
-            schedule: {
-              days: fullWorkout.schedule.days.map((day: DayWorkout) => ({
-                day: day.day,
-                focus: day.focus,
-                exerciseCount: day.exercises?.length || 0
-              }))
-            }
-          });
-          
-          setSelectedWorkout(fullWorkout);
-        } else {
-          console.log('No saved workout found in localStorage');
-        }
-      } catch (error) {
-        console.error('Error loading saved workout:', error);
-        localStorage.removeItem('selectedWorkout');
-      }
-    };
-
-    loadInitialWorkout();
-    fetchWorkouts();
-  }, []);
-
-  useEffect(() => {
-    if (selectedWorkout && currentDay) {
-      setLoadingExercises(true);
-      try {
-        const dayWorkout = getCurrentDayWorkout();
-        if (dayWorkout) {
-          console.log('Found workout for current day:', {
-            day: dayWorkout.day,
-            focus: dayWorkout.focus,
-            exercises: dayWorkout.exercises?.map(e => ({
-              name: e.name,
-              muscleGroup: e.muscleGroup,
-              sets: e.sets,
-              reps: e.reps
-            }))
-          });
-          setExercises(dayWorkout.exercises || []);
-        } else {
-          console.log('No workout found for current day:', currentDay);
-          setExercises([]);
-        }
-      } catch (error) {
-        console.error('Error loading day workout:', error);
-        setExercises([]);
-      } finally {
-        setLoadingExercises(false);
-      }
-    }
-  }, [selectedWorkout, currentDay]);
-
-  useEffect(() => {
-    applyFilters();
-  }, [workouts, filters]);
-
-  const fetchWorkouts = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      // Get workout plans from local data
-      const data = await scrapeWorkoutPlans();
-      console.log('Fetched workout plans:', data);
-      
-      // Generate personal plan if profile data exists
-      if (profile) {
-        const personalPlan = generatePersonalizedWorkoutPlan(profile);
-        console.log('Generated personal plan:', personalPlan);
-        
-        // Check if a personal plan already exists
-        const existingPlan = data.find(p => p.title === personalPlan.title);
-        const finalWorkouts = existingPlan ? data : [personalPlan, ...data];
-        
-        console.log('Setting workouts:', finalWorkouts);
-        setWorkouts(finalWorkouts);
-        setFilteredWorkouts(finalWorkouts);
-      } else {
-        console.log('No profile data, using default workouts');
-        setWorkouts(data);
-        setFilteredWorkouts(data);
-      }
-    } catch (err) {
-      console.error('Error fetching workouts:', err);
-      setError('Failed to load workout plans. Please try again later.');
-      setTimeout(() => setError(null), 5000);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const renderDaySchedule = (day: DayWorkout) => {
-    return (
-      <div key={day.day} className="bg-[#282828] rounded-lg p-4 mb-4">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold">{day.day}</h3>
-          <span className="text-emerald-500">{day.focus}</span>
-        </div>
-        {day.exercises && day.exercises.length > 0 ? (
-          <div className="space-y-4">
-            {day.exercises.map((exercise: Exercise, index: number) => (
-              <button 
-                key={index} 
-                className="w-full border-b border-gray-700 last:border-0 pb-4 last:pb-0 hover:bg-[#333] rounded-lg transition-colors p-4 text-left"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  viewExerciseDetails(exercise);
-                }}
-              >
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h4 className="font-medium flex items-center gap-2">
-                      {exercise.name}
-                      <Info className="w-4 h-4 text-emerald-500" />
-                    </h4>
-                    <p className="text-sm text-gray-400">{exercise.notes}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm text-emerald-500">{exercise.sets} sets × {exercise.reps}</p>
-                  </div>
-                </div>
-              </button>
-            ))}
-          </div>
-        ) : (
-          <div className="text-gray-400">
-            {day.notes || "Rest day"}
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  const renderExerciseModal = () => {
-    if (!selectedExercise) return null;
-
-    return (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-        <div className="bg-white dark:bg-[#1E1E1E] rounded-xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-          {/* Modal Header */}
-          <div className="flex justify-between items-start mb-6">
-            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">{selectedExercise.name}</h2>
-            <button
-              onClick={() => setSelectedExercise(null)}
-              className="p-2 hover:bg-gray-100 dark:hover:bg-[#282828] rounded-lg transition-colors"
-            >
-              <X className="w-6 h-6 text-gray-500 dark:text-gray-400" />
-            </button>
-          </div>
-
-          {/* Video Section */}
-          <div className="mb-6 sm:mb-8">
-            <div className="relative pt-[56.25%] rounded-lg overflow-hidden bg-black">
-              <iframe
-                src={selectedExercise.videoUrl}
-                className="absolute inset-0 w-full h-full"
-                allowFullScreen
-                title={`${selectedExercise.name} demonstration`}
-              />
-            </div>
-          </div>
-
-          {/* Muscle Targeting Chart */}
-          <div className="mb-6 sm:mb-8 bg-gray-50 dark:bg-[#282828] p-4 sm:p-6 rounded-lg">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">Muscle Activation Analysis</h3>
-              <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
-                Hover over the chart for detailed percentages
-              </div>
-            </div>
-            <MuscleRadarChart 
-              muscleData={calculateMuscleTargeting(selectedExercise)} 
-              detailedView={true}
-            />
-          </div>
-
-          {/* Exercise Info Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
-            {/* Target Muscles */}
-            <div className="bg-gray-50 dark:bg-[#282828] p-4 rounded-lg">
-              <h3 className="font-semibold mb-3 text-gray-900 dark:text-white">Primary Target Muscles</h3>
-              <div className="flex flex-wrap gap-2">
-                {selectedExercise.targetMuscles.map((muscle, index) => (
-                  <span key={index} className="bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-3 py-1 rounded-full text-sm">
-                    {muscle}
-                  </span>
-                ))}
-              </div>
-            </div>
-
-            {/* Secondary Muscles */}
-            <div className="bg-gray-50 dark:bg-[#282828] p-4 rounded-lg">
-              <h3 className="font-semibold mb-3 text-gray-900 dark:text-white">Secondary Muscles</h3>
-              <div className="flex flex-wrap gap-2">
-                {selectedExercise.secondaryMuscles.map((muscle, index) => (
-                  <span key={index} className="bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 px-3 py-1 rounded-full text-sm">
-                    {muscle}
-                  </span>
-                ))}
-              </div>
-            </div>
-
-            {/* Equipment */}
-            <div className="bg-gray-50 dark:bg-[#282828] p-4 rounded-lg">
-              <h3 className="font-semibold mb-3 text-gray-900 dark:text-white">Required Equipment</h3>
-              <div className="flex flex-wrap gap-2">
-                {selectedExercise.equipment.map((item, index) => (
-                  <span key={index} className="bg-purple-50 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400 px-3 py-1 rounded-full text-sm">
-                    {item}
-                  </span>
-                ))}
-              </div>
-            </div>
-
-            {/* Difficulty & Category */}
-            <div className="bg-gray-50 dark:bg-[#282828] p-4 rounded-lg">
-              <h3 className="font-semibold mb-3 text-gray-900 dark:text-white">Exercise Info</h3>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Difficulty:</span>
-                  <span className="text-orange-600 dark:text-orange-400">{selectedExercise.difficulty}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Category:</span>
-                  <span className="text-emerald-600 dark:text-emerald-400">{selectedExercise.category}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Instructions */}
-          <div className="mb-8">
-            <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Instructions</h3>
-            <div className="space-y-4">
-              {selectedExercise.instructions.map((instruction, index) => (
-                <div key={index} className="flex gap-4">
-                  <div className="flex-shrink-0 w-8 h-8 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-full flex items-center justify-center font-medium">
-                    {index + 1}
-                  </div>
-                  <p className="text-gray-700 dark:text-gray-300">{instruction}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Tips */}
-          <div>
-            <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Pro Tips</h3>
-            <div className="bg-gray-50 dark:bg-[#282828] rounded-lg p-4">
-              <ul className="space-y-3">
-                {selectedExercise.tips.map((tip, index) => (
-                  <li key={index} className="flex items-start gap-3 text-gray-700 dark:text-gray-300">
-                    <div className="flex-shrink-0 w-5 h-5 bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center text-xs mt-0.5">
-                      ✓
-                    </div>
-                    {tip}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  const renderWorkoutCard = (workout: WorkoutPlan) => {
-    return (
-      <div className="bg-[#1E1E1E] rounded-xl overflow-hidden">
-        <div className="relative h-48">
-          <img
-            src={workout.imageUrl}
-            alt={workout.title}
-            className="w-full h-full object-cover"
-          />
-        </div>
-        <div className="p-4">
-          <h3 className="text-xl font-semibold mb-2">{workout.title}</h3>
-          <div className="space-y-2 text-sm text-gray-400 mb-4">
-            <div className="flex items-center gap-2">
-              <Clock className="w-4 h-4" />
-              <span>Duration: {workout.duration}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Target className="w-4 h-4" />
-              <span>Goal: {workout.goal}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Gauge className="w-4 h-4" />
-              <span>Level: {workout.level}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Wrench className="w-4 h-4" />
-              <span>Equipment: {workout.equipment}</span>
-            </div>
-          </div>
-          <p className="text-gray-400 text-sm mb-4">{workout.description}</p>
-          <button
-            onClick={() => selectWorkout(workout)}
-            className="w-full bg-emerald-500 text-white px-4 py-2 rounded-lg hover:bg-emerald-600 transition-colors"
-          >
-            Start Workout Plan
-          </button>
-        </div>
-      </div>
-    );
-  };
-
-  if (!membership?.is_active) {
-    return (
-      <div className="min-h-screen bg-white dark:bg-[#121212] text-gray-900 dark:text-white py-8">
-        <div className="max-w-3xl mx-auto px-4">
-          <div className="bg-white dark:bg-[#1E1E1E] rounded-3xl shadow-sm border border-gray-100 dark:border-gray-800 p-8">
-            <div className="text-center">
-              <div className="w-16 h-16 bg-red-50 dark:bg-red-500/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <Dumbbell className="w-8 h-8 text-red-500" />
-              </div>
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Active Membership Required</h2>
-              <p className="text-gray-600 dark:text-gray-400 mb-6">
-                You need an active membership to access workout plans
-              </p>
-              <button
-                onClick={() => navigate('/membership')}
-                className="px-6 py-3 bg-red-500 text-white rounded-2xl hover:bg-red-600 transition-colors font-medium"
-              >
-                View Membership Plans
-              </button>
-            </div>
-          </div>
-        </div>
       </div>
     );
   }

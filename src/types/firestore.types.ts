@@ -3,28 +3,28 @@ import { Timestamp } from 'firebase/firestore';
 export interface FirestoreProfile {
   id: string;
   email: string;
-  full_name: string;
-  avatar_url?: string;
-  phone?: string;
-  address?: string;
-  personal_info?: {
-    gender?: 'male' | 'female' | 'other';
-    date_of_birth?: string;
-    height?: number;
-    weight?: number;
+  username: string;
+  photoURL: string;
+  personal_info: {
+    height: number;
+    weight: number;
+    gender: 'male' | 'female' | 'other';
+    date_of_birth: string;
+    blood_type: string;
+    contact: string;
   };
-  fitness_goal?: 'weight_loss' | 'muscle_gain' | 'general_fitness' | 'strength';
-  experience_level?: 'beginner' | 'intermediate' | 'advanced';
-  medical_conditions?: string[];
-  emergency_contact?: {
-    name: string;
-    phone: string;
-    relationship: string;
+  medical_info: {
+    conditions: string;
   };
-  preferences?: {
-    dietary?: string[];
-    workout_time?: 'morning' | 'afternoon' | 'evening';
-    workout_days?: string[];
+  preferences: {
+    activity_level: 'beginner' | 'intermediate' | 'advanced';
+    dietary_preferences: string[];
+    workout_preferences: string[];
+    fitness_goals: string[];
+  };
+  stats: {
+    bmi: string;
+    activity_level: string;
   };
   created_at: Timestamp;
   updated_at: Timestamp;

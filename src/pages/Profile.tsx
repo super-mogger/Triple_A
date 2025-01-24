@@ -119,7 +119,7 @@ export default function Profile() {
               <div className="flex items-center gap-4 w-full sm:w-auto">
                 <div className="relative">
                   <img
-                    src={profile.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${profile.full_name}`}
+                    src={profile.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${profile.username}`}
                     alt="Profile"
                     className="w-16 h-16 rounded-full object-cover border-2 border-emerald-500"
                   />
@@ -131,10 +131,13 @@ export default function Profile() {
                 </div>
                 <div className="flex-1">
                   <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                    {profile.full_name || 'User'}
+                    {profile.username}
                   </h2>
                   <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Member since {profile.created_at.toDate().toLocaleDateString()}
+                    {profile.email}
+                  </p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Member since {profile.created_at?.toDate().toLocaleDateString()}
                   </p>
                 </div>
               </div>
@@ -185,7 +188,7 @@ export default function Profile() {
             <div className="space-y-2">
               <div className="flex justify-between items-baseline">
                 <span className="text-3xl font-bold text-gray-900 dark:text-white capitalize">
-                  {profile.experience_level || 'Beginner'}
+                  {profile.preferences?.activity_level || 'Beginner'}
                 </span>
               </div>
               <p className="text-sm text-gray-500 dark:text-gray-400">Current fitness level</p>

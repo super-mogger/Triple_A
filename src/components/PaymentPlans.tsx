@@ -115,8 +115,36 @@ export const PaymentPlans: React.FC = () => {
           errorMessage = err.message;
         }
       }
+<<<<<<< Updated upstream
       
       setError(errorMessage);
+=======
+
+      // Create order
+      const { orderId, razorpayOrderId } = await createOrder({
+        amount: plan.price,
+        planId: plan.id,
+        userId: user.uid
+      });
+
+      // Initialize payment
+      await initializeRazorpayPayment({
+        amount: plan.price,
+        currency: 'INR',
+        orderId: razorpayOrderId,
+        planId: plan.id,
+        userInfo: {
+          name: user.displayName || '',
+          email: user.email || '',
+          contact: user.phoneNumber || ''
+        },
+        onSuccess: handlePaymentSuccess,
+        onError: handlePaymentError
+      });
+    } catch (error) {
+      console.error('Payment error:', error);
+      toast.error(getErrorMessage(error));
+>>>>>>> Stashed changes
     } finally {
       setLoading(null);
     }

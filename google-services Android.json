@@ -42,6 +42,35 @@
           ]
         }
       }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:182821274121:android:442e4a404024f39c5f2ed8",
+        "android_client_info": {
+          "package_name": "triple_a_fc.com"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "182821274121-ocsan4k3v23atjk1ha96m0krsrib1t1j.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCQ_pqiNaUd77Izvp3gqxH8-3qCTbgyQFA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "182821274121-jv44c6uuf3da9iu74fojfv2bli25f8ah.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
     }
   ],
   "configuration_version": "1"

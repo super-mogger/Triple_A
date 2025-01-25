@@ -1,142 +1,69 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
-import { useProfile } from './ProfileContext';
-import { doc, getDoc, setDoc, collection, query, where, getDocs, orderBy } from 'firebase/firestore';
-import { db } from '../config/firebase';
-
-interface Payment {
-  id: string;
-  userId: string;
-  date: string;
-  amount: number;
-  planId: string;
-  planName: string;
-  status: 'success' | 'failed' | 'pending';
-  transactionId: string;
-  paymentMethod: string;
-  orderId: string;
-  invoiceUrl?: string;
-}
-
-interface Membership {
-  planId: string;
-  startDate: string;
-  endDate: string;
-  isActive: boolean;
-  lastPaymentId: string;
-}
+import { getMembership } from '../services/FirestoreService';
+import type { FirestoreMembership } from '../types/firestore.types';
 
 interface PaymentContextType {
-  payments: Payment[];
-  membership: Membership | null;
+  membership: FirestoreMembership | null;
   loading: boolean;
-  addPayment: (payment: Omit<Payment, 'id'>) => Promise<void>;
-  updateMembership: (membership: Membership) => Promise<void>;
+  error: Error | null;
+  loadMembership: () => Promise<void>;
 }
 
-const PaymentContext = createContext<PaymentContextType>({} as PaymentContextType);
+const PaymentContext = createContext<PaymentContextType | undefined>(undefined);
 
-export function usePayment() {
-  return useContext(PaymentContext);
-}
+export const usePayment = () => {
+  const context = useContext(PaymentContext);
+  if (!context) {
+    throw new Error('usePayment must be used within a PaymentProvider');
+  }
+  return context;
+};
 
-export function PaymentProvider({ children }: { children: React.ReactNode }) {
-  const [payments, setPayments] = useState<Payment[]>([]);
-  const [membership, setMembership] = useState<Membership | null>(null);
+export const PaymentProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [membership, setMembership] = useState<FirestoreMembership | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
   const { user } = useAuth();
-  const { profileData, updateProfile } = useProfile();
 
-  // Immediately update membership when profileData changes
-  useEffect(() => {
-    if (profileData?.membership) {
-      setMembership(profileData.membership);
-    } else if (user?.uid) {
-      // If no membership exists, create a default one
-      const defaultMembership: Membership = {
-        planId: 'monthly',
-        startDate: new Date().toISOString(),
-        endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-        isActive: true,
-        lastPaymentId: 'initial_free_month'
-      };
-      updateProfile({ membership: defaultMembership });
-      setMembership(defaultMembership);
+  const loadMembership = async () => {
+    if (!user) {
+      setMembership(null);
+      setLoading(false);
+      return;
     }
-  }, [profileData, user]);
+
+    try {
+      setLoading(true);
+      const { data: membershipData, error: membershipError } = await getMembership(user.uid);
+      
+      if (membershipError) {
+        throw membershipError;
+      }
+
+      setMembership(membershipData);
+    } catch (err) {
+      console.error('Error loading membership:', err);
+      setError(err instanceof Error ? err : new Error('Failed to load membership'));
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchPayments = async () => {
-      if (!user?.uid) {
-        setLoading(false);
-        return;
-      }
-
-      try {
-        // Fetch payments
-        const paymentsQuery = query(
-          collection(db, 'payments'),
-          where('userId', '==', user.uid),
-          orderBy('date', 'desc')
-        );
-        const paymentsSnapshot = await getDocs(paymentsQuery);
-        const paymentsData = paymentsSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as Payment[];
-        setPayments(paymentsData);
-        setLoading(false);
-      } catch (error) {
-        console.error('Error fetching payments:', error);
-        setLoading(false);
-      }
-    };
-
-    fetchPayments();
+    loadMembership();
   }, [user]);
 
-  const addPayment = async (payment: Omit<Payment, 'id'>) => {
-    if (!user?.uid) return;
-
-    try {
-      const paymentsRef = collection(db, 'payments');
-      const newPaymentRef = doc(paymentsRef);
-      const newPayment = {
-        ...payment,
-        id: newPaymentRef.id
-      };
-
-      await setDoc(newPaymentRef, newPayment);
-      setPayments(prev => [newPayment as Payment, ...prev]);
-    } catch (error) {
-      console.error('Error adding payment:', error);
-      throw error;
-    }
-  };
-
-  const updateMembership = async (newMembership: Membership) => {
-    if (!user?.uid) return;
-
-    try {
-      await updateProfile({
-        membership: newMembership
-      });
-      setMembership(newMembership);
-    } catch (error) {
-      console.error('Error updating membership:', error);
-      throw error;
-    }
-  };
-
   return (
-    <PaymentContext.Provider value={{
-      payments,
-      membership,
-      loading,
-      addPayment,
-      updateMembership
-    }}>
+    <PaymentContext.Provider
+      value={{
+        membership,
+        loading,
+        error,
+        loadMembership
+      }}
+    >
       {children}
     </PaymentContext.Provider>
   );
-} 
+}; 

@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "182821274121",
+    "firebase_url": "https://triple-a-b8605-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "triple-a-b8605",
+    "storage_bucket": "triple-a-b8605.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:182821274121:android:db24eb55d34ad6135f2ed8",
+        "android_client_info": {
+          "package_name": "com.triplea.gymapp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "182821274121-n4t68k3qvah6hc4ckbtim4mjm8mn3abm.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.triplea.gymapp",
+            "certificate_hash": "dafebf49ae22aaaca50c20cd4a6413b8484fecb9"
+          }
+        },
+        {
+          "client_id": "182821274121-ocsan4k3v23atjk1ha96m0krsrib1t1j.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCQ_pqiNaUd77Izvp3gqxH8-3qCTbgyQFA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "182821274121-jv44c6uuf3da9iu74fojfv2bli25f8ah.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

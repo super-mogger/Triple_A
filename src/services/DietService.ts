@@ -1,60 +1,86 @@
 import { useProfile } from '../context/ProfileContext';
+import { db } from '../config/firebase';
+import { collection, query, where, getDocs, addDoc, Timestamp, doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { format, subDays, differenceInDays } from 'date-fns';
 
-const SPOONACULAR_API_KEY = '3c97cc2a2fcf450fae17870b5558abc9';
-const BASE_URL = 'https://api.spoonacular.com';
-
+// Export all necessary interfaces
 export interface DietaryAlternative {
   name: string;
-  protein?: number;
-  changes: string;
-}
-
-export interface DietaryAlternatives {
-  vegetarian: DietaryAlternative;
-  glutenFree: DietaryAlternative;
-  lactoseFree: DietaryAlternative;
-}
-
-export interface Food {
-  id: number;
-  name: string;
-  calories: number;
   protein: number;
   carbs: number;
   fats: number;
-  portion: string;
-  instructions?: string[];
-  tips?: string[];
-  nutritionalInfo?: string[];
-  alternatives?: DietaryAlternatives;
-  category?: string;
-  allergens?: string[];
-  preparationTime?: string;
-  cookingTime?: string;
-  difficulty?: 'easy' | 'medium' | 'hard';
-  imageUrl?: string;
+  calories: number;
+  servingSize: string;
+  changes?: string;
 }
 
-export interface DailyMeal {
-  type: 'breakfast' | 'lunch' | 'dinner' | 'snack';
+export interface Food {
+  name: string;
+  protein: number;
+  carbs: number;
+  fats: number;
+  calories: number;
+  servingSize: string;
+  portion: string;
+  alternatives?: {
+    vegetarian?: DietaryAlternative;
+    glutenFree?: DietaryAlternative;
+    lactoseFree?: DietaryAlternative;
+  };
+  category?: string;
+  difficulty?: string;
+  preparationTime?: string;
+  cookingTime?: string;
+  imageUrl?: string;
+  allergens?: string[];
+  instructions?: string[];
+  tips?: string[];
+}
+
+export interface Meal {
+  type: string;
   time: string;
   foods: Food[];
-  totalCalories?: number;
-  totalProtein?: number;
-  totalCarbs?: number;
-  totalFats?: number;
-  recommendedTime?: string;
-  preparationTips?: string[];
+  notes?: string;
+  totalCalories: number;
+  totalProtein: number;
+  totalCarbs: number;
+  totalFats: number;
+}
+
+export interface DailyMeals {
+  day: string;
+  meals: Meal[];
 }
 
 export interface WeeklyDietPlan {
-  days: {
-    day: string;
-    meals: DailyMeal[];
-    totalDailyCalories?: number;
-    waterIntake?: number;
-    supplementRecommendations?: string[];
-  }[];
+  title: string;
+  description: string;
+  level: string;
+  duration: string;
+  type: string;
+  goal: string;
+  color: string;
+  waterIntake: number;
+  supplementation: Supplement[];
+  nutritionalGoals: NutritionalGoals;
+  weeklyPlan: DailyMeals[];
+}
+
+export interface NutritionalGoals {
+  calories: number;
+  protein: {
+    grams: number;
+    percentage: number;
+  };
+  carbs: {
+    grams: number;
+    percentage: number;
+  };
+  fats: {
+    grams: number;
+    percentage: number;
+  };
 }
 
 export interface Supplement {
@@ -63,789 +89,593 @@ export interface Supplement {
   timing: string;
   notes: string;
   benefits?: string;
-  recommendations?: string;
 }
 
-export interface NutritionalGoals {
-  dailyCalories: number;
-  proteinPercentage: number;
-  carbsPercentage: number;
-  fatsPercentage: number;
-  proteinGrams: number;
-  carbsGrams: number;
-  fatsGrams: number;
+export interface AttendanceStats {
+  userId: string;
+  totalPresent: number;
+  totalAbsent: number;
+  currentStreak: number;
+  longestStreak: number;
+  lastAttendance: Date | null;
+  lastUpdated: Date;
 }
 
-export interface DietPlan {
-  id: string;
-  title: string;
-  description: string;
-  goal: 'weight-loss' | 'muscle-gain' | 'maintenance';
-  duration: number;
-  level: string;
-  schedule?: WeeklyDietPlan;
-  nutritionalGoals?: NutritionalGoals;
-  restrictions?: string[];
-  supplementation?: Supplement[];
-  waterIntake?: number;
+export interface AttendanceRecord {
+  id?: string;
+  userId: string;
+  date: Date;
+  time: string;
+  status: 'present' | 'absent';
+  createdAt: Date;
 }
 
-interface SpoonacularMealPlan {
-  meals: SpoonacularMeal[];
-  nutrients: {
-    calories: number;
-    protein: number;
-    fat: number;
-    carbohydrates: number;
-  };
-}
-
-interface SpoonacularMeal {
-  id: number;
-  title: string;
-  readyInMinutes: number;
-  servings: number;
-  sourceUrl: string;
-  image: string;
-  imageType: string;
-  nutrition?: {
-    nutrients: {
-    name: string;
-      amount: number;
-      unit: string;
-    }[];
-  };
-}
-
-interface SpoonacularRecipe extends SpoonacularMeal {
-  instructions: string;
-  analyzedInstructions: {
-    steps: {
-      number: number;
-      step: string;
-      ingredients: { name: string }[];
-      equipment: { name: string }[];
-    }[];
-  }[];
-  extendedIngredients: {
-    original: string;
-    name: string;
-    amount: number;
-    unit: string;
-    aisle: string;
-  }[];
-  diets: string[];
-  cuisines: string[];
-}
-
-async function fetchMealPlan(targetCalories: number, diet?: string): Promise<SpoonacularMealPlan> {
-  const params = new URLSearchParams({
-    apiKey: SPOONACULAR_API_KEY,
-    targetCalories: targetCalories.toString(),
-    timeFrame: 'day',
-  });
-
-  if (diet) {
-    params.append('diet', diet);
-  }
-
-  const response = await fetch(`${BASE_URL}/mealplanner/generate?${params}`);
-  if (!response.ok) {
-    throw new Error('Failed to fetch meal plan');
-  }
-  return response.json();
-}
-
-async function fetchRecipeDetails(id: number): Promise<SpoonacularRecipe> {
-  const params = new URLSearchParams({
-    apiKey: SPOONACULAR_API_KEY,
-  });
-
-  const response = await fetch(`${BASE_URL}/recipes/${id}/information?${params}`);
-  if (!response.ok) {
-    throw new Error('Failed to fetch recipe details');
-  }
-  return response.json();
-}
-
-function convertSpoonacularMealToFood(meal: SpoonacularMeal, recipe: SpoonacularRecipe): Food {
-  const nutrients = recipe.nutrition?.nutrients || [];
-  
-  return {
-    id: meal.id,
-    name: meal.title,
-    calories: nutrients.find(n => n.name === 'Calories')?.amount || 0,
-    protein: nutrients.find(n => n.name === 'Protein')?.amount || 0,
-    carbs: nutrients.find(n => n.name === 'Carbohydrates')?.amount || 0,
-    fats: nutrients.find(n => n.name === 'Fat')?.amount || 0,
-    portion: `${meal.servings} servings`,
-    category: recipe.cuisines[0] || recipe.diets[0] || 'General',
-    imageUrl: meal.image,
-    preparationTime: `${recipe.readyInMinutes} mins`,
-    difficulty: recipe.readyInMinutes <= 30 ? 'easy' : recipe.readyInMinutes <= 60 ? 'medium' : 'hard',
-    instructions: recipe.analyzedInstructions[0]?.steps.map(step => step.step),
-    alternatives: {
-  vegetarian: {
-        name: `Vegetarian ${meal.title}`,
-        changes: 'Replace meat with plant-based protein alternatives'
-      },
-      glutenFree: {
-        name: `Gluten-Free ${meal.title}`,
-        changes: 'Use gluten-free alternatives for any wheat-based ingredients'
-      },
-      lactoseFree: {
-        name: `Lactose-Free ${meal.title}`,
-        changes: 'Use dairy-free alternatives for any milk-based ingredients'
-      }
-    }
-  };
-}
-
-// High protein meal database with dietary alternatives
-const proteinRichMeals = {
-    breakfast: [
-      {
-      id: 1,
-      name: "Protein Oatmeal with Eggs",
-      calories: 450,
-      protein: 32,
-      carbs: 45,
-      fats: 14,
-      portion: "1 bowl oats + 3 egg whites",
+const highProteinMealDatabase: Food[] = [
+  {
+    name: "Chicken Breast with Rice",
+    protein: 30,
+    carbs: 40,
+    fats: 5,
+    calories: 325,
+    servingSize: "300g",
+    portion: "300g",
       category: "High Protein",
-      imageUrl: "https://images.unsplash.com/photo-1517673400267-0251440c45dc",
+    difficulty: "Easy",
       preparationTime: "10 mins",
-      cookingTime: "10 mins",
-      difficulty: "easy" as const,
-        instructions: [
-        "Cook oats with milk",
-        "Add protein powder to oats",
-        "Cook egg whites separately",
-        "Top with nuts and fruits"
-        ],
-        tips: [
-        "Use whey protein for extra protein",
-        "Add chia seeds for omega-3",
-        "Use almond milk for fewer calories"
-      ],
-      alternatives: {
-        vegetarian: {
-          name: "Tofu Scramble with Quinoa",
-          protein: 28,
-          changes: "Replace eggs with scrambled tofu, add nutritional yeast for B12"
-        },
-        glutenFree: {
-          name: "Gluten-Free Protein Bowl",
-          changes: "Use certified gluten-free oats or replace with quinoa"
-        },
-        lactoseFree: {
-          name: "Dairy-Free Protein Oats",
-          changes: "Use almond/soy milk and plant-based protein powder"
-        }
-      }
-    },
-    {
-      id: 2,
-      name: "High Protein Toast",
-        calories: 380,
-      protein: 28,
+    cookingTime: "20 mins",
+    imageUrl: "https://images.unsplash.com/photo-1532550907401-a500c9a57435",
+    allergens: []
+  },
+  {
+    name: "Protein Oatmeal",
+    protein: 20,
       carbs: 35,
-      fats: 12,
-      portion: "2 toasts + toppings",
+    fats: 8,
+    calories: 290,
+    servingSize: "250g",
+    portion: "250g",
       category: "High Protein",
-      imageUrl: "https://images.unsplash.com/photo-1525351484163-7529414344d8",
-      preparationTime: "10 mins",
-      cookingTime: "5 mins",
-      difficulty: "easy" as const,
-        instructions: [
-        "Toast whole grain bread",
-        "Scramble eggs with whites",
-        "Add cottage cheese",
-        "Top with seeds and herbs"
-        ],
-        tips: [
-        "Use whole grain bread for fiber",
-        "Add smoked chicken or tuna for variety",
-        "Include avocado for healthy fats"
-      ],
-      alternatives: {
-        vegetarian: {
-          name: "Tempeh Toast",
-          protein: 24,
-          changes: "Replace eggs with marinated tempeh, add hummus"
-        },
-        glutenFree: {
-          name: "Sweet Potato Toast",
-          changes: "Replace bread with sliced sweet potato, top with protein"
-        },
-        lactoseFree: {
-          name: "Avocado Protein Toast",
-          changes: "Use dairy-free spread, replace cottage cheese with mashed avocado"
-        }
-      }
-    }
-  ],
-  lunch: [
-    {
-      id: 3,
-      name: "Chicken Rice Bowl",
-      calories: 550,
-      protein: 45,
-      carbs: 55,
-        fats: 12,
-      portion: "300g chicken + 1 cup rice",
-      category: "High Protein",
-      imageUrl: "https://images.unsplash.com/photo-1546833999-b9f581a1996d",
-      preparationTime: "15 mins",
-      cookingTime: "20 mins",
-      difficulty: "medium" as const,
-        instructions: [
-        "Grill chicken breast",
-        "Cook brown rice",
-        "Steam vegetables",
-        "Assemble with sauce"
-        ],
-        tips: [
-        "Marinate chicken for better taste",
-        "Use brown rice for more nutrients",
-        "Add quinoa for extra protein"
-      ],
-      alternatives: {
-        vegetarian: {
-          name: "Chickpea Rice Bowl",
-          protein: 35,
-          changes: "Replace chicken with spiced chickpeas and grilled tofu"
-        },
-        glutenFree: {
-          name: "Cauliflower Rice Bowl",
-          changes: "Replace rice with cauliflower rice, ensure sauce is gluten-free"
-        },
-        lactoseFree: {
-          name: "Dairy-Free Rice Bowl",
-          changes: "Use coconut aminos for sauce, avoid cream-based dressings"
-        }
-      }
-    },
-    {
-      id: 4,
-      name: "Protein-Packed Dal",
-      calories: 420,
-      protein: 28,
-      carbs: 48,
-      fats: 10,
-      portion: "2 cups dal + sides",
-      category: "Vegetarian Protein",
-      imageUrl: "https://images.unsplash.com/photo-1505253758473-96b7015fcd40",
-      preparationTime: "15 mins",
-      cookingTime: "25 mins",
-      difficulty: "easy" as const,
-        instructions: [
-        "Cook mixed lentils",
-        "Add protein powder",
-        "Season with spices",
-        "Serve with egg whites"
-        ],
-        tips: [
-        "Mix different lentils for complete protein",
-        "Add tofu for extra protein",
-        "Include spinach for iron"
-      ],
-      alternatives: {
-        vegetarian: {
-          name: "Pure Veg Dal",
+    difficulty: "Easy",
+    preparationTime: "5 mins",
+    cookingTime: "10 mins",
+    allergens: ["Dairy"]
+  },
+  {
+    name: "Salmon with Sweet Potato",
           protein: 25,
-          changes: "Skip egg whites, add tempeh or extra lentils"
-        },
-        glutenFree: {
-          name: "Gluten-Free Dal",
-          changes: "Ensure all spices are certified gluten-free"
-        },
-        lactoseFree: {
-          name: "Coconut Dal",
-          changes: "Use coconut milk instead of regular dairy"
-        }
-      }
-      }
-    ],
-    dinner: [
-      {
-      id: 5,
-      name: "Grilled Chicken Plate",
-      calories: 480,
-      protein: 52,
-      carbs: 20,
-      fats: 18,
-      portion: "300g chicken + vegetables",
+    carbs: 30,
+    fats: 15,
+    calories: 355,
+    servingSize: "300g",
+    portion: "300g",
       category: "High Protein",
-      imageUrl: "https://images.unsplash.com/photo-1532550907401-a500c9a57435",
-      preparationTime: "15 mins",
-      cookingTime: "20 mins",
-      difficulty: "medium" as const,
-        instructions: [
-        "Marinate chicken breast",
-        "Grill or bake chicken",
-        "Prepare salad",
-        "Add healthy fats"
-        ],
-        tips: [
-        "Use lean chicken breast",
-        "Add olive oil for healthy fats",
-        "Include variety of vegetables"
-      ],
-      alternatives: {
-        vegetarian: {
-          name: "Grilled Seitan Plate",
-          protein: 45,
-          changes: "Replace chicken with seitan or tempeh steak"
-        },
-        glutenFree: {
-          name: "Grilled Tofu Plate",
-          changes: "Use gluten-free marinades, replace seitan with tofu"
-        },
-        lactoseFree: {
-          name: "Dairy-Free Grilled Plate",
-          changes: "Use olive oil based dressings, avoid cream sauces"
-        }
-      }
-    },
-    {
-      id: 6,
-      name: "Protein Power Bowl",
-      calories: 420,
-      protein: 38,
-      carbs: 35,
-      fats: 14,
-      portion: "1 large bowl",
-      category: "High Protein",
-      imageUrl: "https://images.unsplash.com/photo-1547592166-23ac45744acd",
-      preparationTime: "15 mins",
+    difficulty: "Medium",
+    preparationTime: "10 mins",
+    cookingTime: "25 mins",
+    allergens: ["Fish"]
+  }
+];
+
+const lowCalorieMealDatabase: Food[] = [
+  {
+    name: "Grilled Chicken Breast",
+    protein: 25,
+    carbs: 0,
+    fats: 3,
+    calories: 165,
+    servingSize: "100g",
+    portion: "100g",
+    category: "Low Calorie",
+    difficulty: "Easy",
+    preparationTime: "5 mins",
       cookingTime: "15 mins",
-      difficulty: "easy" as const,
-        instructions: [
-        "Cook quinoa",
-        "Prepare tofu/chicken",
-        "Add legumes",
-        "Mix with dressing"
-        ],
-        tips: [
-        "Combine plant and animal proteins",
-        "Add seeds for extra protein",
-        "Use Greek yogurt dressing"
-      ],
       alternatives: {
         vegetarian: {
-          name: "Vegan Power Bowl",
-          protein: 32,
-          changes: "Use only plant-based proteins like tempeh, edamame, and quinoa"
-        },
-        glutenFree: {
-          name: "Gluten-Free Power Bowl",
-          changes: "Ensure all grains are certified gluten-free, check sauce ingredients"
-        },
-        lactoseFree: {
-          name: "Dairy-Free Power Bowl",
-          changes: "Use tahini or avocado-based dressing instead of yogurt"
-        }
+        name: "Grilled Tofu",
+        protein: 20,
+        carbs: 2,
+        fats: 5,
+        calories: 150,
+        servingSize: "100g",
+        changes: "Replace chicken with firm tofu"
       }
     }
-  ]
+  },
+  {
+    name: "Mixed Green Salad",
+    protein: 2,
+    carbs: 5,
+    fats: 0,
+    calories: 25,
+    servingSize: "100g",
+    portion: "100g",
+    category: "Low Calorie",
+    difficulty: "Easy",
+    preparationTime: "10 mins",
+    cookingTime: "0 mins"
+  },
+  {
+    name: "Quinoa Bowl",
+    protein: 4,
+    carbs: 21,
+    fats: 2,
+    calories: 120,
+    servingSize: "100g",
+    portion: "100g",
+    category: "Low Calorie",
+    difficulty: "Easy",
+    preparationTime: "5 mins",
+    cookingTime: "15 mins"
+  }
+];
+
+const maintenanceMealDatabase: Food[] = [
+  {
+    name: "Brown Rice Bowl",
+    protein: 3,
+    carbs: 45,
+    fats: 2,
+    calories: 215,
+    servingSize: "100g",
+    portion: "100g",
+    category: "Balanced",
+    difficulty: "Easy",
+    preparationTime: "5 mins",
+    cookingTime: "20 mins"
+  },
+  {
+    name: "Sweet Potato Mash",
+    protein: 2,
+    carbs: 20,
+    fats: 0,
+    calories: 90,
+    servingSize: "100g",
+    portion: "100g",
+    category: "Balanced",
+    difficulty: "Easy",
+    preparationTime: "10 mins",
+    cookingTime: "15 mins"
+  },
+  {
+    name: "Grilled Salmon",
+    protein: 20,
+    carbs: 0,
+    fats: 13,
+    calories: 208,
+    servingSize: "100g",
+    portion: "100g",
+    category: "Balanced",
+    difficulty: "Medium",
+    preparationTime: "5 mins",
+    cookingTime: "15 mins",
+    allergens: ["Fish"]
+  }
+];
+
+const calculateMealTotals = (foods: Food[]): { 
+  totalCalories: number;
+  totalProtein: number;
+  totalCarbs: number;
+  totalFats: number;
+} => {
+  return foods.reduce((totals, food) => ({
+    totalCalories: totals.totalCalories + food.calories,
+    totalProtein: totals.totalProtein + food.protein,
+    totalCarbs: totals.totalCarbs + food.carbs,
+    totalFats: totals.totalFats + food.fats
+  }), {
+    totalCalories: 0,
+    totalProtein: 0,
+    totalCarbs: 0,
+    totalFats: 0
+  });
 };
 
-// Supplement recommendations based on goals
-const supplementInfo = {
-  'weight-loss': [
-    {
-      name: 'Whey Protein Isolate',
-      dosage: '25-30g',
-      timing: 'Post-workout or between meals',
-      benefits: 'Helps preserve muscle while cutting calories, increases satiety',
-      recommendations: 'Choose low-carb variants, mix with water instead of milk'
-    },
-    {
-      name: 'L-Carnitine',
-      dosage: '1500-2000mg',
-      timing: 'Before cardio or with meals',
-      benefits: 'May help with fat metabolism, supports energy production',
-      recommendations: 'Best taken with carbohydrates for absorption'
+interface UserProfile {
+  weight: number;
+  height: number;
+  age: number;
+  gender: string;
+  activityLevel: string;
+}
+
+export const useDietService = () => {
+  const generateDietPlan = (profile: UserProfile, planType: string): WeeklyDietPlan => {
+    console.log('Generating diet plan for:', { profile, planType });
+  
+  // Calculate BMR using Mifflin-St Jeor Equation
+    const bmr = profile.gender === 'male'
+      ? (10 * profile.weight) + (6.25 * profile.height) - (5 * profile.age) + 5
+      : (10 * profile.weight) + (6.25 * profile.height) - (5 * profile.age) - 161;
+
+    // Calculate TDEE (Total Daily Energy Expenditure)
+    const activityMultipliers = {
+      sedentary: 1.2,
+      light: 1.375,
+      moderate: 1.55,
+      active: 1.725,
+      veryActive: 1.9
+    };
+    const tdee = bmr * (activityMultipliers[profile.activityLevel as keyof typeof activityMultipliers] || 1.55);
+
+    // Adjust calories based on plan type
+    let targetCalories = tdee;
+    switch (planType) {
+      case 'weight-loss':
+        targetCalories = tdee - 500; // 500 calorie deficit
+        break;
+      case 'muscle-gain':
+        targetCalories = tdee + 300; // 300 calorie surplus
+        break;
+      case 'maintenance':
+        targetCalories = tdee;
+        break;
     }
-  ],
-  'muscle-gain': [
-    {
-      name: 'Whey Protein',
-      dosage: '25-30g',
-      timing: 'Post-workout and between meals',
-      benefits: 'Fast-absorbing protein for muscle recovery and growth',
-      recommendations: 'Can mix with milk for extra calories and nutrients'
-    },
-    {
-      name: 'Creatine Monohydrate',
-      dosage: '5g daily',
-      timing: 'Any time of day, consistent timing',
-      benefits: 'Increases strength, muscle volume, and workout performance',
-      recommendations: 'No loading phase needed, stay consistent daily'
-    },
-    {
-      name: 'Mass Gainer',
-      dosage: '1 serving',
-      timing: 'Post-workout or between meals',
-      benefits: 'Extra calories and protein for muscle gain',
-      recommendations: 'Use only if struggling to meet calorie needs through food'
+
+    // Calculate macronutrient goals
+    const nutritionalGoals = {
+      calories: Math.round(targetCalories),
+      protein: {
+        grams: Math.round(profile.weight * 2.2), // 1g per lb of body weight
+        percentage: 30
+      },
+      carbs: {
+        grams: Math.round((targetCalories * 0.4) / 4), // 40% of calories from carbs
+        percentage: 40
+      },
+      fats: {
+        grams: Math.round((targetCalories * 0.3) / 9), // 30% of calories from fats
+        percentage: 30
+      }
+    };
+
+    // Generate the weekly plan
+    const weeklyPlan = generateWeeklyPlan(nutritionalGoals, planType);
+
+    return {
+      title: `${planType.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')} Diet Plan`,
+      description: getDescription(planType),
+      level: 'Intermediate',
+      duration: '12 weeks',
+      type: planType,
+      goal: getGoal(planType),
+      color: getColor(planType),
+      waterIntake: Math.round(profile.weight * 0.033 * 1000), // ml per day
+      supplementation: getSupplementation(planType),
+      nutritionalGoals,
+      weeklyPlan
+    };
+  };
+
+  return {
+    generateDietPlan
+  };
+};
+
+// Helper functions
+const generateWeeklyPlan = (goals: NutritionalGoals, planType: string): DailyMeals[] => {
+  // Select appropriate meal database based on plan type
+  let mealDatabase: Food[];
+  switch (planType) {
+    case 'weight-loss':
+      mealDatabase = lowCalorieMealDatabase;
+      break;
+    case 'muscle-gain':
+      mealDatabase = highProteinMealDatabase;
+      break;
+    default:
+      mealDatabase = maintenanceMealDatabase;
+  }
+
+  // Generate a week's worth of meals
+  const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  
+  return daysOfWeek.map(day => {
+    // Create three meals for each day
+    const breakfast: Meal = {
+      type: 'Breakfast',
+      time: '8:00 AM',
+      foods: [mealDatabase[1]], // Using protein oatmeal or similar
+      ...calculateMealTotals([mealDatabase[1]])
+    };
+
+    const lunch: Meal = {
+      type: 'Lunch',
+      time: '1:00 PM',
+      foods: [mealDatabase[0]], // Using main protein dish
+      ...calculateMealTotals([mealDatabase[0]])
+    };
+
+    const dinner: Meal = {
+      type: 'Dinner',
+      time: '7:00 PM',
+      foods: [mealDatabase[2]], // Using evening meal
+      ...calculateMealTotals([mealDatabase[2]])
+    };
+
+    // Add snacks based on plan type
+    const meals = [breakfast, lunch, dinner];
+
+    // For muscle gain, add pre and post workout meals
+    if (planType === 'muscle-gain') {
+      const preWorkout: Meal = {
+        type: 'Pre-Workout',
+        time: '4:00 PM',
+        foods: [{
+          name: "Banana with Peanut Butter",
+          protein: 7,
+          carbs: 27,
+          fats: 8,
+          calories: 200,
+          servingSize: "1 medium banana + 1 tbsp peanut butter",
+          portion: "1 serving"
+        }],
+        ...calculateMealTotals([{
+          name: "Banana with Peanut Butter",
+          protein: 7,
+          carbs: 27,
+          fats: 8,
+          calories: 200,
+          servingSize: "1 medium banana + 1 tbsp peanut butter",
+          portion: "1 serving"
+        }])
+      };
+      meals.splice(2, 0, preWorkout);
     }
-  ],
-  'maintenance': [
-    {
-      name: 'Whey Protein',
-      dosage: '20-25g',
-      timing: 'Post-workout or as needed',
-      benefits: 'Convenient protein source for muscle maintenance',
-      recommendations: 'Use as supplement to whole food protein sources'
-    },
+
+    return {
+      day,
+      meals
+    };
+  });
+};
+
+const getSupplementation = (planType: string): Supplement[] => {
+  const baseSupplements: Supplement[] = [
     {
       name: 'Multivitamin',
-      dosage: '1 serving',
-      timing: 'With breakfast',
-      benefits: 'Fills potential nutritional gaps',
-      recommendations: 'Choose a high-quality brand with good absorption'
+      dosage: '1 tablet',
+      timing: 'Morning with breakfast',
+      notes: 'Covers basic micronutrient needs',
+      benefits: 'Supports overall health and fills potential nutritional gaps'
     }
-  ]
+  ];
+
+  switch (planType) {
+    case 'muscle-gain':
+      return [
+        ...baseSupplements,
+        {
+          name: 'Whey Protein',
+          dosage: '25-30g',
+          timing: 'Post-workout or between meals',
+          notes: 'High-quality protein source',
+          benefits: 'Supports muscle recovery and growth'
+        },
+        {
+          name: 'Creatine Monohydrate',
+          dosage: '5g daily',
+          timing: 'Any time of day',
+          notes: 'Most researched supplement for muscle gain',
+          benefits: 'Improves strength, power, and muscle growth'
+        }
+      ];
+    case 'weight-loss':
+      return [
+        ...baseSupplements,
+        {
+          name: 'Whey Protein',
+          dosage: '20-25g',
+          timing: 'Between meals or as meal replacement',
+          notes: 'Helps maintain muscle mass during weight loss',
+          benefits: 'Supports satiety and preserves lean mass'
+        }
+      ];
+    default:
+      return baseSupplements;
+  }
 };
 
-// Helper function to convert duration string to number
-export function parseDuration(duration: string): number {
-  const match = duration.match(/\d+/);
-  return match ? parseInt(match[0], 10) : 0;
-}
+const getDescription = (planType: string): string => {
+  switch (planType) {
+    case 'weight-loss':
+      return 'A calorie-controlled diet plan focused on sustainable fat loss while preserving muscle mass.';
+    case 'muscle-gain':
+      return 'A high-protein diet plan designed to support muscle growth and strength gains.';
+    case 'maintenance':
+      return 'A balanced diet plan to maintain weight and support overall health.';
+    default:
+      return 'A personalized diet plan tailored to your goals.';
+  }
+};
 
-// Helper function to convert nutritional goals
-export function convertNutritionalGoals(goals: any): NutritionalGoals {
-  const dailyCalories = Number(goals.dailyCalories) || 2000;
-  const proteinPercentage = Number(goals.proteinPercentage) || 30;
-  const carbsPercentage = Number(goals.carbsPercentage) || 40;
-  const fatsPercentage = Number(goals.fatsPercentage) || 30;
-  
-  return {
-    dailyCalories,
-    proteinPercentage,
-    carbsPercentage,
-    fatsPercentage,
-    proteinGrams: Math.round((dailyCalories * (proteinPercentage / 100)) / 4),
-    carbsGrams: Math.round((dailyCalories * (carbsPercentage / 100)) / 4),
-    fatsGrams: Math.round((dailyCalories * (fatsPercentage / 100)) / 9)
-  };
-}
+const getGoal = (planType: string): string => {
+  switch (planType) {
+    case 'weight-loss':
+      return 'Lose Fat';
+    case 'muscle-gain':
+      return 'Build Muscle';
+    case 'maintenance':
+      return 'Stay Healthy';
+    default:
+      return 'General Health';
+  }
+};
 
-// Helper function to convert supplementation data
-export function convertSupplementation(supplementation: any[]): Supplement[] {
-  return supplementation.map(supp => ({
-    name: supp.name,
-    dosage: supp.dosage,
-    timing: supp.timing,
-    notes: supp.notes || `${supp.benefits || ''} ${supp.recommendations || ''}`.trim()
-  }));
-}
+const getColor = (planType: string): string => {
+  switch (planType) {
+    case 'weight-loss':
+      return 'red';
+    case 'muscle-gain':
+      return 'blue';
+    case 'maintenance':
+      return 'green';
+    default:
+      return 'gray';
+  }
+};
 
-export async function generatePersonalizedDietPlan(profile: any): Promise<DietPlan> {
-  // Mock data - replace with actual API call
-  const mockPlan = {
-    id: Math.random().toString(36).substring(7),
-    title: 'Muscle Gain Diet Plan',
-    description: 'A high-protein diet plan focused on muscle gain through optimal protein intake and strategic supplementation.',
-    goal: 'muscle-gain' as const,
-    duration: 12, // weeks
-    level: 'intermediate',
-    nutritionalGoals: convertNutritionalGoals({
-      dailyCalories: 2800,
-      proteinPercentage: 35,
-      carbsPercentage: 45,
-      fatsPercentage: 20
-    }),
-    restrictions: [
-      'No processed foods',
-      'Limited sugary foods',
-      'Adequate protein with each meal',
-      'Fresh ingredients only'
-    ],
-    supplementation: convertSupplementation([
-      {
-        name: 'Whey Protein',
-        dosage: '25-30g',
-        timing: 'Post-workout and between meals',
-        benefits: 'Supports muscle recovery and growth',
-        recommendations: 'Mix with water or milk'
-      },
-      {
-        name: 'Creatine Monohydrate',
-        dosage: '5g daily',
-        timing: 'Any time of day, consistent timing',
-        benefits: 'Enhances strength and muscle gains',
-        recommendations: 'Take with water, maintain consistent intake'
-      },
-      {
-        name: 'Mass Gainer',
-        dosage: '1 serving',
-        timing: 'Post-workout or between meals',
-        benefits: 'Additional calories and nutrients',
-        recommendations: 'Use when struggling to meet calorie goals'
+export const useAttendanceService = () => {
+  const markAttendance = async (userId: string): Promise<{ success: boolean; message: string }> => {
+    try {
+      const today = new Date();
+      const formattedDate = format(today, 'yyyy-MM-dd');
+      const formattedTime = format(today, 'HH:mm:ss');
+
+      // Check if attendance already marked
+      const attendanceRef = collection(db, 'attendance');
+      const q = query(
+        attendanceRef,
+        where('userId', '==', userId),
+        where('date', '==', formattedDate)
+      );
+      const querySnapshot = await getDocs(q);
+
+      if (!querySnapshot.empty) {
+        return { success: false, message: 'Attendance already marked for today' };
       }
-    ]),
-    waterIntake: 3.5, // liters
-    schedule: {
-      days: [
-        {
-          day: 'Monday',
-      meals: [
-        {
-              type: 'breakfast' as const,
-              time: '8:00 AM',
-              foods: [proteinRichMeals.breakfast[0]],
-              totalCalories: proteinRichMeals.breakfast[0].calories,
-              totalProtein: proteinRichMeals.breakfast[0].protein,
-              totalCarbs: proteinRichMeals.breakfast[0].carbs,
-              totalFats: proteinRichMeals.breakfast[0].fats
-            },
-            {
-              type: 'lunch' as const,
-              time: '1:00 PM',
-              foods: [proteinRichMeals.lunch[0]],
-              totalCalories: proteinRichMeals.lunch[0].calories,
-              totalProtein: proteinRichMeals.lunch[0].protein,
-              totalCarbs: proteinRichMeals.lunch[0].carbs,
-              totalFats: proteinRichMeals.lunch[0].fats
-            },
-            {
-              type: 'dinner' as const,
-          time: '7:00 PM',
-              foods: [proteinRichMeals.dinner[0]],
-              totalCalories: proteinRichMeals.dinner[0].calories,
-              totalProtein: proteinRichMeals.dinner[0].protein,
-              totalCarbs: proteinRichMeals.dinner[0].carbs,
-              totalFats: proteinRichMeals.dinner[0].fats
-            }
-          ],
-          totalDailyCalories: proteinRichMeals.breakfast[0].calories + 
-                             proteinRichMeals.lunch[0].calories + 
-                             proteinRichMeals.dinner[0].calories,
-          waterIntake: 3.5
-        },
-        {
-          day: 'Tuesday',
-          meals: [
-            {
-              type: 'breakfast' as const,
-              time: '8:00 AM',
-              foods: [proteinRichMeals.breakfast[1]],
-              totalCalories: proteinRichMeals.breakfast[1].calories,
-              totalProtein: proteinRichMeals.breakfast[1].protein,
-              totalCarbs: proteinRichMeals.breakfast[1].carbs,
-              totalFats: proteinRichMeals.breakfast[1].fats
-            },
-            {
-              type: 'lunch' as const,
-              time: '1:00 PM',
-              foods: [proteinRichMeals.lunch[1]],
-              totalCalories: proteinRichMeals.lunch[1].calories,
-              totalProtein: proteinRichMeals.lunch[1].protein,
-              totalCarbs: proteinRichMeals.lunch[1].carbs,
-              totalFats: proteinRichMeals.lunch[1].fats
-            },
-            {
-              type: 'dinner' as const,
-              time: '7:00 PM',
-              foods: [proteinRichMeals.dinner[1]],
-              totalCalories: proteinRichMeals.dinner[1].calories,
-              totalProtein: proteinRichMeals.dinner[1].protein,
-              totalCarbs: proteinRichMeals.dinner[1].carbs,
-              totalFats: proteinRichMeals.dinner[1].fats
-            }
-          ],
-          totalDailyCalories: proteinRichMeals.breakfast[1].calories + 
-                             proteinRichMeals.lunch[1].calories + 
-                             proteinRichMeals.dinner[1].calories,
-          waterIntake: 3.5
-        },
-        {
-          day: 'Wednesday',
-          meals: [
-            {
-              type: 'breakfast' as const,
-              time: '8:00 AM',
-              foods: [proteinRichMeals.breakfast[0]],
-              totalCalories: proteinRichMeals.breakfast[0].calories,
-              totalProtein: proteinRichMeals.breakfast[0].protein,
-              totalCarbs: proteinRichMeals.breakfast[0].carbs,
-              totalFats: proteinRichMeals.breakfast[0].fats
-            },
-            {
-              type: 'lunch' as const,
-              time: '1:00 PM',
-              foods: [proteinRichMeals.lunch[0]],
-              totalCalories: proteinRichMeals.lunch[0].calories,
-              totalProtein: proteinRichMeals.lunch[0].protein,
-              totalCarbs: proteinRichMeals.lunch[0].carbs,
-              totalFats: proteinRichMeals.lunch[0].fats
-            },
-            {
-              type: 'dinner' as const,
-          time: '7:00 PM',
-              foods: [proteinRichMeals.dinner[0]],
-              totalCalories: proteinRichMeals.dinner[0].calories,
-              totalProtein: proteinRichMeals.dinner[0].protein,
-              totalCarbs: proteinRichMeals.dinner[0].carbs,
-              totalFats: proteinRichMeals.dinner[0].fats
-            }
-          ],
-          totalDailyCalories: proteinRichMeals.breakfast[0].calories + 
-                             proteinRichMeals.lunch[0].calories + 
-                             proteinRichMeals.dinner[0].calories,
-          waterIntake: 3.5
-        },
-        {
-          day: 'Thursday',
-          meals: [
-            {
-              type: 'breakfast' as const,
-              time: '8:00 AM',
-              foods: [proteinRichMeals.breakfast[1]],
-              totalCalories: proteinRichMeals.breakfast[1].calories,
-              totalProtein: proteinRichMeals.breakfast[1].protein,
-              totalCarbs: proteinRichMeals.breakfast[1].carbs,
-              totalFats: proteinRichMeals.breakfast[1].fats
-            },
-            {
-              type: 'lunch' as const,
-              time: '1:00 PM',
-              foods: [proteinRichMeals.lunch[1]],
-              totalCalories: proteinRichMeals.lunch[1].calories,
-              totalProtein: proteinRichMeals.lunch[1].protein,
-              totalCarbs: proteinRichMeals.lunch[1].carbs,
-              totalFats: proteinRichMeals.lunch[1].fats
-            },
-            {
-              type: 'dinner' as const,
-              time: '7:00 PM',
-              foods: [proteinRichMeals.dinner[1]],
-              totalCalories: proteinRichMeals.dinner[1].calories,
-              totalProtein: proteinRichMeals.dinner[1].protein,
-              totalCarbs: proteinRichMeals.dinner[1].carbs,
-              totalFats: proteinRichMeals.dinner[1].fats
-            }
-          ],
-          totalDailyCalories: proteinRichMeals.breakfast[1].calories + 
-                             proteinRichMeals.lunch[1].calories + 
-                             proteinRichMeals.dinner[1].calories,
-          waterIntake: 3.5
-        },
-        {
-          day: 'Friday',
-          meals: [
-            {
-              type: 'breakfast' as const,
-              time: '8:00 AM',
-              foods: [proteinRichMeals.breakfast[0]],
-              totalCalories: proteinRichMeals.breakfast[0].calories,
-              totalProtein: proteinRichMeals.breakfast[0].protein,
-              totalCarbs: proteinRichMeals.breakfast[0].carbs,
-              totalFats: proteinRichMeals.breakfast[0].fats
-            },
-            {
-              type: 'lunch' as const,
-              time: '1:00 PM',
-              foods: [proteinRichMeals.lunch[0]],
-              totalCalories: proteinRichMeals.lunch[0].calories,
-              totalProtein: proteinRichMeals.lunch[0].protein,
-              totalCarbs: proteinRichMeals.lunch[0].carbs,
-              totalFats: proteinRichMeals.lunch[0].fats
-            },
-            {
-              type: 'dinner' as const,
-              time: '7:00 PM',
-              foods: [proteinRichMeals.dinner[0]],
-              totalCalories: proteinRichMeals.dinner[0].calories,
-              totalProtein: proteinRichMeals.dinner[0].protein,
-              totalCarbs: proteinRichMeals.dinner[0].carbs,
-              totalFats: proteinRichMeals.dinner[0].fats
-            }
-          ],
-          totalDailyCalories: proteinRichMeals.breakfast[0].calories + 
-                             proteinRichMeals.lunch[0].calories + 
-                             proteinRichMeals.dinner[0].calories,
-          waterIntake: 3.5
-        },
-        {
-          day: 'Saturday',
-          meals: [
-            {
-              type: 'breakfast' as const,
-              time: '8:00 AM',
-              foods: [proteinRichMeals.breakfast[1]],
-              totalCalories: proteinRichMeals.breakfast[1].calories,
-              totalProtein: proteinRichMeals.breakfast[1].protein,
-              totalCarbs: proteinRichMeals.breakfast[1].carbs,
-              totalFats: proteinRichMeals.breakfast[1].fats
-            },
-            {
-              type: 'lunch' as const,
-              time: '1:00 PM',
-              foods: [proteinRichMeals.lunch[1]],
-              totalCalories: proteinRichMeals.lunch[1].calories,
-              totalProtein: proteinRichMeals.lunch[1].protein,
-              totalCarbs: proteinRichMeals.lunch[1].carbs,
-              totalFats: proteinRichMeals.lunch[1].fats
-            },
-            {
-              type: 'dinner' as const,
-              time: '7:00 PM',
-              foods: [proteinRichMeals.dinner[1]],
-              totalCalories: proteinRichMeals.dinner[1].calories,
-              totalProtein: proteinRichMeals.dinner[1].protein,
-              totalCarbs: proteinRichMeals.dinner[1].carbs,
-              totalFats: proteinRichMeals.dinner[1].fats
-            }
-          ],
-          totalDailyCalories: proteinRichMeals.breakfast[1].calories + 
-                             proteinRichMeals.lunch[1].calories + 
-                             proteinRichMeals.dinner[1].calories,
-          waterIntake: 3.5
-        },
-        {
-          day: 'Sunday',
-          meals: [
-            {
-              type: 'breakfast' as const,
-              time: '8:00 AM',
-              foods: [proteinRichMeals.breakfast[0]],
-              totalCalories: proteinRichMeals.breakfast[0].calories,
-              totalProtein: proteinRichMeals.breakfast[0].protein,
-              totalCarbs: proteinRichMeals.breakfast[0].carbs,
-              totalFats: proteinRichMeals.breakfast[0].fats
-            },
-            {
-              type: 'lunch' as const,
-              time: '1:00 PM',
-              foods: [proteinRichMeals.lunch[0]],
-              totalCalories: proteinRichMeals.lunch[0].calories,
-              totalProtein: proteinRichMeals.lunch[0].protein,
-              totalCarbs: proteinRichMeals.lunch[0].carbs,
-              totalFats: proteinRichMeals.lunch[0].fats
-            },
-            {
-              type: 'dinner' as const,
-              time: '7:00 PM',
-              foods: [proteinRichMeals.dinner[0]],
-              totalCalories: proteinRichMeals.dinner[0].calories,
-              totalProtein: proteinRichMeals.dinner[0].protein,
-              totalCarbs: proteinRichMeals.dinner[0].carbs,
-              totalFats: proteinRichMeals.dinner[0].fats
-            }
-          ],
-          totalDailyCalories: proteinRichMeals.breakfast[0].calories + 
-                             proteinRichMeals.lunch[0].calories + 
-                             proteinRichMeals.dinner[0].calories,
-          waterIntake: 3.5
-        }
-      ]
+
+      // Add attendance record
+      const attendanceRecord: Omit<AttendanceRecord, 'id'> = {
+        userId,
+        date: today,
+        time: formattedTime,
+        status: 'present',
+        createdAt: today
+      };
+
+      await addDoc(attendanceRef, {
+        ...attendanceRecord,
+        date: Timestamp.fromDate(today),
+        createdAt: Timestamp.fromDate(today)
+      });
+
+      // Update attendance stats
+      await updateAttendanceStats(userId, true);
+
+      // Clean up old records
+      await cleanupOldRecords(userId);
+
+      return { success: true, message: 'Attendance marked successfully' };
+    } catch (error) {
+      console.error('Error marking attendance:', error);
+      return { success: false, message: 'Failed to mark attendance' };
     }
   };
 
-  return mockPlan;
-} 
+  const updateAttendanceStats = async (userId: string, isPresent: boolean) => {
+    try {
+      const statsRef = collection(db, 'attendanceStats');
+      const q = query(statsRef, where('userId', '==', userId));
+      const querySnapshot = await getDocs(q);
+
+      const today = new Date();
+      let stats: AttendanceStats;
+
+      if (querySnapshot.empty) {
+        // Create new stats
+        stats = {
+          userId,
+          totalPresent: isPresent ? 1 : 0,
+          totalAbsent: isPresent ? 0 : 1,
+          currentStreak: isPresent ? 1 : 0,
+          longestStreak: isPresent ? 1 : 0,
+          lastAttendance: isPresent ? today : null,
+          lastUpdated: today
+        };
+        await addDoc(statsRef, {
+          ...stats,
+          lastAttendance: stats.lastAttendance ? Timestamp.fromDate(stats.lastAttendance) : null,
+          lastUpdated: Timestamp.fromDate(stats.lastUpdated)
+        });
+      } else {
+        const docRef = doc(db, 'attendanceStats', querySnapshot.docs[0].id);
+        const existingStats = querySnapshot.docs[0].data() as AttendanceStats;
+
+        // Calculate streak
+        let currentStreak = existingStats.currentStreak;
+        if (isPresent) {
+          if (existingStats.lastAttendance) {
+            const daysSinceLastAttendance = differenceInDays(today, existingStats.lastAttendance);
+            if (daysSinceLastAttendance === 1) {
+              currentStreak++;
+            } else if (daysSinceLastAttendance > 1) {
+              currentStreak = 1;
+            }
+          } else {
+            currentStreak = 1;
+          }
+        } else {
+          currentStreak = 0;
+        }
+
+        stats = {
+          ...existingStats,
+          totalPresent: isPresent ? existingStats.totalPresent + 1 : existingStats.totalPresent,
+          totalAbsent: !isPresent ? existingStats.totalAbsent + 1 : existingStats.totalAbsent,
+          currentStreak,
+          longestStreak: Math.max(currentStreak, existingStats.longestStreak),
+          lastAttendance: isPresent ? today : existingStats.lastAttendance,
+          lastUpdated: today
+        };
+
+        await updateDoc(docRef, {
+          ...stats,
+          lastAttendance: stats.lastAttendance ? Timestamp.fromDate(stats.lastAttendance) : null,
+          lastUpdated: Timestamp.fromDate(stats.lastUpdated)
+        });
+      }
+
+      return stats;
+    } catch (error) {
+      console.error('Error updating attendance stats:', error);
+      throw error;
+    }
+  };
+
+  const cleanupOldRecords = async (userId: string) => {
+    try {
+      const cutoffDate = subDays(new Date(), 100);
+      const attendanceRef = collection(db, 'attendance');
+      const q = query(
+        attendanceRef,
+        where('userId', '==', userId),
+        where('date', '<=', Timestamp.fromDate(cutoffDate))
+      );
+
+      const querySnapshot = await getDocs(q);
+      const deletePromises = querySnapshot.docs.map(doc => deleteDoc(doc.ref));
+      await Promise.all(deletePromises);
+    } catch (error) {
+      console.error('Error cleaning up old records:', error);
+    }
+  };
+
+  const getAttendanceStats = async (userId: string): Promise<AttendanceStats | null> => {
+    try {
+      const statsRef = collection(db, 'attendanceStats');
+      const q = query(statsRef, where('userId', '==', userId));
+      const querySnapshot = await getDocs(q);
+
+      if (querySnapshot.empty) {
+        return null;
+      }
+
+      const data = querySnapshot.docs[0].data();
+      return {
+        ...data,
+        lastAttendance: data.lastAttendance?.toDate() || null,
+        lastUpdated: data.lastUpdated.toDate()
+      } as AttendanceStats;
+    } catch (error) {
+      console.error('Error fetching attendance stats:', error);
+      return null;
+    }
+  };
+
+  return {
+    markAttendance,
+    getAttendanceStats,
+    updateAttendanceStats
+  };
+}; 

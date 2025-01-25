@@ -1,7 +1,9 @@
-import React from 'react';
-import { ArrowLeft, Crown } from 'lucide-react';
+import React, { useState } from 'react';
+import { ArrowLeft, Crown, Check } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { usePayment } from '../context/PaymentContext';
+import { useTheme } from '../context/ThemeContext';
+import { useProfile } from '../context/ProfileContext';
 
 interface Plan {
   id: string;
@@ -59,119 +61,198 @@ const plans: Plan[] = [
 
 export default function MembershipDetails() {
   const navigate = useNavigate();
-  const { membership } = usePayment();
+  const { membership, createOrder, verifyPayment, loadMembership } = usePayment();
+  const { profile } = useProfile();
+  const { isDarkMode } = useTheme();
+  const [loading, setLoading] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
 
   // Calculate days remaining
-  const daysRemaining = membership?.endDate 
-    ? Math.ceil((new Date(membership.endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
+  const daysRemaining = membership?.end_date 
+    ? Math.ceil((new Date(membership.end_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
     : 0;
 
   // Calculate total days
-  const totalDays = membership?.startDate && membership?.endDate
-    ? Math.ceil((new Date(membership.endDate).getTime() - new Date(membership.startDate).getTime()) / (1000 * 60 * 60 * 24))
+  const totalDays = membership?.start_date && membership?.end_date
+    ? Math.ceil((new Date(membership.end_date).getTime() - new Date(membership.start_date).getTime()) / (1000 * 60 * 60 * 24))
     : 30;
 
   // Get active plan details
-  const activePlan = membership?.planId ? plans.find(p => p.id === membership.planId) : null;
+  const activePlan = membership?.plan_id ? plans.find(p => p.id === membership.plan_id) : null;
+
+  const handlePayment = async (plan: Plan) => {
+    try {
+      setLoading(true);
+      setSelectedPlan(plan.id);
+
+      // Create order
+      const { orderId } = await createOrder(plan.id, plan.price);
+
+      // Load Razorpay script if not already loaded
+      if (!window.Razorpay) {
+        const script = document.createElement('script');
+        script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+        await new Promise((resolve) => {
+          script.onload = resolve;
+          document.body.appendChild(script);
+        });
+      }
+
+      // Initialize Razorpay
+      const options = {
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID,
+        amount: plan.price * 100, // Convert to paise
+        currency: 'INR',
+        name: 'Triple A Fitness',
+        description: `${plan.name} - ${plan.duration} Membership`,
+        order_id: orderId,
+        handler: async function (response: any) {
+          try {
+            await verifyPayment(
+              response.razorpay_payment_id,
+              response.razorpay_order_id,
+              response.razorpay_signature
+            );
+            // Reload membership details
+            await loadMembership();
+          } catch (error) {
+            console.error('Payment verification failed:', error);
+            alert('Payment verification failed. Please contact support.');
+          }
+        },
+        prefill: {
+          name: profile?.full_name || '',
+          email: profile?.email || '',
+          contact: profile?.personal_info?.contact || ''
+        },
+        theme: {
+          color: '#10B981'
+        }
+      };
+
+      const razorpay = new window.Razorpay(options);
+      razorpay.open();
+    } catch (error) {
+      console.error('Payment initiation failed:', error);
+      alert('Failed to initiate payment. Please try again.');
+    } finally {
+      setLoading(false);
+      setSelectedPlan(null);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#121212] py-8">
       <div className="max-w-7xl mx-auto px-4">
         {/* Back Button with Title */}
-        <div className="flex items-center gap-3 mb-6">
+        <div className="flex items-center gap-3 mb-8">
           <button
             onClick={() => navigate(-1)}
-            className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+            className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors"
           >
-            <ArrowLeft className="w-6 h-6" />
+            <ArrowLeft className="w-5 h-5" />
           </button>
-          <h1 className="text-xl font-semibold text-gray-900 dark:text-white">Membership</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Membership</h1>
         </div>
 
-        {/* Active Membership */}
-        <div className="bg-[#1E1E1E] rounded-xl p-6 mb-8">
-          <div className="flex items-center justify-between mb-4">
+        {/* Active Membership Card */}
+        <div className="bg-white dark:bg-[#1E1E1E] rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 p-6 mb-8">
+          <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-2">
-              <Crown className="w-5 h-5 text-yellow-500" />
-              <h2 className="text-lg font-semibold">Active Membership</h2>
+              <Crown className="w-6 h-6 text-yellow-500" />
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Active Membership</h2>
             </div>
-            <span className={`px-3 py-1 ${
-              membership?.isActive 
-                ? 'bg-emerald-500/10 text-emerald-500'
-                : 'bg-red-500/10 text-red-500'
-            } text-sm rounded-full`}>
-              {membership?.isActive ? 'Active' : 'Inactive'}
-              </span>
+            <span className={`px-4 py-1.5 rounded-full text-sm font-medium ${
+              membership?.status === 'active'
+                ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400'
+                : 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400'
+            }`}>
+              {membership?.status === 'active' ? 'Active' : 'Inactive'}
+            </span>
           </div>
 
-          <div className="mb-4">
-            <h3 className="text-lg font-medium">{activePlan?.name || 'No Active Plan'}</h3>
-            <p className="text-sm text-gray-400">
-              {membership?.endDate ? `Valid until ${new Date(membership.endDate).toLocaleDateString()}` : 'Not subscribed'}
-                    </p>
-                  </div>
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
+              {activePlan?.name || 'No Active Plan'}
+            </h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              {membership?.end_date ? `Valid until ${new Date(membership.end_date).toLocaleDateString()}` : 'Not subscribed'}
+            </p>
+          </div>
 
-          {membership?.isActive && (
+          {membership?.status === 'active' && (
             <div className="relative pt-1">
               <div className="flex items-center justify-between mb-2">
-                <div className="text-right">
-                  <span className="text-sm font-semibold text-emerald-500">
+                <div>
+                  <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
                     {daysRemaining} days
                   </span>
-                  <span className="text-sm text-gray-400"> remaining</span>
+                  <span className="text-sm text-gray-600 dark:text-gray-400"> remaining</span>
                 </div>
               </div>
-              <div className="overflow-hidden h-2 text-xs flex rounded bg-[#282828]">
+              <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                 <div
                   style={{ width: `${(daysRemaining / totalDays) * 100}%` }}
-                  className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-emerald-500"
+                  className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 dark:from-emerald-400 dark:to-teal-400 rounded-full transition-all duration-300"
                 ></div>
               </div>
-              </div>
-            )}
+            </div>
+          )}
         </div>
 
         {/* Available Plans */}
-        <div>
-          <h2 className="text-xl font-semibold mb-6">Available Plans</h2>
+        <div className="space-y-6">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white">Available Plans</h2>
           <div className="grid md:grid-cols-3 gap-6">
-              {plans.map((plan) => (
-                <div
-                  key={plan.id}
-                className={`bg-[#1E1E1E] rounded-xl p-6 border ${
-                  membership?.planId === plan.id
-                    ? 'border-emerald-500'
-                    : 'border-gray-800 hover:border-gray-700'
-                } transition-colors`}
+            {plans.map((plan) => (
+              <div
+                key={plan.id}
+                className={`bg-white dark:bg-[#1E1E1E] rounded-xl p-6 border ${
+                  membership?.plan_id === plan.id
+                    ? 'border-emerald-500 dark:border-emerald-400'
+                    : 'border-gray-200 dark:border-gray-800 hover:border-emerald-200 dark:hover:border-emerald-800'
+                } transition-all duration-300 hover:shadow-lg`}
               >
-                <h3 className="text-lg font-medium mb-2">{plan.name}</h3>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">{plan.name}</h3>
                 <div className="flex items-baseline gap-1 mb-4">
-                  <span className="text-2xl font-bold">₹{plan.price}</span>
-                  <span className="text-gray-400">/{plan.duration}</span>
-                  </div>
-                  <p className="text-sm text-gray-400 mb-4">
-                    Just ₹{plan.pricePerMonth} per month
-                  </p>
-                  <ul className="space-y-3 mb-6">
-                    {plan.features.map((feature, index) => (
-                    <li key={index} className="flex items-start gap-2 text-sm text-gray-300">
-                      <span className="text-emerald-500">•</span>
-                      {feature}
-                      </li>
-                    ))}
-                  </ul>
-                  <button
-                  className={`w-full ${
-                    membership?.planId === plan.id
-                      ? 'bg-emerald-500/20 text-emerald-500 cursor-default'
-                      : 'bg-emerald-500 hover:bg-emerald-600 text-white'
-                  } py-2 rounded-lg font-medium transition-colors`}
-                  disabled={membership?.planId === plan.id}
-                >
-                  {membership?.planId === plan.id ? 'Current Plan' : 'Choose Plan'}
-                  </button>
+                  <span className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">₹{plan.price}</span>
+                  <span className="text-gray-600 dark:text-gray-400">/{plan.duration}</span>
                 </div>
-              ))}
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                  Just ₹{plan.pricePerMonth} per month
+                </p>
+                <ul className="space-y-3 mb-6">
+                  {plan.features.map((feature, index) => (
+                    <li key={index} className="flex items-start gap-2">
+                      <Check className="w-5 h-5 text-emerald-500 dark:text-emerald-400 flex-shrink-0" />
+                      <span className="text-sm text-gray-600 dark:text-gray-300">{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+                <button
+                  onClick={() => handlePayment(plan)}
+                  disabled={loading || membership?.plan_id === plan.id}
+                  className={`w-full py-2.5 rounded-xl font-medium transition-all duration-300 ${
+                    membership?.plan_id === plan.id
+                      ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400 cursor-default'
+                      : loading && selectedPlan === plan.id
+                      ? 'bg-gray-300 text-gray-600 cursor-wait'
+                      : 'bg-emerald-500 hover:bg-emerald-600 text-white dark:bg-gradient-to-r dark:from-emerald-400 dark:to-teal-400 dark:hover:from-emerald-500 dark:hover:to-teal-500 dark:text-black'
+                  }`}
+                >
+                  {membership?.plan_id === plan.id 
+                    ? 'Current Plan' 
+                    : loading && selectedPlan === plan.id 
+                    ? 'Processing...' 
+                    : 'Choose Plan'}
+                </button>
+              </div>
+            ))}
+          </div>
+          <div className="mt-6 text-center">
+            <p className="text-gray-500">
+              Secure payment powered by Razorpay
+            </p>
           </div>
         </div>
       </div>

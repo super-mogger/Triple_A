@@ -1,185 +1,117 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { db } from '../config/firebase';
 import { useAuth } from './AuthContext';
-
-interface Membership {
-  planId: string;
-  startDate: string;
-  endDate: string;
-  isActive: boolean;
-  lastPaymentId: string;
-}
-
-interface ProfileData {
-  uid: string;
-  email: string;
-  displayName: string;
-  photoURL: string;
-  personalInfo: {
-    age: string;
-    dateOfBirth: string;
-    gender: string;
-    bloodType: string;
-  };
-  stats: {
-    weight: string;
-    height: string;
-  };
-  preferences: {
-    fitnessLevel: string;
-    activityLevel: string;
-    dietary: string[];
-  };
-  goals: string[];
-  medicalInfo: {
-    conditions: string;
-  };
-  membership: Membership;
-  createdAt: string;
-  lastUpdated: string;
-}
+import { getProfile as getFirestoreProfile, updateProfile as updateFirestoreProfile, createProfile as createFirestoreProfile } from '../services/FirestoreService';
+import { toast } from 'react-hot-toast';
+import { Profile } from '../types/profile';
+import { Timestamp } from 'firebase/firestore';
 
 interface ProfileContextType {
-  profileData: ProfileData | null;
+  profile: Profile | null;
   loading: boolean;
-  updateProfile: (updatedData: Partial<ProfileData>) => Promise<void>;
+  error: Error | null;
+  updateProfile: (data: Partial<Profile>) => Promise<void>;
 }
 
-const ProfileContext = createContext<ProfileContextType>({} as ProfileContextType);
-
-export function useProfile() {
-  return useContext(ProfileContext);
-}
+const ProfileContext = createContext<ProfileContextType | undefined>(undefined);
 
 export function ProfileProvider({ children }: { children: React.ReactNode }) {
-  const [profileData, setProfileData] = useState<ProfileData | null>(null);
-  const [loading, setLoading] = useState(true);
   const { user } = useAuth();
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
-    const fetchProfile = async () => {
-      if (!user?.email) {
-        console.log('No authenticated user found');
-        setLoading(false);
-        return;
-      }
-
-      try {
-        console.log('Fetching profile for:', user.email);
-        const docRef = doc(db, 'users', user.uid);
-        const docSnap = await getDoc(docRef);
-
-        if (docSnap.exists()) {
-          console.log('Existing profile found:', docSnap.data());
-          const data = docSnap.data();
-          // Ensure membership exists and is active
-          if (!data.membership || !data.membership.isActive) {
-            data.membership = {
-              planId: 'monthly',
-              startDate: new Date().toISOString(),
-              endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-              isActive: true,
-              lastPaymentId: 'initial_free_month'
-            };
-            // Update the document with active membership
-            await setDoc(docRef, data, { merge: true });
-          }
-          setProfileData(data as ProfileData);
-        } else {
-          console.log('Creating new profile for:', user.email);
-          const initialProfile: ProfileData = {
-            uid: user.uid,
-            email: user.email,
-            displayName: user.displayName || '',
-            photoURL: user.photoURL || '',
-            personalInfo: {
-              age: '',
-              dateOfBirth: '',
-              gender: '',
-              bloodType: '',
-            },
-            stats: {
-              weight: '',
-              height: '',
-            },
-            preferences: {
-              fitnessLevel: '',
-              activityLevel: '',
-              dietary: [],
-            },
-            goals: [],
-            medicalInfo: {
-              conditions: '',
-            },
-            membership: {
-              planId: 'monthly',
-              startDate: new Date().toISOString(),
-              endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days from now
-              isActive: true,
-              lastPaymentId: 'initial_free_month'
-            },
-            createdAt: new Date().toISOString(),
-            lastUpdated: new Date().toISOString()
-          };
-          
-          await setDoc(docRef, initialProfile);
-          console.log('Initial profile created');
-          setProfileData(initialProfile);
-        }
-      } catch (error) {
-        console.error('Error in ProfileContext:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchProfile();
+    if (user) {
+      fetchProfile();
+    } else {
+      setProfile(null);
+      setLoading(false);
+    }
   }, [user]);
 
-  const updateProfile = async (updatedData: Partial<ProfileData>) => {
-    if (!user?.email || !profileData) {
-      console.log('No authenticated user found or no existing profile');
-      return;
-    }
+  const fetchProfile = async () => {
+    if (!user?.uid) return;
     
     try {
-      console.log('Updating profile for:', user.email);
-      const docRef = doc(db, 'users', user.uid);
+      setLoading(true);
+      const { data: profileData, error: fetchError } = await getFirestoreProfile(user.uid);
       
-      console.log('Current profile data:', profileData);
-      console.log('Update data received:', updatedData);
+      if (fetchError) throw fetchError;
       
-      // Merge with existing data
-      const updatedProfile: ProfileData = {
-        ...profileData,
-        ...updatedData,
-        uid: user.uid,
-        email: user.email,
-        displayName: user.displayName || '',
-        photoURL: user.photoURL || '',
-        lastUpdated: new Date().toISOString(),
+      if (profileData) {
+        setProfile(profileData);
+      } else {
+        // Create default profile if none exists
+        const now = Timestamp.now();
+        const defaultProfile: Profile = {
+          id: user.uid,
+          user_id: user.uid,
+          personal_info: {
+            date_of_birth: '',
+            gender: 'male',
+            height: 0,
+            weight: 0,
+            contact: '',
+            blood_type: ''
+          },
+          medical_info: {
+            conditions: ''
+          },
+          preferences: {
+            dietary: [],
+            workout_days: [],
+            fitness_goals: [],
+            fitness_level: '',
+            activity_level: 'moderate'
+          },
+          created_at: now,
+          updated_at: now
+        };
+        
+        const { error: createError } = await createFirestoreProfile(user.uid, defaultProfile);
+        if (createError) throw createError;
+        
+        setProfile(defaultProfile);
+      }
+    } catch (err) {
+      console.error('Error fetching profile:', err);
+      setError(err as Error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateProfile = async (data: Partial<Profile>) => {
+    if (!user?.uid) {
+      return;
+    }
+
+    try {
+      const updatedData = {
+        ...data,
+        updated_at: Timestamp.now()
       };
-
-      console.log('Final update data:', updatedProfile);
-
-      await setDoc(docRef, updatedProfile, { merge: true });
-      console.log('Profile updated successfully');
-      setProfileData(updatedProfile);
-    } catch (error: any) {
-      console.error('Detailed error:', {
-        error,
-        code: error?.code,
-        message: error?.message,
-        stack: error?.stack
-      });
-      throw error;
+      const { error: updateError } = await updateFirestoreProfile(user.uid, updatedData);
+      if (updateError) throw updateError;
+      
+      await fetchProfile(); // Refresh profile data
+    } catch (err) {
+      console.error('Error updating profile:', err);
+      throw err;
     }
   };
 
   return (
-    <ProfileContext.Provider value={{ profileData, loading, updateProfile }}>
+    <ProfileContext.Provider value={{ profile, loading, error, updateProfile }}>
       {children}
     </ProfileContext.Provider>
   );
+}
+
+export function useProfile() {
+  const context = useContext(ProfileContext);
+  if (context === undefined) {
+    throw new Error('useProfile must be used within a ProfileProvider');
+  }
+  return context;
 }

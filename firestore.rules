@@ -12,6 +12,27 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
+    // Validate payment data
+    function isValidPayment() {
+      let data = request.resource.data;
+      return data.keys().hasAll(['amount', 'currency', 'status', 'userId', 'planId', 'createdAt', 'paymentMethod']) &&
+        data.userId == request.auth.uid &&
+        data.currency == 'INR' &&
+        (data.status in ['completed', 'failed', 'cancelled']) &&
+        (data.planId in ['monthly', 'quarterly', 'yearly']) &&
+        data.paymentMethod == 'razorpay' &&
+        data.amount is number &&
+        data.amount > 0;
+    }
+
+    // Validate metadata
+    function hasValidMetadata() {
+      let data = request.resource.data;
+      return data.metadata is map &&
+        data.metadata.gateway == 'razorpay' &&
+        (data.metadata.environment in ['development', 'production']);
+    }
+
     // Allow users to read and write their own data
     match /users/{userId} {
       allow read: if isAuthenticated();
@@ -28,20 +49,48 @@ service cloud.firestore {
     match /payments/{paymentId} {
       allow read: if isAuthenticated() && 
         resource.data.userId == request.auth.uid;
+      
+      // Allow creating new payments
       allow create: if isAuthenticated() && 
-        request.resource.data.userId == request.auth.uid;
-      allow update: if false; // Payments should never be updated
-      allow delete: if false; // Payments should never be deleted
+        isValidPayment() &&
+        hasValidMetadata();
+      
+      // Never allow updates or deletes
+      allow update, delete: if false;
     }
     
     // Allow users to read and write their own profile
     match /profiles/{userId} {
-      allow read, write: if isUserOwned(userId);
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow write: if request.auth != null && request.auth.uid == userId;
     }
 
     // Allow users to read their own membership details
-    match /memberships/{userId} {
-      allow read, write: if isUserOwned(userId);
+    match /memberships/{membershipId} {
+      allow read: if request.auth != null && resource.data.user_id == request.auth.uid;
+      allow create: if true;  // Temporarily allow creation for testing
+      allow update: if request.auth != null && resource.data.user_id == request.auth.uid;
+      allow delete: if request.auth != null && resource.data.user_id == request.auth.uid;
+    }
+
+    // Payment history collection (for querying)
+    match /payment-history/{userId} {
+      allow read: if isUserOwned(userId);
+      
+      match /transactions/{transactionId} {
+        allow read: if isUserOwned(userId);
+      }
+    }
+
+    match /attendance/{document} {
+      allow read, write: if request.auth != null && 
+        (request.auth.uid == resource.data.userId || 
+         request.auth.uid == request.resource.data.userId);
+    }
+    match /attendanceStats/{document} {
+      allow read, write: if request.auth != null && 
+        (request.auth.uid == resource.data.userId || 
+         request.auth.uid == request.resource.data.userId);
     }
   }
 }

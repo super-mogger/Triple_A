@@ -1,10 +1,10 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import { LayoutDashboard, Dumbbell, UtensilsCrossed, CalendarCheck } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 
 const navItems = [
-  { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
+  { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/workouts', icon: Dumbbell, label: 'Workouts' },
   { to: '/diet', icon: UtensilsCrossed, label: 'Diet' },
   { to: '/attendance', icon: CalendarCheck, label: 'Attendance' }
@@ -16,9 +16,10 @@ interface NavigationProps {
 
 export default function Navigation({ onLogout }: NavigationProps) {
   const { isDarkMode } = useTheme();
+  const location = useLocation();
 
   return (
-    <nav className={`${
+    <nav className={`fixed bottom-0 left-0 right-0 z-50 pb-safe ${
       isDarkMode 
         ? 'bg-dark-surface/80 border-gray-800/50' 
         : 'bg-white/80 border-gray-200/50'

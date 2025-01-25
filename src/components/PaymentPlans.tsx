@@ -1,7 +1,8 @@
-import React from 'react';
-import { razorpayService } from '../services/RazorpayClientService';
-import { useAuth } from '../hooks/useAuth';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import React, { useState } from 'react';
+import { useAuth } from '../context/AuthContext';
+import { loadRazorpayScript, createOrder, initializeRazorpayPayment } from '../services/RazorpayService';
+import { Dumbbell, Calendar, Clock } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 interface Plan {
   id: string;
@@ -9,183 +10,180 @@ interface Plan {
   price: number;
   duration: string;
   features: string[];
+  popular?: boolean;
+  icon: React.ReactNode;
 }
 
 const plans: Plan[] = [
   {
     id: 'monthly',
     name: 'Monthly Plan',
-    price: 999,
+    price: 699,
     duration: '1 Month',
     features: [
-      'Full Gym Access',
-      'Personal Trainer',
-      'Diet Consultation',
-      'Progress Tracking'
-    ]
+      'Access to all gym equipment',
+      'Personal trainer consultation',
+      'Group fitness classes',
+      'Locker room access',
+      'Fitness assessment'
+    ],
+    icon: <Clock className="w-6 h-6" />
   },
   {
     id: 'quarterly',
     name: 'Quarterly Plan',
-    price: 2499,
+    price: 1799,
     duration: '3 Months',
     features: [
-      'All Monthly Features',
-      'Fitness Classes',
-      '15% Discount',
-      'Nutrition Plan'
-    ]
+      'All Monthly Plan features',
+      'Nutrition consultation',
+      'Personalized workout plan',
+      'Progress tracking',
+      'Priority booking'
+    ],
+    popular: true,
+    icon: <Calendar className="w-6 h-6" />
   },
   {
     id: 'yearly',
-    name: 'Yearly Plan',
-    price: 7999,
+    name: 'Annual Plan',
+    price: 5999,
     duration: '12 Months',
     features: [
-      'All Quarterly Features',
-      'Free Supplements',
-      '25% Discount',
-      'Priority Support'
-    ]
+      'All Quarterly Plan features',
+      'Free supplements starter pack',
+      'Exclusive member events',
+      'Guest passes',
+      'Annual health check-up'
+    ],
+    icon: <Dumbbell className="w-6 h-6" />
   }
 ];
 
-const getErrorMessage = (errorCode: string | null): string => {
-  switch (errorCode) {
-    case 'payment-failed':
-      return 'Your payment was not successful. Please try again.';
-    case 'verification-failed':
-      return 'Payment verification failed. Please contact support.';
-    default:
-      return 'An error occurred. Please try again.';
-  }
-};
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  return String(error);
+}
 
-export const PaymentPlans: React.FC = () => {
-  const { user, loading: authLoading } = useAuth();
-  const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const [loading, setLoading] = React.useState<string | null>(null);
-  const [error, setError] = React.useState<string | null>(null);
-
-  // Handle URL error parameters
-  React.useEffect(() => {
-    const errorParam = searchParams.get('error');
-    if (errorParam) {
-      setError(getErrorMessage(errorParam));
-    }
-  }, [searchParams]);
-
-  // Redirect to login if not authenticated
-  React.useEffect(() => {
-    if (!authLoading && !user) {
-      navigate('/login', { state: { from: '/plans' } });
-    }
-  }, [user, authLoading, navigate]);
+export default function PaymentPlans() {
+  const { user } = useAuth();
+  const [loading, setLoading] = useState<string | null>(null);
 
   const handlePayment = async (plan: Plan) => {
+    if (!user) {
+      toast.error('Please sign in to purchase a plan');
+      return;
+    }
+
     try {
       setLoading(plan.id);
-      setError(null);
 
-      await razorpayService.createOrder({
+      // Load Razorpay script
+      const isLoaded = await loadRazorpayScript();
+      if (!isLoaded) {
+        throw new Error('Failed to load payment gateway');
+      }
+
+      // Create order
+      const orderId = await createOrder({
         amount: plan.price,
         planId: plan.id,
-        name: 'Triple A Fitness',
-        description: `${plan.name} Membership`,
-        prefill: {
-          name: user?.displayName || undefined,
-          email: user?.email || undefined,
-          contact: user?.phoneNumber || undefined
-        }
+        userId: user.uid
       });
-    } catch (err) {
-      console.error('Payment failed:', err);
-      let errorMessage = 'Payment failed. Please try again.';
-      
-      if (err instanceof Error) {
-        if (err.message.includes('User must be logged in')) {
-          errorMessage = 'Please log in to make a payment.';
-          navigate('/login', { state: { from: '/plans' } });
-        } else if (err.message.includes('Failed to create order')) {
-          errorMessage = 'Unable to create order. Please try again later.';
-        } else if (err.message.includes('Payment verification failed')) {
-          errorMessage = 'Payment verification failed. Please contact support.';
-        } else {
-          errorMessage = err.message;
-        }
-      }
-      
-      setError(errorMessage);
+
+      // Initialize payment
+      await initializeRazorpayPayment({
+        amount: plan.price,
+        currency: 'INR',
+        orderId,
+        planId: plan.id,
+        userInfo: {
+          name: user.displayName || '',
+          email: user.email || '',
+          contact: user.phoneNumber || ''
+        },
+        onSuccess: handlePaymentSuccess,
+        onError: handlePaymentError
+      });
+    } catch (error) {
+      console.error('Payment error:', error);
+      toast.error(getErrorMessage(error));
     } finally {
       setLoading(null);
     }
   };
 
-  if (authLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-      </div>
-    );
-  }
+  const handlePaymentSuccess = (response: any) => {
+    toast.success('Payment successful! Welcome to Triple A Gym!');
+    console.log('Payment success:', response);
+  };
+
+  const handlePaymentError = (error: any) => {
+    toast.error('Payment failed: ' + getErrorMessage(error));
+    console.error('Payment error:', error);
+  };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <div className="py-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
       <div className="text-center">
-        <h2 className="text-3xl font-extrabold text-gray-900 sm:text-4xl">
-          Choose Your Membership Plan
+        <h2 className="text-3xl font-bold text-gray-900 dark:text-white sm:text-4xl">
+          Choose Your Plan
         </h2>
-        <p className="mt-4 text-xl text-gray-600">
-          Select the plan that best fits your fitness journey
+        <p className="mt-4 text-lg text-gray-600 dark:text-gray-400">
+          Select the perfect membership plan for your fitness journey
         </p>
       </div>
 
-      {error && (
-        <div className="mt-8 max-w-md mx-auto bg-red-50 p-4 rounded-md">
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-              </svg>
-            </div>
-            <div className="ml-3">
-              <p className="text-sm font-medium text-red-800">{error}</p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div className="mt-12 grid gap-8 lg:grid-cols-3">
+      <div className="mt-12 space-y-4 sm:mt-16 sm:space-y-0 sm:grid sm:grid-cols-2 sm:gap-6 lg:max-w-4xl lg:mx-auto xl:max-w-none xl:grid-cols-3">
         {plans.map((plan) => (
           <div
             key={plan.id}
-            className="relative bg-white rounded-lg shadow-lg overflow-hidden"
+            className={`rounded-lg shadow-lg divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800 ${
+              plan.popular ? 'ring-2 ring-emerald-500' : ''
+            }`}
           >
-            <div className="px-6 py-8">
-              <h3 className="text-2xl font-semibold text-gray-900">{plan.name}</h3>
-              <p className="mt-4 text-gray-500">{plan.duration}</p>
+            <div className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    {plan.name}
+                  </h3>
+                  <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                    {plan.duration}
+                  </p>
+                </div>
+                <div className={`p-2 rounded-lg ${
+                  plan.popular ? 'bg-emerald-500' : 'bg-gray-100 dark:bg-gray-700'
+                }`}>
+                  {React.cloneElement(plan.icon as React.ReactElement, {
+                    className: `w-6 h-6 ${plan.popular ? 'text-white' : 'text-gray-500 dark:text-gray-400'}`
+                  })}
+                </div>
+              </div>
+
               <p className="mt-8">
-                <span className="text-4xl font-extrabold text-gray-900">
-                  ₹{plan.price}
-                </span>
+                <span className="text-4xl font-bold text-gray-900 dark:text-white">₹{plan.price}</span>
               </p>
 
-              <ul className="mt-8 space-y-4">
+              <ul className="mt-6 space-y-4">
                 {plan.features.map((feature, index) => (
-                  <li key={index} className="flex items-center">
+                  <li key={index} className="flex">
                     <svg
-                      className="w-5 h-5 text-green-500"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
+                      className="flex-shrink-0 w-6 h-6 text-emerald-500"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
                     >
                       <path
-                        fillRule="evenodd"
-                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                        clipRule="evenodd"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M5 13l4 4L19 7"
                       />
                     </svg>
-                    <span className="ml-3 text-gray-600">{feature}</span>
+                    <span className="ml-3 text-sm text-gray-700 dark:text-gray-300">
+                      {feature}
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -193,21 +191,37 @@ export const PaymentPlans: React.FC = () => {
               <button
                 onClick={() => handlePayment(plan)}
                 disabled={!!loading}
-                className={`mt-8 block w-full bg-indigo-600 hover:bg-indigo-700 
-                  text-white font-semibold py-3 px-4 rounded-md text-center
-                  transition duration-150 ease-in-out
-                  ${loading === plan.id ? 'opacity-75 cursor-not-allowed' : ''}
-                  ${!user ? 'opacity-50 cursor-not-allowed' : ''}`}
+                className={`mt-8 w-full py-3 px-4 rounded-md shadow ${
+                  plan.popular
+                    ? 'bg-emerald-500 hover:bg-emerald-600 focus:ring-emerald-500'
+                    : 'bg-gray-800 hover:bg-gray-900 focus:ring-gray-500'
+                } text-white text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200`}
               >
                 {loading === plan.id ? (
                   <div className="flex items-center justify-center">
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                    Processing...
+                    <svg
+                      className="animate-spin h-5 w-5 text-white"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
+                    </svg>
                   </div>
-                ) : !user ? (
-                  'Please Login'
                 ) : (
-                  'Subscribe Now'
+                  'Get Started'
                 )}
               </button>
             </div>
@@ -216,4 +230,4 @@ export const PaymentPlans: React.FC = () => {
       </div>
     </div>
   );
-}; 
+} 

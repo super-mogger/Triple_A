@@ -1,34 +1,87 @@
-import { StrictMode } from 'react';
+import { StrictMode, lazy, Suspense } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
-import App from './App';
 import './index.css';
 import ErrorBoundary from './components/ErrorBoundary';
+import './config/firebase';
 
-// Debug Firebase config
-console.log('Firebase Config:', {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID
+// Preload and cache critical routes
+const CRITICAL_ROUTES = {
+  app: () => import('./App'),
+  dashboard: () => import('./pages/Dashboard'),
+  diet: () => import('./pages/DietPlan'),
+  profile: () => import('./pages/Profile')
+};
+
+// Preload critical routes in parallel
+Object.values(CRITICAL_ROUTES).forEach(importFn => {
+  importFn().then(module => {
+    // Cache the module in memory
+    (window as any).__ROUTE_CACHE__ = {
+      ...(window as any).__ROUTE_CACHE__,
+      [module.default.name]: module
+    };
+  });
 });
 
-// Debug Razorpay config
-console.log('Razorpay Key:', import.meta.env.REACT_APP_RAZORPAY_KEY_ID);
+// Optimized App loading with route prefetching
+const App = lazy(() => {
+  // Load App and critical routes in parallel
+  return Promise.all([
+    CRITICAL_ROUTES.app(),
+    CRITICAL_ROUTES.dashboard(),
+    CRITICAL_ROUTES.diet()
+  ]).then(([appModule]) => appModule);
+});
 
-const rootElement = document.getElementById('root');
-if (!rootElement) throw new Error('Failed to find the root element');
+// Optimized loading UI with instant feedback
+const LoadingFallback = () => (
+  <div className="min-h-screen bg-gray-50 dark:bg-[#121212] flex items-center justify-center">
+    <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+  </div>
+);
 
-const root = createRoot(rootElement);
+const container = document.getElementById('root');
+const root = createRoot(container!);
 
+// Performance optimizations
+if (import.meta.env.PROD) {
+  console.log = () => {};
+  console.debug = () => {};
+  console.info = () => {};
+}
+
+// Memory management
+window.addEventListener('beforeunload', () => {
+  root.unmount();
+  // Clear route cache
+  (window as any).__ROUTE_CACHE__ = {};
+});
+
+// Link prefetching
+const prefetchLinks = () => {
+  requestIdleCallback(() => {
+    const links = document.querySelectorAll('a[href^="/"]');
+    links.forEach(link => {
+      const href = link.getAttribute('href');
+      if (href) {
+        const route = href.split('/')[1];
+        if (CRITICAL_ROUTES[route as keyof typeof CRITICAL_ROUTES]) {
+          // Prefetch when browser is idle
+          CRITICAL_ROUTES[route as keyof typeof CRITICAL_ROUTES]();
+        }
+      }
+    });
+  });
+};
+
+// Optimized render with route prefetching
 root.render(
-  <StrictMode>
-    <ErrorBoundary>
+  <ErrorBoundary>
+    <Suspense fallback={<LoadingFallback />}>
       <BrowserRouter>
         <App />
       </BrowserRouter>
-    </ErrorBoundary>
-  </StrictMode>
+    </Suspense>
+  </ErrorBoundary>
 );

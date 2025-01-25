@@ -1,160 +1,166 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { 
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import {
   User,
-  signInWithEmailAndPassword,
-  signOut,
-  onAuthStateChanged,
   GoogleAuthProvider,
   signInWithPopup,
+  signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
-  sendEmailVerification,
-  sendPasswordResetEmail as firebaseSendPasswordResetEmail
+  sendPasswordResetEmail,
+  signOut as firebaseSignOut,
+  onAuthStateChanged,
+  updateProfile,
+  updatePassword as updateUserPassword,
+  browserPopupRedirectResolver,
+  UserCredential
 } from 'firebase/auth';
 import { auth } from '../config/firebase';
-import { createUserProfile } from '../services/database';
+import { toast } from 'react-hot-toast';
+import { createProfile, getProfile } from '../services/FirestoreService';
+import { useNavigate } from 'react-router-dom';
 
 interface AuthContextType {
   user: User | null;
-  isAuthenticated: boolean;
-  isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  loginWithGoogle: () => Promise<void>;
-  logout: () => Promise<void>;
-  signup: (email: string, password: string) => Promise<void>;
-  error: string | null;
-  sendVerificationEmail: () => Promise<void>;
-  isEmailVerified: boolean;
-  sendPasswordResetEmail: (email: string) => Promise<void>;
+  loading: boolean;
+  error: Error | null;
+  signUp: (email: string, password: string) => Promise<UserCredential>;
+  signIn: (email: string, password: string) => Promise<UserCredential>;
+  signInWithGoogle: () => Promise<UserCredential>;
+  signOut: () => Promise<void>;
+  resetPassword: (email: string) => Promise<{ error: Error | null }>;
+  updatePassword: (newPassword: string) => Promise<{ error: Error | null }>;
+  updateProfile: (data: { displayName?: string; photoURL?: string }) => Promise<{ error: Error | null }>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    console.log('Setting up auth state listener');
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      console.log('Auth state changed:', user?.email);
       setUser(user);
-      setIsLoading(false);
+      setLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+      console.log('Cleaning up auth state listener');
+      unsubscribe();
+    };
   }, []);
 
-  const login = async (email: string, password: string) => {
+  const signIn = async (email: string, password: string) => {
     try {
-      setError(null);
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      
-      if (!userCredential.user.emailVerified) {
-        setError('Please verify your email before signing in');
-        await signOut(auth);
-        return;
-      }
-      
       setUser(userCredential.user);
-      navigate('/');
-    } catch (err) {
-      setError('Invalid email or password');
-      throw err;
+      return { error: null };
+    } catch (error: any) {
+      console.error('Sign in error:', error);
+      return { error };
     }
   };
 
-  const loginWithGoogle = async () => {
+  const signUp = async (email: string, password: string) => {
     try {
-      setError(null);
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      setUser(userCredential.user);
+      return { error: null };
+    } catch (error: any) {
+      console.error('Sign up error:', error);
+      return { error };
+    }
+  };
+
+  const signInWithGoogle = async () => {
+    try {
       const provider = new GoogleAuthProvider();
       const userCredential = await signInWithPopup(auth, provider);
       setUser(userCredential.user);
-      navigate('/dashboard');
-    } catch (err) {
-      setError('Failed to sign in with Google');
-      throw err;
+      return { error: null };
+    } catch (error: any) {
+      console.error('Google sign in error:', error);
+      return { error };
     }
   };
 
-  const logout = async () => {
+  const signOut = async () => {
     try {
-      await signOut(auth);
+      await auth.signOut();
       setUser(null);
-      navigate('/welcome');
-    } catch (err) {
-      setError('Failed to log out');
-      throw err;
+      return { error: null };
+    } catch (error: any) {
+      console.error('Sign out error:', error);
+      return { error };
     }
   };
 
-  const signup = async (email: string, password: string) => {
+  const resetPassword = async (email: string) => {
     try {
-      setError(null);
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      
-      // Create user profile in Firestore
-      await createUserProfile({
-        uid: userCredential.user.uid,
-        email: userCredential.user.email!,
-        displayName: userCredential.user.displayName || undefined,
-        photoURL: userCredential.user.photoURL || undefined,
-        joinDate: new Date(),
-        lastUpdated: new Date()
-      });
-      
-      // Send verification email
-      await sendEmailVerification(userCredential.user);
-      setUser(userCredential.user);
-      
-      navigate('/verify-email');
-    } catch (err: any) {
-      if (err.code === 'auth/email-already-in-use') {
-        setError('An account with this email already exists');
-      } else {
-        setError('Failed to create an account');
-      }
-      throw err;
+      await sendPasswordResetEmail(auth, email);
+      return { error: null };
+    } catch (error: any) {
+      console.error('Password reset error:', error);
+      return { error };
     }
   };
 
-  const sendVerificationEmail = async () => {
-    if (user && !user.emailVerified) {
-      try {
-        await sendEmailVerification(user);
-      } catch (err) {
-        setError('Failed to send verification email');
-        throw err;
-      }
-    }
-  };
-
-  const sendPasswordResetEmail = async (email: string) => {
+  const updatePassword = async (password: string) => {
     try {
-      await firebaseSendPasswordResetEmail(auth, email);
-    } catch (err) {
-      setError('Failed to send password reset email');
-      throw err;
+      if (user) {
+        await updateUserPassword(user, password);
+        return { error: null };
+      }
+      return { error: new Error('No user logged in') };
+    } catch (error: any) {
+      console.error('Update password error:', error);
+      return { error };
     }
   };
+
+  const updateProfile = async (data: { displayName?: string; photoURL?: string }) => {
+    try {
+      if (user) {
+        await updateProfile(user, data);
+        return { error: null };
+      }
+      return { error: new Error('No user logged in') };
+    } catch (error: any) {
+      console.error('Update profile error:', error);
+      return { error };
+    }
+  };
+
+  const value = {
+    user,
+    loading,
+    error,
+    signUp,
+    signIn,
+    signInWithGoogle,
+    signOut,
+    resetPassword,
+    updatePassword,
+    updateProfile,
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-[#121212] flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-gray-600 dark:text-gray-400">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <AuthContext.Provider 
-      value={{ 
-        user, 
-        isAuthenticated: !!user, 
-        isLoading, 
-        login, 
-        loginWithGoogle, 
-        logout, 
-        signup, 
-        error,
-        sendVerificationEmail,
-        isEmailVerified: user?.emailVerified ?? false,
-        sendPasswordResetEmail,
-      }}
-    >
-      {!isLoading && children}
+    <AuthContext.Provider value={value}>
+      {!loading && children}
     </AuthContext.Provider>
   );
 }

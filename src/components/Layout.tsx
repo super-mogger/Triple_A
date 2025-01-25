@@ -1,17 +1,22 @@
 import React from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
+import { Outlet, useLocation, Navigate } from 'react-router-dom';
 import Header from './Header';
 import Navigation from './Navigation';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 
 export default function Layout() {
-  const { logout } = useAuth();
+  const { signOut, user } = useAuth();
   const { isDarkMode } = useTheme();
   const { pathname } = useLocation();
 
-  const showHeaderAndNav = !['profile', 'membership', 'achievements', 'profile/edit'].some(path => 
-    pathname.endsWith(path)
+  // Redirect to /dashboard if at root path
+  if (pathname === '/' && user) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  const showHeaderAndNav = !['/profile', '/membership', '/achievements', '/profile/edit', '/settings', '/plans'].some(path => 
+    pathname === path
   );
 
   return (
@@ -23,9 +28,7 @@ export default function Layout() {
         <Outlet />
       </main>
       {showHeaderAndNav && (
-        <div className="fixed bottom-0 left-0 right-0 pb-safe">
-          <Navigation onLogout={logout} />
-        </div>
+        <Navigation onLogout={signOut} />
       )}
     </div>
   );

@@ -48,9 +48,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (user) {
         try {
           // Check if profile exists
-          const { data: profile } = await getProfile(user.uid);
+          const { data: profile, error } = await getProfile(user.uid);
           
           if (!profile) {
+            console.log('Creating new profile for user:', user.email);
             // Create default profile if none exists
             const defaultProfile: Profile = {
               id: user.uid,
@@ -80,8 +81,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               updated_at: Timestamp.now()
             };
             
-            await createProfile(user.uid, defaultProfile);
+            const { error: createError } = await createProfile(user.uid, defaultProfile);
+            if (createError) {
+              console.error('Error creating profile:', createError);
+              setError(new Error('Failed to create profile'));
+            }
           } else {
+            console.log('Updating existing profile for user:', user.email);
             // Update profile with latest auth data
             const updates = {
               email: user.email || profile.email,
@@ -89,10 +95,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               photoURL: user.photoURL || profile.photoURL,
               updated_at: Timestamp.now()
             };
-            await updateProfile(user.uid, updates);
+            const { error: updateError } = await updateProfile(user.uid, updates);
+            if (updateError) {
+              console.error('Error updating profile:', updateError);
+              setError(new Error('Failed to update profile'));
+            }
           }
         } catch (error) {
           console.error('Error managing profile:', error);
+          setError(error instanceof Error ? error : new Error('Failed to manage profile'));
         }
       }
 

@@ -158,7 +158,7 @@ const Attendance = () => {
     );
     
     if (!record) return null;
-
+    
     return (
       <div className="flex justify-center">
         {record.status === 'present' ? (
@@ -250,15 +250,15 @@ const Attendance = () => {
 
   return (
     <div className="p-4">
-      <div className="flex justify-between items-center mb-6">
+        <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Attendance</h1>
-        <button
-          onClick={() => setShowScanner(true)}
+          <button
+            onClick={() => setShowScanner(true)}
           className="px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors"
-        >
-          Scan QR
-        </button>
-      </div>
+          >
+            Scan QR
+          </button>
+        </div>
 
       {renderStats()}
 
@@ -270,18 +270,18 @@ const Attendance = () => {
             tileContent={tileContent}
           />
         </div>
-        <div>
+                  <div>
           {renderRecentAttendance()}
+          </div>
         </div>
-      </div>
 
-      {showScanner && (
-        <QRScanner
-          onScanSuccess={handleScanSuccess}
-          onScanError={handleScanError}
-          onClose={() => setShowScanner(false)}
-        />
-      )}
+        {showScanner && (
+          <QRScanner
+            onScanSuccess={handleScanSuccess}
+            onScanError={handleScanError}
+            onClose={() => setShowScanner(false)}
+          />
+        )}
 
       <style>{`
         .attendance-calendar {

@@ -8,15 +8,15 @@ import {
   sendPasswordResetEmail,
   signOut as firebaseSignOut,
   onAuthStateChanged,
-  updateProfile,
+  updateProfile as updateUserProfile,
   updatePassword as updateUserPassword,
-  browserPopupRedirectResolver,
   UserCredential
 } from 'firebase/auth';
 import { auth } from '../config/firebase';
-import { toast } from 'react-hot-toast';
-import { createProfile, getProfile } from '../services/FirestoreService';
+import { getProfile, createProfile, updateProfile } from '../services/FirestoreService';
 import { useNavigate } from 'react-router-dom';
+import { Timestamp } from 'firebase/firestore';
+import type { Profile } from '../types/profile';
 
 interface AuthContextType {
   user: User | null;
@@ -26,9 +26,9 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<UserCredential>;
   signInWithGoogle: () => Promise<UserCredential>;
   signOut: () => Promise<void>;
-  resetPassword: (email: string) => Promise<{ error: Error | null }>;
-  updatePassword: (newPassword: string) => Promise<{ error: Error | null }>;
-  updateProfile: (data: { displayName?: string; photoURL?: string }) => Promise<{ error: Error | null }>;
+  resetPassword: (email: string) => Promise<void>;
+  updatePassword: (newPassword: string) => Promise<void>;
+  updateUserProfile: (data: { displayName?: string; photoURL?: string }) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -44,6 +44,58 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       console.log('Auth state changed:', user?.email);
       setUser(user);
+
+      if (user) {
+        try {
+          // Check if profile exists
+          const { data: profile } = await getProfile(user.uid);
+          
+          if (!profile) {
+            // Create default profile if none exists
+            const defaultProfile: Profile = {
+              id: user.uid,
+              user_id: user.uid,
+              email: user.email || '',
+              username: user.displayName || user.email?.split('@')[0] || `user_${user.uid.substring(0, 6)}`,
+              photoURL: user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.uid}`,
+              personal_info: {
+                date_of_birth: '',
+                gender: 'male',
+                height: 170,
+                weight: 70,
+                contact: '',
+                blood_type: ''
+              },
+              medical_info: {
+                conditions: ''
+              },
+              preferences: {
+                dietary: [],
+                workout_days: [],
+                fitness_goals: [],
+                fitness_level: 'beginner',
+                activity_level: 'moderate'
+              },
+              created_at: Timestamp.now(),
+              updated_at: Timestamp.now()
+            };
+            
+            await createProfile(user.uid, defaultProfile);
+          } else {
+            // Update profile with latest auth data
+            const updates = {
+              email: user.email || profile.email,
+              username: user.displayName || profile.username,
+              photoURL: user.photoURL || profile.photoURL,
+              updated_at: Timestamp.now()
+            };
+            await updateProfile(user.uid, updates);
+          }
+        } catch (error) {
+          console.error('Error managing profile:', error);
+        }
+      }
+
       setLoading(false);
     });
 
@@ -54,87 +106,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      setUser(userCredential.user);
-      return { error: null };
-    } catch (error: any) {
-      console.error('Sign in error:', error);
-      return { error };
-    }
+    return signInWithEmailAndPassword(auth, email, password);
   };
 
   const signUp = async (email: string, password: string) => {
-    try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      setUser(userCredential.user);
-      return { error: null };
-    } catch (error: any) {
-      console.error('Sign up error:', error);
-      return { error };
-    }
+    return createUserWithEmailAndPassword(auth, email, password);
   };
 
   const signInWithGoogle = async () => {
-    try {
-      const provider = new GoogleAuthProvider();
-      const userCredential = await signInWithPopup(auth, provider);
-      setUser(userCredential.user);
-      return { error: null };
-    } catch (error: any) {
-      console.error('Google sign in error:', error);
-      return { error };
-    }
+    const provider = new GoogleAuthProvider();
+    return signInWithPopup(auth, provider);
   };
 
   const signOut = async () => {
-    try {
-      await auth.signOut();
-      setUser(null);
-      return { error: null };
-    } catch (error: any) {
-      console.error('Sign out error:', error);
-      return { error };
-    }
+    await firebaseSignOut(auth);
   };
 
   const resetPassword = async (email: string) => {
-    try {
-      await sendPasswordResetEmail(auth, email);
-      return { error: null };
-    } catch (error: any) {
-      console.error('Password reset error:', error);
-      return { error };
-    }
+    await sendPasswordResetEmail(auth, email);
   };
 
   const updatePassword = async (password: string) => {
-    try {
-      if (user) {
-        await updateUserPassword(user, password);
-        return { error: null };
-      }
-      return { error: new Error('No user logged in') };
-    } catch (error: any) {
-      console.error('Update password error:', error);
-      return { error };
-    }
+    if (!user) throw new Error('No user logged in');
+    await updateUserPassword(user, password);
   };
 
-  const updateProfile = async (data: { displayName?: string; photoURL?: string }) => {
-    try {
-      if (user) {
-        await updateProfile(user, data);
-        return { error: null };
-      }
-      return { error: new Error('No user logged in') };
-    } catch (error: any) {
-      console.error('Update profile error:', error);
-      return { error };
-    }
+  const updateUserProfileData = async (data: { displayName?: string; photoURL?: string }) => {
+    if (!user) throw new Error('No user logged in');
+    await updateUserProfile(user, data);
   };
 
-  const value = {
+  const value: AuthContextType = {
     user,
     loading,
     error,
@@ -144,7 +146,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signOut,
     resetPassword,
     updatePassword,
-    updateProfile,
+    updateUserProfile: updateUserProfileData
   };
 
   if (loading) {

@@ -82,39 +82,44 @@ export async function getProfile(userId: string) {
     
     if (profileSnap.exists()) {
       const data = profileSnap.data();
-      // Convert Firestore timestamps to our Profile type
+      // Convert Firestore data to our Profile type with all required fields
       return { 
         data: {
-          ...data,
-          created_at: data.created_at,
-          updated_at: data.updated_at,
+          id: profileSnap.id,
+          email: data.email || '',
+          username: data.username || '',
+          photoURL: data.photoURL || '',
           personal_info: {
-            ...data.personal_info,
-            date_of_birth: data.personal_info?.date_of_birth || '',
-            gender: data.personal_info?.gender || 'male',
             height: data.personal_info?.height || 0,
             weight: data.personal_info?.weight || 0,
-            contact: data.personal_info?.contact || '',
-            blood_type: data.personal_info?.blood_type || ''
+            gender: data.personal_info?.gender || 'male',
+            date_of_birth: data.personal_info?.date_of_birth || '',
+            blood_type: data.personal_info?.blood_type || '',
+            contact: data.personal_info?.contact || ''
           },
           medical_info: {
             conditions: data.medical_info?.conditions || ''
           },
           preferences: {
-            dietary: data.preferences?.dietary || [],
-            workout_days: data.preferences?.workout_days || [],
-            fitness_goals: data.preferences?.fitness_goals || [],
-            fitness_level: data.preferences?.fitness_level || '',
-            activity_level: data.preferences?.activity_level || 'moderate'
-          }
-        } as Profile,
-        error: null 
+            activity_level: data.preferences?.activity_level || 'beginner',
+            dietary_preferences: data.preferences?.dietary_preferences || [],
+            workout_preferences: data.preferences?.workout_preferences || [],
+            fitness_goals: data.preferences?.fitness_goals || []
+          },
+          stats: {
+            bmi: data.stats?.bmi || '0',
+            activity_level: data.stats?.activity_level || 'beginner'
+          },
+          created_at: data.created_at,
+          updated_at: data.updated_at
+        } as FirestoreProfile,
+        error: null
       };
     }
-    return { data: null, error: null };
-  } catch (error) {
+    return { data: null, error: 'Profile not found' };
+  } catch (error: any) {
     console.error('Error getting profile:', error);
-    return { data: null, error };
+    return { data: null, error: error.message };
   }
 }
 

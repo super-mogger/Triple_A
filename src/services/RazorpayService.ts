@@ -42,9 +42,9 @@ export const loadRazorpayScript = (): Promise<boolean> => {
   });
 };
 
-export const createOrder = async (orderDetails: OrderDetails): Promise<string> => {
+export const createOrder = async (orderDetails: OrderDetails): Promise<{ orderId: string, razorpayOrderId: string }> => {
   try {
-    // Create an order document in Firestore
+    // First create the order in Firestore
     const ordersRef = collection(db, 'orders');
     const orderDoc = await addDoc(ordersRef, {
       amount: orderDetails.amount,
@@ -54,10 +54,34 @@ export const createOrder = async (orderDetails: OrderDetails): Promise<string> =
       createdAt: new Date(),
     });
 
-    // In a production environment, you would make an API call to your backend
-    // to create a Razorpay order and get the order ID
-    // For now, we'll use the Firestore document ID as the order ID
-    return orderDoc.id;
+    // Then create the Razorpay order through our server
+    const response = await fetch('/api/create-razorpay-order', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        amount: orderDetails.amount * 100, // Convert to paise
+        currency: 'INR',
+        receipt: orderDoc.id,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to create Razorpay order');
+    }
+
+    const { razorpayOrderId } = await response.json();
+
+    // Update the Firestore document with the Razorpay order ID
+    await updateDoc(orderDoc, {
+      razorpayOrderId,
+    });
+
+    return {
+      orderId: orderDoc.id,
+      razorpayOrderId,
+    };
   } catch (error) {
     console.error('Error creating order:', error);
     throw error;

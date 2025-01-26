@@ -3,6 +3,9 @@ import { Timestamp } from 'firebase/firestore';
 export interface Profile {
   id: string;
   user_id: string;
+  email: string;
+  username: string;
+  photoURL?: string;
   personal_info: {
     gender: 'male' | 'female';
     date_of_birth: string;

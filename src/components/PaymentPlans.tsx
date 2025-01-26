@@ -85,7 +85,7 @@ export default function PaymentPlans() {
       }
 
       // Create order
-      const orderId = await createOrder({
+      const { orderId, razorpayOrderId } = await createOrder({
         amount: plan.price,
         planId: plan.id,
         userId: user.uid
@@ -95,7 +95,7 @@ export default function PaymentPlans() {
       await initializeRazorpayPayment({
         amount: plan.price,
         currency: 'INR',
-        orderId,
+        orderId: razorpayOrderId,
         planId: plan.id,
         userInfo: {
           name: user.displayName || '',

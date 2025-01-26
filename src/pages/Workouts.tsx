@@ -472,20 +472,20 @@ export default function Workouts() {
             <p className="text-gray-600 dark:text-gray-300 mb-6">
               Get access to personalized workout plans, exercise tracking, and more with a membership.
             </p>
-            <div className="space-y-4">
+          <div className="space-y-4">
               <div className="flex items-center gap-3 text-gray-600 dark:text-gray-300">
                 <Target className="w-5 h-5 text-emerald-500" />
                 <span>Personalized workout plans</span>
-              </div>
+                  </div>
               <div className="flex items-center gap-3 text-gray-600 dark:text-gray-300">
                 <Calendar className="w-5 h-5 text-emerald-500" />
                 <span>Weekly workout schedules</span>
-              </div>
+                  </div>
               <div className="flex items-center gap-3 text-gray-600 dark:text-gray-300">
                 <BarChart className="w-5 h-5 text-emerald-500" />
                 <span>Progress tracking</span>
-              </div>
-            </div>
+                </div>
+          </div>
             <button
               onClick={() => navigate('/membership')}
               className="mt-8 px-6 py-3 bg-emerald-500 text-white rounded-xl font-medium hover:bg-emerald-600 transition-colors"

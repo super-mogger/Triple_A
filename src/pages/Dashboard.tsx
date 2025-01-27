@@ -2,10 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { useProfile } from '../context/ProfileContext';
 import { Activity, Award, Calendar, Clock, Crown, Dumbbell, Target, TrendingUp, User } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { usePayment } from '../context/PaymentContext';
+import { checkMembershipStatus } from '../services/FirestoreService';
+import type { Membership } from '../services/FirestoreService';
 import StreakCounter from '../components/StreakCounter';
 import { getAchievements, updateAchievement, checkStreakAchievements, checkWorkoutAchievements } from '../services/AchievementService';
 import { attendanceService } from '../services/AttendanceService';
+import { useAuth } from '../context/AuthContext';
 
 interface Achievement {
   id: string;
@@ -25,8 +27,13 @@ interface AttendanceStats {
 
 export default function Dashboard() {
   const { profile, loading } = useProfile();
-  const { membership } = usePayment();
+  const { user } = useAuth();
   const navigate = useNavigate();
+  const [membershipStatus, setMembershipStatus] = useState<{
+    isActive: boolean;
+    membership: Membership | null;
+    error: string | null;
+  }>({ isActive: false, membership: null, error: null });
   const [streak, setStreak] = useState(0);
   const [lastWorkoutDate, setLastWorkoutDate] = useState<string | null>(null);
   const [showStreakBrokenAlert, setShowStreakBrokenAlert] = useState(false);
@@ -94,6 +101,23 @@ export default function Dashboard() {
       setAchievements(updatedAchievements);
     }
   }, [attendanceStats]);
+
+  // Add membership status check
+  useEffect(() => {
+    if (!user?.uid) return;
+
+    const fetchMembershipStatus = async () => {
+      const status = await checkMembershipStatus(user.uid);
+      setMembershipStatus(status);
+    };
+
+    fetchMembershipStatus();
+
+    // Set up an interval to check membership status every minute
+    const intervalId = setInterval(fetchMembershipStatus, 60000);
+
+    return () => clearInterval(intervalId);
+  }, [user]);
 
   const handleStreakBroken = () => {
     const audio = new Audio('/sounds/streak-broken.mp3');
@@ -347,7 +371,7 @@ export default function Dashboard() {
           </div>
 
           {/* Membership Alert */}
-          {!membership?.is_active && (
+          {!membershipStatus.isActive && (
             <div className="bg-white dark:bg-[#1E1E1E] rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-800">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">

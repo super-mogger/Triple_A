@@ -9,61 +9,55 @@ import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
 import { usePayment } from '../context/PaymentContext';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { checkMembershipStatus } from '../services/FirestoreService';
+import type { Membership } from '../services/FirestoreService';
 
 const Attendance = () => {
   const { profile } = useProfile();
   const { membership } = usePayment();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [showScanner, setShowScanner] = useState(false);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<any>(null);
   const [recentAttendance, setRecentAttendance] = useState<any[]>([]);
   const [allAttendance, setAllAttendance] = useState<AttendanceRecord[]>([]);
+  const [membershipStatus, setMembershipStatus] = useState<{
+    isActive: boolean;
+    membership: Membership | null;
+    error: string | null;
+  }>({ isActive: false, membership: null, error: null });
 
-  // If user has no membership, show upgrade message
-  if (!membership?.is_active) {
-    return (
-      <div className="min-h-screen bg-white dark:bg-[#121212] p-4">
-        <div className="max-w-2xl mx-auto mt-8 text-center">
-          <div className="bg-white dark:bg-[#1E1E1E] rounded-3xl p-8 shadow-sm border border-gray-100 dark:border-gray-800">
-            <CalendarIcon className="w-12 h-12 text-emerald-500 mx-auto mb-4" />
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
-              Upgrade to Track Attendance
-            </h1>
-            <p className="text-gray-600 dark:text-gray-300 mb-6">
-              Get access to attendance tracking, streak monitoring, and achievement unlocks with a membership.
-            </p>
-            <div className="space-y-4">
-              <div className="flex items-center gap-3 text-gray-600 dark:text-gray-300">
-                <Trophy className="w-5 h-5 text-emerald-500" />
-                <span>Track your gym streaks</span>
-              </div>
-              <div className="flex items-center gap-3 text-gray-600 dark:text-gray-300">
-                <CheckCircle2 className="w-5 h-5 text-emerald-500" />
-                <span>Mark daily attendance</span>
-              </div>
-              <div className="flex items-center gap-3 text-gray-600 dark:text-gray-300">
-                <Clock className="w-5 h-5 text-emerald-500" />
-                <span>View attendance history</span>
-              </div>
-            </div>
-            <button
-              onClick={() => navigate('/membership')}
-              className="mt-8 px-6 py-3 bg-emerald-500 text-white rounded-xl font-medium hover:bg-emerald-600 transition-colors"
-            >
-              View Membership Plans
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // Function to load attendance data
+  const loadData = async (userId: string) => {
+    try {
+      const stats = await attendanceService.getAttendanceStats(userId);
+      const records = await attendanceService.getAttendanceRecords(userId);
+      setStats(stats);
+      setAllAttendance(records);
+    } catch (error) {
+      console.error('Error loading attendance data:', error);
+    }
+  };
 
   useEffect(() => {
-    if (!profile?.id) return;
+    if (!user?.uid) return;
+
+    const fetchMembershipStatus = async () => {
+      const status = await checkMembershipStatus(user.uid);
+      setMembershipStatus(status);
+      setLoading(false);
+    };
+
+    fetchMembershipStatus();
+  }, [user]);
+
+  useEffect(() => {
+    if (!profile?.id || !membershipStatus.isActive) return;
 
     // Load initial data
-    loadAttendanceData();
+    loadData(profile.id);
     
     // Setup realtime listener
     attendanceService.setupRealtimeListener(profile.id);
@@ -71,38 +65,32 @@ const Attendance = () => {
     // Load recent attendance from local storage
     setRecentAttendance(attendanceService.getRecentAttendance());
 
-    // Load all attendance records
-    loadAllAttendanceRecords();
-
     return () => {
       // Cleanup realtime listener when component unmounts
       attendanceService.cleanup();
     };
-  }, [profile?.id]);
+  }, [profile?.id, membershipStatus.isActive]);
 
-  const loadAttendanceData = async () => {
-    if (!profile?.id) return;
-    
-    try {
-      const stats = await attendanceService.getAttendanceStats(profile.id);
-      setStats(stats);
-    } catch (error) {
-      console.error('Error loading attendance data:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  if (loading) {
+    return <div className="p-4">Loading...</div>;
+  }
 
-  const loadAllAttendanceRecords = async () => {
-    if (!profile?.id) return;
-    
-    try {
-      const records = await attendanceService.getAttendanceRecords(profile.id);
-      setAllAttendance(records);
-    } catch (error) {
-      console.error('Error loading attendance records:', error);
-    }
-  };
+  if (!membershipStatus.isActive) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+        <div className="text-center">
+          <h2 className="text-2xl font-semibold mb-4">Active Membership Required</h2>
+          <p className="text-gray-600 mb-4">Please purchase a membership to access attendance features.</p>
+          <button
+            onClick={() => navigate('/membership')}
+            className="bg-emerald-500 text-white px-6 py-2 rounded-lg hover:bg-emerald-600 transition-colors"
+          >
+            View Membership Plans
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const handleScanSuccess = async (result: string) => {
     if (!profile?.id) {
@@ -124,8 +112,8 @@ const Attendance = () => {
       
       if (response.success) {
         toast.success(response.message);
-        loadAttendanceData();
-        loadAllAttendanceRecords(); // Reload calendar data
+        // Reload data after marking attendance
+        await loadData(profile.id);
       } else {
         toast.error(response.message);
       }
@@ -142,20 +130,62 @@ const Attendance = () => {
 
   const tileClassName = ({ date }: { date: Date }) => {
     const formattedDate = format(date, 'yyyy-MM-dd');
+    const isSunday = date.getDay() === 0;
+    
+    if (isSunday) {
+      return 'attendance-holiday';
+    }
+
     const record = allAttendance.find(r => 
       format(r.date.toDate(), 'yyyy-MM-dd') === formattedDate
     );
     
-    if (!record) return '';
+    if (!record) {
+      // Check if this date is in the past (excluding today) and not marked
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const compareDate = new Date(date);
+      compareDate.setHours(0, 0, 0, 0);
+      
+      if (compareDate < today && !isSunday) {
+        return 'attendance-absent';
+      }
+      
+      return '';
+    }
     
     return record.status === 'present' ? 'attendance-present' : 'attendance-absent';
   };
 
   const tileContent = ({ date }: { date: Date }) => {
     const formattedDate = format(date, 'yyyy-MM-dd');
+    const isSunday = date.getDay() === 0;
+    
+    if (isSunday) {
+      return (
+        <div className="flex justify-center">
+          <span className="text-xs text-gray-500">Holiday</span>
+        </div>
+      );
+    }
+
     const record = allAttendance.find(r => 
       format(r.date.toDate(), 'yyyy-MM-dd') === formattedDate
     );
+    
+    // Check if this date is in the past (excluding today) and not marked
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const compareDate = new Date(date);
+    compareDate.setHours(0, 0, 0, 0);
+    
+    if (compareDate < today && !record && !isSunday) {
+      return (
+        <div className="flex justify-center">
+          <XCircle className="w-4 h-4 text-red-500" />
+        </div>
+      );
+    }
     
     if (!record) return null;
     
@@ -244,10 +274,6 @@ const Attendance = () => {
     );
   };
 
-  if (loading) {
-    return <div className="p-4">Loading...</div>;
-  }
-
   return (
     <div className="p-4">
         <div className="flex justify-between items-center mb-6">
@@ -316,12 +342,20 @@ const Attendance = () => {
           background-color: rgba(239, 68, 68, 0.1) !important;
         }
 
+        .attendance-holiday {
+          background-color: rgba(59, 130, 246, 0.1) !important;
+        }
+
         .dark .attendance-present {
           background-color: rgba(16, 185, 129, 0.2) !important;
         }
 
         .dark .attendance-absent {
           background-color: rgba(239, 68, 68, 0.2) !important;
+        }
+
+        .dark .attendance-holiday {
+          background-color: rgba(59, 130, 246, 0.2) !important;
         }
 
         .attendance-calendar .react-calendar__navigation button {

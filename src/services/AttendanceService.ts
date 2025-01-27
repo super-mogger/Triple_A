@@ -284,41 +284,88 @@ class AttendanceService {
         const doc = querySnapshot.docs[0];
         const existingStats = doc.data() as AttendanceStats;
         
-        let newStreak = existingStats.currentStreak;
-        if (isPresent) {
-          // Check if this is a consecutive day
-          if (existingStats.lastAttendance) {
-            const lastDate = existingStats.lastAttendance.toDate();
-            const today = now.toDate();
-            const diffDays = differenceInDays(today, lastDate);
-            
-            if (diffDays === 1) {
-              // Consecutive day
-              newStreak++;
-            } else if (diffDays > 1) {
-              // Streak broken
-              newStreak = 1;
-            }
-          } else {
-            // First attendance
-            newStreak = 1;
+        // If marking absent, immediately reset streak to 0
+        if (!isPresent) {
+          const updatedStats = {
+            totalPresent: existingStats.totalPresent,
+            totalAbsent: existingStats.totalAbsent + 1,
+            currentStreak: 0, // Reset streak on absence
+            longestStreak: existingStats.longestStreak,
+            lastAttendance: existingStats.lastAttendance,
+            lastUpdated: now
+          };
+          await updateDoc(doc.ref, updatedStats);
+          stats = { ...updatedStats, id: doc.id, userId };
+          return stats;
+        }
+
+        // Get all attendance records for the last few days
+        const attendanceRef = collection(db, 'attendance');
+        const lastWeekDate = new Date();
+        lastWeekDate.setDate(lastWeekDate.getDate() - 7);
+        
+        const attendanceQuery = query(
+          attendanceRef,
+          where('userId', '==', userId),
+          where('date', '>=', Timestamp.fromDate(lastWeekDate)),
+          orderBy('date', 'desc')
+        );
+        
+        const attendanceSnapshot = await getDocs(attendanceQuery);
+        const attendanceRecords = attendanceSnapshot.docs.map(doc => ({
+          date: doc.data().date,
+          status: doc.data().status
+        }));
+
+        // Calculate streak for present attendance
+        let streakCount = 1; // Start with 1 for today's attendance
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        let currentDate = new Date(today);
+        currentDate.setDate(currentDate.getDate() - 1); // Start checking from yesterday
+
+        // Sort records by date in descending order
+        const sortedRecords = attendanceRecords.sort((a, b) => 
+          b.date.toDate().getTime() - a.date.toDate().getTime()
+        );
+
+        let streakBroken = false;
+        while (!streakBroken && currentDate >= lastWeekDate) {
+          // Skip Sundays
+          if (currentDate.getDay() === 0) {
+            currentDate.setDate(currentDate.getDate() - 1);
+            continue;
           }
-        } else {
-          // Absent breaks the streak
-          newStreak = 0;
+
+          // Find attendance record for current date
+          const record = sortedRecords.find(r => {
+            const recordDate = r.date.toDate();
+            recordDate.setHours(0, 0, 0, 0);
+            return recordDate.getTime() === currentDate.getTime();
+          });
+
+          // If no record found or status is not present, break streak
+          if (!record || record.status !== 'present') {
+            streakBroken = true;
+            break;
+          }
+
+          streakCount++;
+          currentDate.setDate(currentDate.getDate() - 1);
         }
 
         const updatedStats = {
-          totalPresent: existingStats.totalPresent + (isPresent ? 1 : 0),
-          totalAbsent: existingStats.totalAbsent + (isPresent ? 0 : 1),
-          currentStreak: newStreak,
-          longestStreak: Math.max(existingStats.longestStreak, newStreak),
-          lastAttendance: isPresent ? now : existingStats.lastAttendance,
+          totalPresent: existingStats.totalPresent + 1,
+          totalAbsent: existingStats.totalAbsent,
+          currentStreak: streakCount,
+          longestStreak: Math.max(streakCount, existingStats.longestStreak),
+          lastAttendance: now,
           lastUpdated: now
         };
 
         await updateDoc(doc.ref, updatedStats);
-        stats = { ...existingStats, ...updatedStats, id: doc.id };
+        stats = { ...updatedStats, id: doc.id, userId };
       }
 
       return stats;
@@ -326,6 +373,53 @@ class AttendanceService {
       console.error('Error updating attendance stats:', error);
       return null;
     }
+  }
+
+  // Helper function to check for absences between two dates
+  private checkForAbsences(startDate: Date, endDate: Date, records: any[]): boolean {
+    let currentDate = new Date(startDate);
+    currentDate.setHours(0, 0, 0, 0);
+    const end = new Date(endDate);
+    end.setHours(0, 0, 0, 0);
+
+    while (currentDate < end) {
+      currentDate.setDate(currentDate.getDate() + 1);
+      
+      // Skip Sundays
+      if (currentDate.getDay() === 0) continue;
+      
+      // Check if we have a record for this date
+      const dateStr = format(currentDate, 'yyyy-MM-dd');
+      const hasAttendance = records.some(record => {
+        const recordDate = format(record.date.toDate(), 'yyyy-MM-dd');
+        return recordDate === dateStr;
+      });
+
+      // If we don't have attendance for a working day, it's an absence
+      if (!hasAttendance && currentDate < end) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  // Helper function to calculate working days difference (excluding Sundays)
+  private getWorkingDaysDifference(startDate: Date, endDate: Date): number {
+    let days = 0;
+    let currentDate = new Date(startDate);
+    currentDate.setHours(0, 0, 0, 0);
+    const end = new Date(endDate);
+    end.setHours(0, 0, 0, 0);
+
+    while (currentDate < end) {
+      currentDate.setDate(currentDate.getDate() + 1);
+      if (currentDate.getDay() !== 0) { // Skip Sundays
+        days++;
+      }
+    }
+
+    return days;
   }
 
   private async cleanupOldRecords(userId: string) {

@@ -16,6 +16,9 @@ import { useNavigate } from 'react-router-dom';
 import { MuscleRadarChart } from '../components/MuscleRadarChart';
 import { exerciseDatabase } from '../data/exerciseDatabase';
 import type { Exercise, ExerciseDetails } from '../types/exercise';
+import { useAuth } from '../context/AuthContext';
+import { checkMembershipStatus } from '../services/FirestoreService';
+import type { Membership } from '../services/FirestoreService';
 
 type SplitType = 'bro-split' | 'push-pull-legs' | 'upper-lower';
 
@@ -249,28 +252,26 @@ function WeekdaySchedule({ schedule, currentDay, setCurrentDay }: WeekdaySchedul
 
 // Initial states
 export default function Workouts() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const { profile } = useProfile();
+  
+  // States
   const [currentDay, setCurrentDay] = useState<string>(() => {
     const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     return days[new Date().getDay()];
   });
-
-  const { profile } = useProfile();
-  const { membership, loading: membershipLoading } = usePayment();
-  const navigate = useNavigate();
-  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
-
-  const isActiveMembership = useMemo(() => {
-    if (membershipLoading) return false;
-    if (!membership) return false;
-    return membership.is_active;
-  }, [membership, membershipLoading]);
-
+  const [membershipStatus, setMembershipStatus] = useState<{
+    isActive: boolean;
+    membership: Membership | null;
+    error: string | null;
+  }>({ isActive: false, membership: null, error: null });
+  const [loading, setLoading] = useState(true);
   const [workouts, setWorkouts] = useState<WorkoutPlan[]>([]);
   const [filteredWorkouts, setFilteredWorkouts] = useState<WorkoutPlan[]>([]);
   const [selectedWorkout, setSelectedWorkout] = useState<WorkoutPlan | null>(null);
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
-  const [loading, setLoading] = useState(false);
   const [loadingExercise, setLoadingExercise] = useState(false);
   const [loadingExercises, setLoadingExercises] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -283,6 +284,42 @@ export default function Workouts() {
     goal: '',
     equipment: ''
   });
+
+  // Add fetchWorkouts function
+  const fetchWorkouts = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const workoutPlans = await scrapeWorkoutPlans();
+      setWorkouts(workoutPlans);
+      setFilteredWorkouts(workoutPlans);
+    } catch (err) {
+      console.error('Error fetching workouts:', err);
+      setError('Failed to load workout plans');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Check if user has active membership
+  useEffect(() => {
+    if (!user?.uid) return;
+
+    const fetchMembershipStatus = async () => {
+      const status = await checkMembershipStatus(user.uid);
+      setMembershipStatus(status);
+      setLoading(false);
+    };
+
+    fetchMembershipStatus();
+  }, [user]);
+
+  // Fetch workouts when membership is active
+  useEffect(() => {
+    if (membershipStatus.isActive) {
+      fetchWorkouts();
+    }
+  }, [membershipStatus.isActive, fetchWorkouts]);
 
   // Define applyFilters at the top level
   const applyFilters = useCallback(() => {
@@ -330,22 +367,6 @@ export default function Workouts() {
     return workout;
   }, [selectedWorkout, currentDay]);
 
-  // Add fetchWorkouts function
-  const fetchWorkouts = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const workoutPlans = await scrapeWorkoutPlans();
-      setWorkouts(workoutPlans);
-      setFilteredWorkouts(workoutPlans);
-    } catch (err) {
-      console.error('Error fetching workouts:', err);
-      setError('Failed to load workout plans');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
   // Load initial workout from localStorage
   useEffect(() => {
     const savedWorkout = localStorage.getItem('selectedWorkout');
@@ -370,13 +391,6 @@ export default function Workouts() {
       setExercises([]);
     }
   }, [selectedWorkout, getCurrentDayWorkout, currentDay]);
-
-  // Fetch workouts when membership is active
-  useEffect(() => {
-    if (isActiveMembership) {
-      fetchWorkouts();
-    }
-  }, [isActiveMembership, fetchWorkouts]);
 
   // Apply filters when workouts or filters change
   useEffect(() => {
@@ -460,56 +474,33 @@ export default function Workouts() {
     });
   };
 
-  if (!membership?.is_active) {
-    return (
-      <div className="min-h-screen bg-white dark:bg-[#121212] p-4">
-        <div className="max-w-2xl mx-auto mt-8 text-center">
-          <div className="bg-white dark:bg-[#1E1E1E] rounded-3xl p-8 shadow-sm border border-gray-100 dark:border-gray-800">
-            <Dumbbell className="w-12 h-12 text-emerald-500 mx-auto mb-4" />
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
-              Upgrade to Access Workouts
-            </h1>
-            <p className="text-gray-600 dark:text-gray-300 mb-6">
-              Get access to personalized workout plans, exercise tracking, and more with a membership.
-            </p>
-          <div className="space-y-4">
-              <div className="flex items-center gap-3 text-gray-600 dark:text-gray-300">
-                <Target className="w-5 h-5 text-emerald-500" />
-                <span>Personalized workout plans</span>
-                  </div>
-              <div className="flex items-center gap-3 text-gray-600 dark:text-gray-300">
-                <Calendar className="w-5 h-5 text-emerald-500" />
-                <span>Weekly workout schedules</span>
-                  </div>
-              <div className="flex items-center gap-3 text-gray-600 dark:text-gray-300">
-                <BarChart className="w-5 h-5 text-emerald-500" />
-                <span>Progress tracking</span>
-                </div>
-          </div>
-            <button
-              onClick={() => navigate('/membership')}
-              className="mt-8 px-6 py-3 bg-emerald-500 text-white rounded-xl font-medium hover:bg-emerald-600 transition-colors"
-            >
-              View Membership Plans
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (membershipLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
+  // Handle day change
+  const handleDayChange = (day: string) => {
+    setCurrentDay(day);
+    // Additional logic for day change
+  };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-white dark:bg-[#121212] flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500"></div>
+      </div>
+    );
+  }
+
+  if (!membershipStatus.isActive) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+        <div className="text-center">
+          <h2 className="text-2xl font-semibold mb-4">Active Membership Required</h2>
+          <p className="text-gray-600 mb-4">Please purchase a membership to access workout features.</p>
+          <button
+            onClick={() => navigate('/membership')}
+            className="bg-emerald-500 text-white px-6 py-2 rounded-lg hover:bg-emerald-600 transition-colors"
+          >
+            View Membership Plans
+          </button>
+        </div>
       </div>
     );
   }
@@ -601,7 +592,7 @@ export default function Workouts() {
                 {selectedWorkout.schedule?.days.map((day) => (
                   <button
                     key={day.day}
-                    onClick={() => setCurrentDay(day.day)}
+                    onClick={() => handleDayChange(day.day)}
                     className={`p-2 sm:p-4 rounded-xl sm:rounded-2xl text-center transition-all ${
                       currentDay === day.day
                         ? 'bg-emerald-500 text-white'

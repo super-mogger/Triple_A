@@ -1,9 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Crown, Check } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { usePayment } from '../context/PaymentContext';
+import { useAuth } from '../context/AuthContext';
+import { checkMembershipStatus, createMembership } from '../services/FirestoreService';
+import type { Membership } from '../services/FirestoreService';
 import { useTheme } from '../context/ThemeContext';
 import { useProfile } from '../context/ProfileContext';
+import { Timestamp } from 'firebase/firestore';
 
 interface Plan {
   id: string;
@@ -60,86 +63,61 @@ const plans: Plan[] = [
 ];
 
 export default function MembershipDetails() {
+  const { user } = useAuth();
   const navigate = useNavigate();
-  const { membership, createOrder, verifyPayment, loadMembership } = usePayment();
   const { profile } = useProfile();
   const { isDarkMode } = useTheme();
-  const [loading, setLoading] = useState(false);
+  const [membershipStatus, setMembershipStatus] = useState<{
+    isActive: boolean;
+    membership: Membership | null;
+    error: string | null;
+  }>({ isActive: false, membership: null, error: null });
+  const [loading, setLoading] = useState(true);
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
 
-  // Calculate days remaining
-  const daysRemaining = membership?.end_date 
-    ? Math.ceil((new Date(membership.end_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
-    : 0;
+  const fetchMembershipStatus = async () => {
+    if (!user?.uid) return;
+    const status = await checkMembershipStatus(user.uid);
+    setMembershipStatus(status);
+    setLoading(false);
+  };
 
-  // Calculate total days
-  const totalDays = membership?.start_date && membership?.end_date
-    ? Math.ceil((new Date(membership.end_date).getTime() - new Date(membership.start_date).getTime()) / (1000 * 60 * 60 * 24))
-    : 30;
+  useEffect(() => {
+    fetchMembershipStatus();
+  }, [user]);
 
-  // Get active plan details
-  const activePlan = membership?.plan_id ? plans.find(p => p.id === membership.plan_id) : null;
-
-  const handlePayment = async (plan: Plan) => {
+  const handleCreateMembership = async (planData: any) => {
+    if (!user?.uid) return;
+    
     try {
-      setLoading(true);
-      setSelectedPlan(plan.id);
-
-      // Create order
-      const { orderId } = await createOrder(plan.id, plan.price);
-
-      // Load Razorpay script if not already loaded
-      if (!window.Razorpay) {
-        const script = document.createElement('script');
-        script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-        await new Promise((resolve) => {
-          script.onload = resolve;
-          document.body.appendChild(script);
-        });
+      const result = await createMembership(user.uid, planData);
+      if (result.error) {
+        throw new Error(result.error.toString());
       }
-
-      // Initialize Razorpay
-      const options = {
-        key: import.meta.env.VITE_RAZORPAY_KEY_ID,
-        amount: plan.price * 100, // Convert to paise
-        currency: 'INR',
-        name: 'Triple A Fitness',
-        description: `${plan.name} - ${plan.duration} Membership`,
-        order_id: orderId,
-        handler: async function (response: any) {
-          try {
-            await verifyPayment(
-              response.razorpay_payment_id,
-              response.razorpay_order_id,
-              response.razorpay_signature
-            );
-            // Reload membership details
-            await loadMembership();
-          } catch (error) {
-            console.error('Payment verification failed:', error);
-            alert('Payment verification failed. Please contact support.');
-          }
-        },
-        prefill: {
-          name: profile?.full_name || '',
-          email: profile?.email || '',
-          contact: profile?.personal_info?.contact || ''
-        },
-        theme: {
-          color: '#10B981'
-        }
-      };
-
-      const razorpay = new window.Razorpay(options);
-      razorpay.open();
+      await fetchMembershipStatus();
     } catch (error) {
-      console.error('Payment initiation failed:', error);
-      alert('Failed to initiate payment. Please try again.');
-    } finally {
-      setLoading(false);
-      setSelectedPlan(null);
+      console.error('Error creating membership:', error);
     }
   };
+
+  const formatDate = (timestamp: Timestamp) => {
+    return timestamp.toDate().toLocaleDateString();
+  };
+
+  const getDaysRemaining = (endDate: Timestamp | undefined | null) => {
+    if (!endDate) return 0;
+    const now = new Date();
+    const end = endDate.toDate();
+    return Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#121212] py-8">
@@ -163,36 +141,36 @@ export default function MembershipDetails() {
               <h2 className="text-xl font-bold text-gray-900 dark:text-white">Active Membership</h2>
             </div>
             <span className={`px-4 py-1.5 rounded-full text-sm font-medium ${
-              membership?.status === 'active'
+              membershipStatus.isActive
                 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400'
                 : 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400'
             }`}>
-              {membership?.status === 'active' ? 'Active' : 'Inactive'}
+              {membershipStatus.isActive ? 'Active' : 'Inactive'}
             </span>
           </div>
 
           <div className="mb-6">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
-              {activePlan?.name || 'No Active Plan'}
+              {membershipStatus.membership?.plan_name || 'No Active Plan'}
             </h3>
             <p className="text-sm text-gray-600 dark:text-gray-400">
-              {membership?.end_date ? `Valid until ${new Date(membership.end_date).toLocaleDateString()}` : 'Not subscribed'}
+              {membershipStatus.membership?.end_date ? `Valid until ${formatDate(membershipStatus.membership.end_date)}` : 'Not subscribed'}
             </p>
           </div>
 
-          {membership?.status === 'active' && (
+          {membershipStatus.isActive && (
             <div className="relative pt-1">
               <div className="flex items-center justify-between mb-2">
                 <div>
                   <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
-                    {daysRemaining} days
+                    {getDaysRemaining(membershipStatus.membership?.end_date)} days
                   </span>
                   <span className="text-sm text-gray-600 dark:text-gray-400"> remaining</span>
                 </div>
               </div>
               <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                 <div
-                  style={{ width: `${(daysRemaining / totalDays) * 100}%` }}
+                  style={{ width: `${(getDaysRemaining(membershipStatus.membership?.end_date) / 30) * 100}%` }}
                   className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 dark:from-emerald-400 dark:to-teal-400 rounded-full transition-all duration-300"
                 ></div>
               </div>
@@ -208,7 +186,7 @@ export default function MembershipDetails() {
               <div
                 key={plan.id}
                 className={`bg-white dark:bg-[#1E1E1E] rounded-xl p-6 border ${
-                  membership?.plan_id === plan.id
+                  membershipStatus.membership?.plan_id === plan.id
                     ? 'border-emerald-500 dark:border-emerald-400'
                     : 'border-gray-200 dark:border-gray-800 hover:border-emerald-200 dark:hover:border-emerald-800'
                 } transition-all duration-300 hover:shadow-lg`}
@@ -230,17 +208,17 @@ export default function MembershipDetails() {
                   ))}
                 </ul>
                 <button
-                  onClick={() => handlePayment(plan)}
-                  disabled={loading || membership?.plan_id === plan.id}
+                  onClick={() => handleCreateMembership(plan)}
+                  disabled={loading || membershipStatus.membership?.plan_id === plan.id}
                   className={`w-full py-2.5 rounded-xl font-medium transition-all duration-300 ${
-                    membership?.plan_id === plan.id
+                    membershipStatus.membership?.plan_id === plan.id
                       ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400 cursor-default'
                       : loading && selectedPlan === plan.id
                       ? 'bg-gray-300 text-gray-600 cursor-wait'
                       : 'bg-emerald-500 hover:bg-emerald-600 text-white dark:bg-gradient-to-r dark:from-emerald-400 dark:to-teal-400 dark:hover:from-emerald-500 dark:hover:to-teal-500 dark:text-black'
                   }`}
                 >
-                  {membership?.plan_id === plan.id 
+                  {membershipStatus.membership?.plan_id === plan.id 
                     ? 'Current Plan' 
                     : loading && selectedPlan === plan.id 
                     ? 'Processing...' 

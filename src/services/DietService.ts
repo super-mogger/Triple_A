@@ -277,74 +277,96 @@ interface UserProfile {
   age: number;
   gender: string;
   activityLevel: string;
+  userId: string;
 }
 
 export const useDietService = () => {
-  const generateDietPlan = (profile: UserProfile, planType: string): WeeklyDietPlan => {
-    console.log('Generating diet plan for:', { profile, planType });
-  
-  // Calculate BMR using Mifflin-St Jeor Equation
-    const bmr = profile.gender === 'male'
-      ? (10 * profile.weight) + (6.25 * profile.height) - (5 * profile.age) + 5
-      : (10 * profile.weight) + (6.25 * profile.height) - (5 * profile.age) - 161;
+  const generateDietPlan = async (profile: UserProfile, planType: string): Promise<WeeklyDietPlan> => {
+    try {
+      console.log('Generating diet plan for:', { profile, planType });
+    
+      // Calculate BMR using Mifflin-St Jeor Equation
+      const bmr = profile.gender === 'male'
+        ? (10 * profile.weight) + (6.25 * profile.height) - (5 * profile.age) + 5
+        : (10 * profile.weight) + (6.25 * profile.height) - (5 * profile.age) - 161;
 
-    // Calculate TDEE (Total Daily Energy Expenditure)
-    const activityMultipliers = {
-      sedentary: 1.2,
-      light: 1.375,
-      moderate: 1.55,
-      active: 1.725,
-      veryActive: 1.9
-    };
-    const tdee = bmr * (activityMultipliers[profile.activityLevel as keyof typeof activityMultipliers] || 1.55);
+      // Calculate TDEE (Total Daily Energy Expenditure)
+      const activityMultipliers = {
+        sedentary: 1.2,
+        light: 1.375,
+        moderate: 1.55,
+        active: 1.725,
+        veryActive: 1.9
+      };
+      const tdee = bmr * (activityMultipliers[profile.activityLevel as keyof typeof activityMultipliers] || 1.55);
 
-    // Adjust calories based on plan type
-    let targetCalories = tdee;
-    switch (planType) {
-      case 'weight-loss':
-        targetCalories = tdee - 500; // 500 calorie deficit
-        break;
-      case 'muscle-gain':
-        targetCalories = tdee + 300; // 300 calorie surplus
-        break;
-      case 'maintenance':
-        targetCalories = tdee;
-        break;
-    }
-
-    // Calculate macronutrient goals
-    const nutritionalGoals = {
-      calories: Math.round(targetCalories),
-      protein: {
-        grams: Math.round(profile.weight * 2.2), // 1g per lb of body weight
-        percentage: 30
-      },
-      carbs: {
-        grams: Math.round((targetCalories * 0.4) / 4), // 40% of calories from carbs
-        percentage: 40
-      },
-      fats: {
-        grams: Math.round((targetCalories * 0.3) / 9), // 30% of calories from fats
-        percentage: 30
+      // Adjust calories based on plan type
+      let targetCalories = tdee;
+      switch (planType) {
+        case 'weight-loss':
+          targetCalories = tdee - 500; // 500 calorie deficit
+          break;
+        case 'muscle-gain':
+          targetCalories = tdee + 300; // 300 calorie surplus
+          break;
+        case 'maintenance':
+          targetCalories = tdee;
+          break;
       }
-    };
 
-    // Generate the weekly plan
-    const weeklyPlan = generateWeeklyPlan(nutritionalGoals, planType);
+      // Calculate macronutrient goals
+      const nutritionalGoals = {
+        calories: Math.round(targetCalories),
+        protein: {
+          grams: Math.round(profile.weight * 2.2), // 1g per lb of body weight
+          percentage: 30
+        },
+        carbs: {
+          grams: Math.round((targetCalories * 0.4) / 4), // 40% of calories from carbs
+          percentage: 40
+        },
+        fats: {
+          grams: Math.round((targetCalories * 0.3) / 9), // 30% of calories from fats
+          percentage: 30
+        }
+      };
 
-    return {
-      title: `${planType.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')} Diet Plan`,
-      description: getDescription(planType),
-      level: 'Intermediate',
-      duration: '12 weeks',
-      type: planType,
-      goal: getGoal(planType),
-      color: getColor(planType),
-      waterIntake: Math.round(profile.weight * 0.033 * 1000), // ml per day
-      supplementation: getSupplementation(planType),
-      nutritionalGoals,
-      weeklyPlan
-    };
+      // Generate the weekly plan
+      const weeklyPlan = generateWeeklyPlan(nutritionalGoals, planType);
+
+      const plan: WeeklyDietPlan = {
+        title: `${planType.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')} Diet Plan`,
+        description: getDescription(planType),
+        level: 'Intermediate',
+        duration: '12 weeks',
+        type: planType,
+        goal: getGoal(planType),
+        color: getColor(planType),
+        waterIntake: Math.round(profile.weight * 0.033 * 1000), // ml per day
+        supplementation: getSupplementation(planType),
+        nutritionalGoals,
+        weeklyPlan
+      };
+
+      // Save the plan to Firestore
+      try {
+        const dietPlansRef = collection(db, 'dietPlans');
+        await addDoc(dietPlansRef, {
+          ...plan,
+          userId: profile.userId, // Make sure to pass userId in profile
+          createdAt: Timestamp.now(),
+          updatedAt: Timestamp.now()
+        });
+      } catch (error) {
+        console.error('Error saving diet plan to database:', error);
+        // Continue even if save fails - user can still view the plan
+      }
+
+      return plan;
+    } catch (error) {
+      console.error('Error generating diet plan:', error);
+      throw new Error('Failed to generate diet plan. Please try again.');
+    }
   };
 
   return {

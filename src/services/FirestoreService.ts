@@ -10,88 +10,51 @@ import {
   getDocs,
   Timestamp,
   serverTimestamp,
-  addDoc
+  addDoc,
+  orderBy,
+  limit
 } from 'firebase/firestore';
 import type { FirestoreProfile, FirestoreMembership, FirestorePayment } from '../types/firestore.types';
 import { Profile } from '../types/profile';
+import { auth } from '../config/firebase';
 
 // Types
 export interface Membership {
-  id: string;
-  user_id: string;
+  id?: string;
+  amount: number;
+  created_at: Timestamp;
+  duration: number;
+  end_date: Timestamp;
+  is_active: boolean;
+  payment_method: string;
+  payment_status: 'pending' | 'completed' | 'failed';
   plan_id: string;
   plan_name: string;
   start_date: Timestamp;
-  end_date: Timestamp;
-  is_active: boolean;
-  amount_paid: number;
-  payment_status: 'pending' | 'completed' | 'failed';
-  features?: string[];
-  description?: string;
-  created_at: Timestamp;
   updated_at: Timestamp;
-}
-
-export interface WorkoutSession {
-  id: string;
-  user_id: string;
-  start_time: Timestamp;
-  end_time?: Timestamp;
-  duration?: number;
-  type: string;
-  intensity: 'low' | 'medium' | 'high';
-  calories_burned?: number;
-  notes?: string;
-  created_at: Timestamp;
-  updated_at: Timestamp;
-}
-
-export interface DietPlan {
-  id: string;
-  user_id: string;
-  name: string;
-  description?: string;
-  start_date: Timestamp;
-  end_date?: Timestamp;
-  calories_target?: number;
-  protein_target?: number;
-  carbs_target?: number;
-  fat_target?: number;
-  meals: any[];
-  notes?: string;
-  created_at: Timestamp;
-  updated_at: Timestamp;
-}
-
-export interface Attendance {
-  id: string;
-  user_id: string;
-  check_in: Timestamp;
-  check_out?: Timestamp;
-  duration?: number;
-  notes?: string;
-  created_at: Timestamp;
-  updated_at: Timestamp;
+  userId: string;
 }
 
 // Profile Operations
-export async function getProfile(userId: string) {
+export async function getProfile(userId: string): Promise<{ data: Profile | null; error: string | null }> {
   try {
+    console.log('Fetching profile for user:', userId);
     const profileRef = doc(db, 'profiles', userId);
     const profileSnap = await getDoc(profileRef);
     
     if (profileSnap.exists()) {
       const data = profileSnap.data();
-      // Convert Firestore data to our Profile type with all required fields
+      console.log('Profile found:', data);
       return { 
         data: {
           id: profileSnap.id,
+          user_id: userId,
           email: data.email || '',
           username: data.username || '',
           photoURL: data.photoURL || '',
           personal_info: {
-            height: data.personal_info?.height || 0,
-            weight: data.personal_info?.weight || 0,
+            height: data.personal_info?.height || 170,
+            weight: data.personal_info?.weight || 70,
             gender: data.personal_info?.gender || 'male',
             date_of_birth: data.personal_info?.date_of_birth || '',
             blood_type: data.personal_info?.blood_type || '',
@@ -101,21 +64,19 @@ export async function getProfile(userId: string) {
             conditions: data.medical_info?.conditions || ''
           },
           preferences: {
-            activity_level: data.preferences?.activity_level || 'beginner',
-            dietary_preferences: data.preferences?.dietary_preferences || [],
-            workout_preferences: data.preferences?.workout_preferences || [],
-            fitness_goals: data.preferences?.fitness_goals || []
+            dietary: data.preferences?.dietary || [],
+            workout_days: data.preferences?.workout_days || [],
+            fitness_goals: data.preferences?.fitness_goals || [],
+            fitness_level: data.preferences?.fitness_level || 'beginner',
+            activity_level: data.preferences?.activity_level || 'moderate'
           },
-          stats: {
-            bmi: data.stats?.bmi || '0',
-            activity_level: data.stats?.activity_level || 'beginner'
-          },
-          created_at: data.created_at,
-          updated_at: data.updated_at
-        } as FirestoreProfile,
+          created_at: data.created_at || Timestamp.now(),
+          updated_at: data.updated_at || Timestamp.now()
+        } as Profile,
         error: null
       };
     }
+    console.log('Profile not found for user:', userId);
     return { data: null, error: 'Profile not found' };
   } catch (error: any) {
     console.error('Error getting profile:', error);
@@ -123,27 +84,20 @@ export async function getProfile(userId: string) {
   }
 }
 
-export async function updateProfile(userId: string, data: Partial<Profile>) {
+export async function updateProfile(userId: string, data: Partial<Profile>): Promise<{ error: any }> {
   try {
-    const profileRef = doc(db, 'profiles', userId);
-    const updateData = {
+    const user = auth.currentUser;
+    if (!user) throw new Error('No authenticated user');
+
+    const updates = {
       ...data,
-      updated_at: Timestamp.now(),
-      // Ensure nested objects are properly merged
-      personal_info: data.personal_info ? {
-        ...data.personal_info,
-        height: Number(data.personal_info.height) || 0,
-        weight: Number(data.personal_info.weight) || 0
-      } : undefined,
-      preferences: data.preferences ? {
-        ...data.preferences,
-        dietary: Array.isArray(data.preferences.dietary) ? data.preferences.dietary : [],
-        workout_days: Array.isArray(data.preferences.workout_days) ? data.preferences.workout_days : [],
-        fitness_goals: Array.isArray(data.preferences.fitness_goals) ? data.preferences.fitness_goals : []
-      } : undefined
+      email: user.email || data.email,
+      username: user.displayName || data.username,
+      photoURL: user.photoURL || data.photoURL,
+      updated_at: Timestamp.now()
     };
-    
-    await setDoc(profileRef, updateData, { merge: true });
+
+    await updateDoc(doc(db, 'profiles', userId), updates);
     return { error: null };
   } catch (error) {
     console.error('Error updating profile:', error);
@@ -151,218 +105,214 @@ export async function updateProfile(userId: string, data: Partial<Profile>) {
   }
 }
 
-export async function createProfile(userId: string, data: Profile) {
+export async function createProfile(userId: string, data: Profile): Promise<{ error: string | null }> {
   try {
-    const profileRef = doc(db, 'profiles', userId);
-    await setDoc(profileRef, data);
+    const user = auth.currentUser;
+    if (!user) throw new Error('No authenticated user');
+
+    const profileData = {
+      id: userId,
+      user_id: userId,
+      email: user.email || '',
+      username: user.displayName || user.email?.split('@')[0] || `user_${userId.substring(0, 6)}`,
+      photoURL: user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${userId}`,
+      personal_info: {
+        contact: '',
+        blood_type: '',
+        date_of_birth: '',
+        gender: 'male',
+        height: 170,
+        weight: 70
+      },
+      medical_info: {
+        conditions: ''
+      },
+      preferences: {
+        activity_level: 'moderate',
+        dietary: [],
+        fitness_goals: [],
+        fitness_level: 'beginner',
+        workout_days: []
+      },
+      created_at: Timestamp.now(),
+      updated_at: Timestamp.now()
+    };
+
+    await setDoc(doc(db, 'profiles', userId), profileData, { merge: true });
     return { error: null };
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating profile:', error);
-    return { error };
+    return { error: error.message };
   }
 }
 
 // Membership Operations
-export const getMembership = async (userId: string) => {
+export const getMembership = async (userId: string): Promise<{ data: Membership | null; error: string | null }> => {
   try {
-    // First try to get from user's membership subcollection
-    const userMembershipRef = doc(db, 'users', userId, 'membership', 'current');
-    const userMembershipDoc = await getDoc(userMembershipRef);
+    console.log('Fetching membership for user:', userId);
+    const membershipRef = collection(db, 'memberships');
     
-    if (userMembershipDoc.exists()) {
-      const membership = {
-        id: userMembershipDoc.id,
-        ...userMembershipDoc.data()
-      } as FirestoreMembership;
-      return { data: membership, error: null };
+    const membershipQuery = query(
+      membershipRef,
+      where('userId', '==', userId),
+      orderBy('created_at', 'desc')
+    );
+    
+    const querySnapshot = await getDocs(membershipQuery);
+
+    if (querySnapshot.empty) {
+      console.log('No membership found for user:', userId);
+      return { data: null, error: null };
     }
 
-    // If not found in subcollection, try the main memberships collection
-    const membershipRef = doc(db, 'memberships', userId);
-    const membershipDoc = await getDoc(membershipRef);
-    
-    if (membershipDoc.exists()) {
-      const membership = {
-        id: membershipDoc.id,
-        ...membershipDoc.data()
-      } as FirestoreMembership;
-      return { data: membership, error: null };
+    let mostRecentMembership: Membership | null = null;
+    let mostRecentDate = new Date(0);
+
+    const now = new Date();
+
+    for (const doc of querySnapshot.docs) {
+      const data = doc.data();
+      const createdAt = data.created_at?.toDate() || new Date(0);
+      const endDate = data.end_date instanceof Timestamp ? data.end_date.toDate() : null;
+      const startDate = data.start_date instanceof Timestamp ? data.start_date.toDate() : null;
+
+      if (endDate && startDate && createdAt > mostRecentDate && data.payment_status === 'completed') {
+        mostRecentDate = createdAt;
+        mostRecentMembership = {
+          id: doc.id,
+          ...data
+        } as Membership;
+      }
     }
 
-    return { data: null, error: null };
+    if (!mostRecentMembership) {
+      console.log('No valid membership found');
+      return { data: null, error: null };
+    }
+
+    const endDate = mostRecentMembership.end_date instanceof Timestamp ? mostRecentMembership.end_date.toDate() : null;
+    const startDate = mostRecentMembership.start_date instanceof Timestamp ? mostRecentMembership.start_date.toDate() : null;
+
+    const shouldBeActive = endDate && startDate 
+      ? now >= startDate && now <= endDate
+      : false;
+
+    if (mostRecentMembership.is_active !== shouldBeActive) {
+      for (const doc of querySnapshot.docs) {
+        await updateDoc(doc.ref, {
+          is_active: doc.id === mostRecentMembership.id ? shouldBeActive : false,
+          updated_at: serverTimestamp()
+        });
+      }
+      mostRecentMembership.is_active = shouldBeActive;
+    }
+
+    return { data: mostRecentMembership, error: null };
   } catch (error) {
-    console.error('Error getting membership:', error);
-    return { data: null, error: error instanceof Error ? error : new Error('Failed to get membership') };
+    console.error('Error fetching membership:', error);
+    return { 
+      data: null, 
+      error: error instanceof Error ? error.message : 'Failed to fetch membership' 
+    };
   }
 };
 
-export async function createMembership(userId: string, membershipData: Partial<Membership>) {
+export const checkMembershipStatus = async (userId: string): Promise<{
+  isActive: boolean;
+  membership: Membership | null;
+  error: string | null;
+}> => {
   try {
-    const membershipRef = collection(db, 'memberships');
-    const membership = {
-      ...membershipData,
-      user_id: userId,
-      created_at: serverTimestamp(),
-      updated_at: serverTimestamp()
-    };
-    const docRef = await addDoc(membershipRef, membership);
-    return { data: { id: docRef.id, ...membership }, error: null };
-  } catch (error) {
-    console.error('Error creating membership:', error);
-    return { data: null, error };
-  }
-}
-
-export async function updateMembership(userId: string, membershipData: Partial<Membership>) {
-  try {
-    const membershipRef = doc(db, 'memberships', userId);
-    await updateDoc(membershipRef, {
-      ...membershipData,
-      updated_at: serverTimestamp()
-    });
-    return { error: null };
-  } catch (error) {
-    console.error('Error updating membership:', error);
-    return { error };
-  }
-}
-
-// Payment Operations
-export async function createPayment(paymentData: Omit<FirestorePayment, 'created_at' | 'updated_at'>) {
-  try {
-    const paymentRef = doc(db, 'payments', paymentData.id);
-    await setDoc(paymentRef, {
-      ...paymentData,
-      created_at: serverTimestamp(),
-      updated_at: serverTimestamp()
-    });
-    return { error: null };
-  } catch (error) {
-    console.error('Error creating payment:', error);
-    return { error };
-  }
-}
-
-export async function getPaymentHistory(userId: string) {
-  try {
-    const paymentsRef = collection(db, 'payments');
-    const q = query(paymentsRef, where('user_id', '==', userId));
-    const querySnapshot = await getDocs(q);
+    const { data: membership, error } = await getMembership(userId);
     
-    const payments: FirestorePayment[] = [];
-    querySnapshot.forEach((doc) => {
-      payments.push({ id: doc.id, ...doc.data() } as FirestorePayment);
-    });
-    
-    return { data: payments, error: null };
-  } catch (error) {
-    console.error('Error getting payment history:', error);
-    return { data: null, error };
-  }
-}
-
-export async function updatePaymentStatus(paymentId: string, status: FirestorePayment['status']) {
-  try {
-    const paymentRef = doc(db, 'payments', paymentId);
-    await updateDoc(paymentRef, {
-      status,
-      updated_at: serverTimestamp()
-    });
-    return { error: null };
-  } catch (error) {
-    console.error('Error updating payment status:', error);
-    return { error };
-  }
-}
-
-// Workout Session Functions
-export async function createWorkoutSession(userId: string, sessionData: Partial<WorkoutSession>) {
-  try {
-    const sessionRef = collection(db, 'workout_sessions');
-    const session = {
-      ...sessionData,
-      user_id: userId,
-      created_at: serverTimestamp(),
-      updated_at: serverTimestamp()
-    };
-    const docRef = await addDoc(sessionRef, session);
-    return { data: { id: docRef.id, ...session }, error: null };
-  } catch (error) {
-    console.error('Error creating workout session:', error);
-    return { data: null, error };
-  }
-}
-
-// Diet Plan Functions
-export async function createDietPlan(userId: string, planData: Partial<DietPlan>) {
-  try {
-    const planRef = collection(db, 'diet_plans');
-    const plan = {
-      ...planData,
-      user_id: userId,
-      created_at: serverTimestamp(),
-      updated_at: serverTimestamp()
-    };
-    const docRef = await addDoc(planRef, plan);
-    return { data: { id: docRef.id, ...plan }, error: null };
-  } catch (error) {
-    console.error('Error creating diet plan:', error);
-    return { data: null, error };
-  }
-}
-
-// Attendance Functions
-export async function markAttendance(userId: string, attendanceData: Partial<Attendance>) {
-  try {
-    // Check if attendance already exists for today
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    const attendanceRef = collection(db, 'attendance');
-    const q = query(
-      attendanceRef,
-      where('user_id', '==', userId),
-      where('check_in', '>=', today)
-    );
-    
-    const querySnapshot = await getDocs(q);
-    if (!querySnapshot.empty) {
-      return { data: null, error: 'Attendance already marked for today' };
+    if (error) {
+      return {
+        isActive: false,
+        membership: null,
+        error
+      };
     }
 
-    const attendance = {
-      ...attendanceData,
-      user_id: userId,
-      created_at: serverTimestamp(),
-      updated_at: serverTimestamp()
-    };
-    const docRef = await addDoc(attendanceRef, attendance);
-    return { data: { id: docRef.id, ...attendance }, error: null };
-  } catch (error) {
-    console.error('Error marking attendance:', error);
-    return { data: null, error };
-  }
-}
+    if (!membership) {
+      return {
+        isActive: false,
+        membership: null,
+        error: null
+      };
+    }
 
-export async function getAttendance(userId: string, startDate: Date, endDate: Date) {
-  try {
-    const attendanceRef = collection(db, 'attendance');
-    const q = query(
-      attendanceRef,
-      where('user_id', '==', userId),
-      where('check_in', '>=', startDate),
-      where('check_in', '<=', endDate)
-    );
-    
-    const querySnapshot = await getDocs(q);
-    const attendance = querySnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    })) as Attendance[];
-    
-    return { data: attendance, error: null };
+    const now = new Date().getTime();
+    const endDate = membership.end_date.toDate().getTime();
+    const isActive = membership.is_active && now <= endDate && membership.payment_status === 'completed';
+
+    return {
+      isActive,
+      membership,
+      error: null
+    };
   } catch (error) {
-    console.error('Error getting attendance:', error);
+    console.error('Error checking membership status:', error);
+    return {
+      isActive: false,
+      membership: null,
+      error: error instanceof Error ? error.message : 'Failed to check membership status'
+    };
+  }
+};
+
+export async function createMembership(userId: string, membershipData: Partial<Membership>): Promise<{ data: Membership | null; error: any }> {
+  try {
+    const membershipRef = collection(db, 'memberships');
+
+    // Calculate end date based on duration
+    const startDate = new Date();
+    const endDate = new Date(startDate);
+    const duration = membershipData.duration || 1;
+    endDate.setMonth(endDate.getMonth() + duration);
+
+    // First deactivate all existing memberships
+    const existingMemberships = await getDocs(
+      query(
+        collection(db, 'memberships'),
+        where('userId', '==', userId)
+      )
+    );
+
+    for (const doc of existingMemberships.docs) {
+      await updateDoc(doc.ref, {
+        is_active: false,
+        updated_at: serverTimestamp()
+      });
+    }
+
+    const membership = {
+      amount: membershipData.amount || 699,
+      created_at: serverTimestamp(),
+      duration: duration,
+      end_date: Timestamp.fromDate(endDate),
+      is_active: true,
+      payment_method: membershipData.payment_method || 'admin',
+      payment_status: 'completed',
+      plan_id: membershipData.plan_id || 'MONTHLY',
+      plan_name: membershipData.plan_name || 'Monthly Plan',
+      start_date: Timestamp.fromDate(startDate),
+      updated_at: serverTimestamp(),
+      userId: userId
+    };
+    
+    const docRef = await addDoc(membershipRef, membership);
+    console.log('Created membership with ID:', docRef.id);
+    
+    // Return the created membership with its ID
+    return { 
+      data: { 
+        id: docRef.id, 
+        ...membership 
+      } as Membership, 
+      error: null 
+    };
+  } catch (error) {
+    console.error('Error creating membership:', error);
     return { data: null, error };
   }
 } 

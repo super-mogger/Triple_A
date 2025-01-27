@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Calendar, Clock, Scale, Target, X, Info, ArrowLeft, Droplets, Pill } from 'lucide-react';
 import { WeeklyDietPlan, Food, Meal, Supplement } from '../services/DietService';
 import { useProfile } from '../context/ProfileContext';
+import { toast } from 'react-hot-toast';
 
 // Add type for goal
 type DietGoal = 'weight-loss' | 'muscle-gain' | 'maintenance';
@@ -277,6 +278,7 @@ export default function DietPlanDetails() {
     const savedPlan = localStorage.getItem('currentDietPlan');
     
     if (!savedPlanType || !savedPlan) {
+      console.error('No saved diet plan found');
       navigate('/diet');
       return;
     }
@@ -296,9 +298,12 @@ export default function DietPlanDetails() {
       // Set current day plan based on the first day's meals
       if (plan.weeklyPlan?.[0]?.meals) {
         setCurrentDayPlan(plan.weeklyPlan[0].meals);
+      } else {
+        throw new Error('Invalid plan structure');
       }
     } catch (error) {
       console.error('Error loading diet plan:', error);
+      toast.error('Failed to load diet plan. Please try generating a new one.');
       navigate('/diet');
     }
   }, [navigate]);

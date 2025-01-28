@@ -2,6 +2,7 @@ import { useProfile } from '../context/ProfileContext';
 import { db } from '../config/firebase';
 import { collection, query, where, getDocs, addDoc, Timestamp, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { format, subDays, differenceInDays } from 'date-fns';
+import axios from 'axios';
 
 // Export all necessary interfaces
 export interface DietaryAlternative {
@@ -280,12 +281,39 @@ interface UserProfile {
   userId: string;
 }
 
+const SPOONACULAR_API_KEY = '41a7028772cd4a0fa562ceb7377f59db';
+
+export const fetchFoodImage = async (foodName: string): Promise<string> => {
+  try {
+    console.log(`Requesting image for: ${foodName}`);
+    const response = await axios.get(`https://api.spoonacular.com/food/ingredients/search`, {
+      params: {
+        query: foodName,
+        apiKey: SPOONACULAR_API_KEY
+      }
+    });
+
+    console.log('API response:', response.data);
+    const results = response.data.results;
+    if (results.length > 0) {
+      const imageUrl = `https://spoonacular.com/cdn/ingredients_500x500/${results[0].image}`;
+      console.log(`Image URL found: ${imageUrl}`);
+      return imageUrl;
+    }
+    console.log('No image found, using default.');
+    return '/images/default-diet.png'; // Fallback image
+  } catch (error) {
+    console.error('Error fetching food image:', error);
+    return '/images/default-diet.png'; // Fallback image
+  }
+};
+
 export const useDietService = () => {
   const generateDietPlan = async (profile: UserProfile, planType: string): Promise<WeeklyDietPlan> => {
     try {
       console.log('Generating diet plan for:', { profile, planType });
-    
-      // Calculate BMR using Mifflin-St Jeor Equation
+  
+  // Calculate BMR using Mifflin-St Jeor Equation
       const bmr = profile.gender === 'male'
         ? (10 * profile.weight) + (6.25 * profile.height) - (5 * profile.age) + 5
         : (10 * profile.weight) + (6.25 * profile.height) - (5 * profile.age) - 161;

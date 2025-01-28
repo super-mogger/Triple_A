@@ -7,6 +7,7 @@ import { toast } from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import { checkMembershipStatus } from '../services/FirestoreService';
 import type { Membership } from '../services/FirestoreService';
+import { fetchFoodImage } from '../services/DietService';
 
 interface DietPlanCardProps {
   title: string;
@@ -48,12 +49,37 @@ const DietPlanCard = React.memo(({
   const { isDarkMode } = useTheme();
   const navigate = useNavigate();
   const [imageError, setImageError] = useState(false);
+  const [cardImage, setCardImage] = useState<string>(image);
   
   const handleCardClick = () => {
     if (isPremium && !isGenerating) {
       onClick();
     }
   };
+
+  const getStockImage = (type: string) => {
+    switch (type) {
+      case 'weight-loss':
+        return 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg';
+      case 'muscle-gain':
+        return 'https://images.pexels.com/photos/5938/food-salad-healthy-lunch.jpg';
+      case 'balanced':
+        return 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg';
+      default:
+        return 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg';
+    }
+  };
+
+  useEffect(() => {
+    const loadImage = async () => {
+      console.log(`Fetching image for: ${title}`);
+      const fetchedImage = getStockImage(type);
+      console.log(`Fetched image URL: ${fetchedImage}`);
+      setImageError(false);
+      setCardImage(fetchedImage);
+    };
+    loadImage();
+  }, [title, type]);
 
   // Get default image based on plan type
   const getDefaultImage = (type: string) => {
@@ -73,14 +99,14 @@ const DietPlanCard = React.memo(({
     <div 
       onClick={handleCardClick}
       className={`
-        relative rounded-xl overflow-hidden transform transition-all duration-300 cursor-pointer
+        relative rounded-xl overflow-hidden shadow-lg transform transition-all duration-300 cursor-pointer
         ${isDarkMode ? 'bg-[#1E1E1E]' : 'bg-white'}
         ${isSelected ? 'ring-2 ring-blue-500 scale-[1.02]' : 'hover:scale-[1.02]'}
       `}
     >
-      <div className="h-48 relative bg-gray-100 dark:bg-gray-800">
+      <div className="h-48 relative">
         <img 
-          src={imageError ? getDefaultImage(type) : image}
+          src={imageError ? getDefaultImage(type) : cardImage}
           alt={title} 
           className="object-cover w-full h-full"
           onError={() => setImageError(true)}
@@ -89,63 +115,27 @@ const DietPlanCard = React.memo(({
         {/* Gradient overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
       </div>
-      <div className="p-6">
-        <h3 className={`text-xl font-semibold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+      <div className="p-4">
+        <h3 className={`text-xl font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
           {title}
         </h3>
-        <p className={`text-sm mb-4 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+        <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
           {description}
         </p>
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mt-4">
           <span className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
             {duration}
           </span>
-          <span className={`
-            px-3 py-1 rounded-full text-sm font-medium
-            ${type === 'weight-loss' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
-              type === 'muscle-gain' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
-              'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'}
-          `}>
+          <span className="px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-700">
             {goal}
           </span>
         </div>
-      </div>
-
-      {/* Action Button */}
-      <div className="px-6 pb-6">
-        {isPremium ? (
-          <button
-            onClick={(e) => {
-              e.stopPropagation(); // Prevent card click
-              if (isSelected) {
-                onStartPlan();
-              } else {
-                onClick();
-              }
-            }}
-            disabled={isGenerating}
-            className={`
-              w-full px-4 py-3 rounded-lg font-medium transition-all duration-300
-              ${isGenerating
-                ? 'bg-blue-100 text-blue-400 dark:bg-blue-900/30 dark:text-blue-400 cursor-wait'
-                : isSelected
-                  ? 'bg-blue-600 text-white hover:bg-blue-700 dark:hover:bg-blue-500'
-                  : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'}
-            `}
-          >
-            {isGenerating ? 'Generating...' : isSelected ? 'Start Plan' : 'Select Plan'}
-          </button>
-        ) : (
-          <button
-            onClick={(e) => {
-              e.stopPropagation(); // Prevent card click
-              navigate('/membership');
-            }}
-            className="w-full px-4 py-3 rounded-lg font-medium bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:from-purple-700 hover:to-blue-700 transition-all duration-300"
-          >
-            Upgrade to Premium
-          </button>
-        )}
+        <button
+          onClick={() => navigate('/diet/plan-details')}
+          className="mt-4 w-full px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-all duration-300"
+        >
+          Start Diet Plan
+        </button>
       </div>
     </div>
   );

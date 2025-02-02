@@ -18,6 +18,7 @@ import type { Exercise, ExerciseDetails } from '../types/exercise';
 import { useAuth } from '../context/AuthContext';
 import { checkMembershipStatus } from '../services/FirestoreService';
 import type { Membership } from '../services/FirestoreService';
+import MembershipRequired from '../components/MembershipRequired';
 
 type SplitType = 'bro-split' | 'push-pull-legs' | 'upper-lower';
 
@@ -486,20 +487,7 @@ export default function Workouts() {
   }
 
   if (!membershipStatus.isActive) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
-            <div className="text-center">
-          <h2 className="text-2xl font-semibold mb-4">Active Membership Required</h2>
-          <p className="text-gray-600 mb-4">Please purchase a membership to access workout features.</p>
-              <button
-                onClick={() => navigate('/membership')}
-            className="bg-emerald-500 text-white px-6 py-2 rounded-lg hover:bg-emerald-600 transition-colors"
-              >
-                View Membership Plans
-              </button>
-        </div>
-      </div>
-    );
+    return <MembershipRequired feature="workout" />;
   }
 
   if (loadingExercises) {

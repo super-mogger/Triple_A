@@ -64,6 +64,7 @@ export default function ProfileEdit() {
       activity_level: profile?.preferences?.activity_level || 'moderate'
     }
   });
+  const [heightUnit, setHeightUnit] = useState<'cm' | 'ft'>('cm');
 
   // Update form data when profile changes
   useEffect(() => {
@@ -439,22 +440,26 @@ export default function ProfileEdit() {
                   <p className="text-xs text-gray-500 dark:text-gray-400">Important for medical purposes</p>
                 </div>
                 <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-500 dark:text-gray-400">Phone Number</label>
+                  <label className="block text-sm font-medium text-gray-500 dark:text-gray-400">Contact Number</label>
                   <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400">+91</span>
                     <input
                       type="tel"
+                      className="w-full px-4 py-2 rounded-lg bg-gray-100 dark:bg-[#282828] border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
                       value={formData.personal_info.contact.replace('+91', '').trim()}
+                      disabled={!isAdmin}
                       onChange={(e) => {
                         const value = e.target.value.replace(/\D/g, '');
                         handleChange('personal_info', 'contact', value ? `+91 ${value}` : '');
                       }}
-                      className="w-full bg-gray-50 dark:bg-[#282828] rounded-xl pl-12 pr-4 py-3 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors"
-                      placeholder="98765 43210"
                       maxLength={10}
                     />
+                    {!isAdmin && (
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center text-gray-500">
+                        <Lock className="w-4 h-4 mr-1" />
+                        <span className="text-xs">Admin only</span>
+                      </div>
+                    )}
                   </div>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Enter your 10-digit mobile number</p>
                 </div>
               </div>
             </div>
@@ -519,32 +524,91 @@ export default function ProfileEdit() {
                   <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Your current body measurements</p>
                 </div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-500 dark:text-gray-400">Weight (kg)</label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Weight (kg)</label>
                   <input
                     type="number"
+                    className="w-full px-4 py-2 rounded-lg bg-gray-100 dark:bg-[#282828] border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white"
                     value={formData.personal_info.weight}
                     onChange={(e) => handleChange('personal_info', 'weight', e.target.value)}
-                    className="w-full bg-gray-50 dark:bg-[#282828] rounded-xl px-4 py-3 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors"
-                    placeholder="65"
-                    min="30"
-                    max="250"
+                    min="0"
+                    max="300"
                   />
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Example: 65 kg</p>
                 </div>
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-500 dark:text-gray-400">Height (cm)</label>
-                  <input
-                    type="number"
-                    value={formData.personal_info.height}
-                    onChange={(e) => handleChange('personal_info', 'height', e.target.value)}
-                    className="w-full bg-gray-50 dark:bg-[#282828] rounded-xl px-4 py-3 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors"
-                    placeholder="170"
-                    min="100"
-                    max="250"
-                  />
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Example: 170 cm</p>
+                <div>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="block text-sm font-medium">Height</label>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setHeightUnit('cm')}
+                        className={`text-xs px-2 py-1 rounded ${
+                          heightUnit === 'cm' 
+                            ? 'bg-emerald-500 text-white' 
+                            : 'bg-gray-100 dark:bg-[#282828] text-gray-700 dark:text-gray-300'
+                        }`}
+                      >
+                        cm
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setHeightUnit('ft')}
+                        className={`text-xs px-2 py-1 rounded ${
+                          heightUnit === 'ft' 
+                            ? 'bg-emerald-500 text-white' 
+                            : 'bg-gray-100 dark:bg-[#282828] text-gray-700 dark:text-gray-300'
+                        }`}
+                      >
+                        ft/in
+                      </button>
+                    </div>
+                  </div>
+                  {heightUnit === 'cm' ? (
+                    <input
+                      type="number"
+                      className="w-full px-4 py-2 rounded-lg bg-gray-100 dark:bg-[#282828] border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white"
+                      value={formData.personal_info.height}
+                      onChange={(e) => handleChange('personal_info', 'height', e.target.value)}
+                      min="0"
+                      max="300"
+                    />
+                  ) : (
+                    <div className="flex gap-2">
+                      <div className="flex-1">
+                        <input
+                          type="number"
+                          className="w-full px-4 py-2 rounded-lg bg-gray-100 dark:bg-[#282828] border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white"
+                          value={Math.floor(formData.personal_info.height / 30.48)}
+                          onChange={(e) => {
+                            const feet = Number(e.target.value);
+                            const inches = formData.personal_info.height % 30.48 / 2.54;
+                            const totalCm = (feet * 30.48) + (inches * 2.54);
+                            handleChange('personal_info', 'height', Math.round(totalCm));
+                          }}
+                          min="0"
+                          max="9"
+                          placeholder="ft"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <input
+                          type="number"
+                          className="w-full px-4 py-2 rounded-lg bg-gray-100 dark:bg-[#282828] border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white"
+                          value={Math.round((formData.personal_info.height % 30.48) / 2.54)}
+                          onChange={(e) => {
+                            const inches = Number(e.target.value);
+                            const feet = Math.floor(formData.personal_info.height / 30.48);
+                            const totalCm = (feet * 30.48) + (inches * 2.54);
+                            handleChange('personal_info', 'height', Math.round(totalCm));
+                          }}
+                          min="0"
+                          max="11"
+                          placeholder="in"
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

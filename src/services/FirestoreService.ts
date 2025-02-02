@@ -12,7 +12,8 @@ import {
   serverTimestamp,
   addDoc,
   orderBy,
-  limit
+  limit,
+  writeBatch
 } from 'firebase/firestore';
 import type { FirestoreProfile, FirestoreMembership, FirestorePayment } from '../types/firestore.types';
 import { Profile } from '../types/profile';
@@ -150,71 +151,83 @@ export async function createProfile(userId: string, data: Profile): Promise<{ er
 export const getMembership = async (userId: string): Promise<{ data: Membership | null; error: string | null }> => {
   try {
     console.log('Fetching membership for user:', userId);
-    const membershipRef = collection(db, 'memberships');
     
+    // First try to get from global memberships collection
+    const membershipRef = collection(db, 'memberships');
     const membershipQuery = query(
       membershipRef,
       where('userId', '==', userId),
-      orderBy('created_at', 'desc')
+      orderBy('created_at', 'desc'),
+      limit(1)
     );
     
     const querySnapshot = await getDocs(membershipQuery);
-
+    
     if (querySnapshot.empty) {
-      console.log('No membership found for user:', userId);
-      return { data: null, error: null };
-    }
-
-    let mostRecentMembership: Membership | null = null;
-    let mostRecentDate = new Date(0);
-
-    const now = new Date();
-
-    for (const doc of querySnapshot.docs) {
-      const data = doc.data();
-      const createdAt = data.created_at?.toDate() || new Date(0);
-      const endDate = data.end_date instanceof Timestamp ? data.end_date.toDate() : null;
-      const startDate = data.start_date instanceof Timestamp ? data.start_date.toDate() : null;
-
-      if (endDate && startDate && createdAt > mostRecentDate && data.payment_status === 'completed') {
-        mostRecentDate = createdAt;
-        mostRecentMembership = {
-          id: doc.id,
-          ...data
-        } as Membership;
+      console.log('No membership found in global collection, checking user subcollection...');
+      
+      // Try user's membership subcollection as fallback
+      const userMembershipRef = doc(collection(db, 'users', userId, 'membership'), 'current');
+      const userMembershipDoc = await getDoc(userMembershipRef);
+      
+      if (!userMembershipDoc.exists()) {
+        console.log('No membership found for user:', userId);
+        return { data: null, error: null };
       }
+      
+      const membershipData = userMembershipDoc.data() as Membership;
+      return handleMembershipData(membershipData, userMembershipDoc.id);
     }
 
-    if (!mostRecentMembership) {
-      console.log('No valid membership found');
-      return { data: null, error: null };
-    }
+    // Use the most recent membership from global collection
+    const membershipDoc = querySnapshot.docs[0];
+    const membershipData = membershipDoc.data() as Membership;
+    
+    // If found in global but not in user's collection, sync it
+    const userMembershipRef = doc(collection(db, 'users', userId, 'membership'), 'current');
+    await setDoc(userMembershipRef, {
+      ...membershipData,
+      updated_at: serverTimestamp()
+    });
 
-    const endDate = mostRecentMembership.end_date instanceof Timestamp ? mostRecentMembership.end_date.toDate() : null;
-    const startDate = mostRecentMembership.start_date instanceof Timestamp ? mostRecentMembership.start_date.toDate() : null;
-
-    const shouldBeActive = endDate && startDate 
-      ? now >= startDate && now <= endDate
-      : false;
-
-    if (mostRecentMembership.is_active !== shouldBeActive) {
-      for (const doc of querySnapshot.docs) {
-        await updateDoc(doc.ref, {
-          is_active: doc.id === mostRecentMembership.id ? shouldBeActive : false,
-          updated_at: serverTimestamp()
-        });
-      }
-      mostRecentMembership.is_active = shouldBeActive;
-    }
-
-    return { data: mostRecentMembership, error: null };
+    return handleMembershipData(membershipData, membershipDoc.id);
   } catch (error) {
     console.error('Error fetching membership:', error);
-    return { 
-      data: null, 
-      error: error instanceof Error ? error.message : 'Failed to fetch membership' 
+    return {
+      data: null,
+      error: error instanceof Error ? error.message : 'Failed to fetch membership'
     };
   }
+};
+
+// Helper function to handle membership data processing
+const handleMembershipData = async (
+  membershipData: Membership, 
+  docId: string
+): Promise<{ data: Membership | null; error: string | null }> => {
+  const now = new Date().getTime();
+  const endDate = membershipData.end_date instanceof Timestamp ? 
+    membershipData.end_date.toDate().getTime() : null;
+  
+  const shouldBeActive = endDate ? now <= endDate : false;
+  
+  if (membershipData.is_active !== shouldBeActive) {
+    // Update active status if it has changed
+    const userMembershipRef = doc(collection(db, 'users', membershipData.userId, 'membership'), 'current');
+    await updateDoc(userMembershipRef, {
+      is_active: shouldBeActive,
+      updated_at: serverTimestamp()
+    });
+    membershipData.is_active = shouldBeActive;
+  }
+
+  return { 
+    data: {
+      ...membershipData,
+      id: docId
+    }, 
+    error: null 
+  };
 };
 
 export const checkMembershipStatus = async (userId: string): Promise<{
@@ -260,59 +273,58 @@ export const checkMembershipStatus = async (userId: string): Promise<{
   }
 };
 
-export async function createMembership(userId: string, membershipData: Partial<Membership>): Promise<{ data: Membership | null; error: any }> {
+export async function createMembership(
+  userId: string, 
+  membershipData: Partial<Membership>
+): Promise<{ data: Membership | null; error: any }> {
   try {
-    const membershipRef = collection(db, 'memberships');
-
-    // Calculate end date based on duration
-    const startDate = new Date();
-    const endDate = new Date(startDate);
-    const duration = membershipData.duration || 1;
-    endDate.setMonth(endDate.getMonth() + duration);
-
-    // First deactivate all existing memberships
-    const existingMemberships = await getDocs(
-      query(
-        collection(db, 'memberships'),
-        where('userId', '==', userId)
-      )
-    );
-
-    for (const doc of existingMemberships.docs) {
-      await updateDoc(doc.ref, {
-        is_active: false,
-        updated_at: serverTimestamp()
-      });
-    }
-
-    const membership = {
-      amount: membershipData.amount || 699,
-      created_at: serverTimestamp(),
-      duration: duration,
-      end_date: Timestamp.fromDate(endDate),
+    const batch = writeBatch(db);
+    
+    // Prepare membership data
+    const now = serverTimestamp();
+    const completeData: Membership = {
+      ...membershipData,
+      userId,
+      created_at: now,
+      updated_at: now,
       is_active: true,
-      payment_method: membershipData.payment_method || 'admin',
-      payment_status: 'completed',
-      plan_id: membershipData.plan_id || 'MONTHLY',
-      plan_name: membershipData.plan_name || 'Monthly Plan',
-      start_date: Timestamp.fromDate(startDate),
-      updated_at: serverTimestamp(),
-      userId: userId
-    };
-    
-    const docRef = await addDoc(membershipRef, membership);
-    console.log('Created membership with ID:', docRef.id);
-    
-    // Return the created membership with its ID
-    return { 
-      data: { 
-        id: docRef.id, 
-        ...membership 
-      } as Membership, 
-      error: null 
+      payment_status: 'completed'
+    } as Membership;
+
+    // Store in user's membership subcollection
+    const userMembershipRef = doc(collection(db, 'users', userId, 'membership'), 'current');
+    batch.set(userMembershipRef, completeData);
+
+    // Also store in global memberships collection for admin access
+    const globalMembershipRef = doc(collection(db, 'memberships'));
+    batch.set(globalMembershipRef, {
+      ...completeData,
+      membershipId: globalMembershipRef.id
+    });
+
+    // Update user's profile with membership status
+    const profileRef = doc(db, 'profiles', userId);
+    batch.update(profileRef, {
+      'membership_status': 'active',
+      'membership_end_date': membershipData.end_date,
+      'membership_plan': membershipData.plan_id,
+      'updated_at': now
+    });
+
+    await batch.commit();
+
+    return {
+      data: {
+        ...completeData,
+        id: userMembershipRef.id
+      },
+      error: null
     };
   } catch (error) {
     console.error('Error creating membership:', error);
-    return { data: null, error };
+    return {
+      data: null,
+      error: error instanceof Error ? error.message : 'Failed to create membership'
+    };
   }
 } 

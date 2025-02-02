@@ -27,6 +27,7 @@ dist-ssr
 **/google-services.json
 **/firebase-adminsdk*.json
 **/serviceAccountKey.json
+triple-a-b8605-firebase-adminsdk-h9m98-be8c77729f.json
 
 # Gradle files
 .gradle/

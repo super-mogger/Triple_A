@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Crown, Check } from 'lucide-react';
+import { ArrowLeft, Crown, Check, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { checkMembershipStatus, createMembership } from '../services/FirestoreService';
@@ -178,6 +178,22 @@ export default function MembershipDetails() {
           )}
         </div>
 
+        {/* Coming Soon Banner */}
+        <div className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-2xl p-6 mb-8 relative overflow-hidden">
+          <div className="absolute inset-0 bg-black/10"></div>
+          <div className="relative z-10">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="bg-white/20 p-2 rounded-lg">
+                <Sparkles className="w-6 h-6 text-white" />
+              </div>
+              <h2 className="text-xl font-bold text-white">Online Payments Coming Soon!</h2>
+            </div>
+            <p className="text-white/90">
+              We're working on bringing you a seamless online payment experience. Please visit our gym office for membership details and registration.
+            </p>
+          </div>
+        </div>
+
         {/* Available Plans */}
         <div className="space-y-6">
           <h2 className="text-xl font-bold text-gray-900 dark:text-white">Available Plans</h2>
@@ -208,28 +224,17 @@ export default function MembershipDetails() {
                   ))}
                 </ul>
                 <button
-                  onClick={() => handleCreateMembership(plan)}
-                  disabled={loading || membershipStatus.membership?.plan_id === plan.id}
-                  className={`w-full py-2.5 rounded-xl font-medium transition-all duration-300 ${
-                    membershipStatus.membership?.plan_id === plan.id
-                      ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400 cursor-default'
-                      : loading && selectedPlan === plan.id
-                      ? 'bg-gray-300 text-gray-600 cursor-wait'
-                      : 'bg-emerald-500 hover:bg-emerald-600 text-white dark:bg-gradient-to-r dark:from-emerald-400 dark:to-teal-400 dark:hover:from-emerald-500 dark:hover:to-teal-500 dark:text-black'
-                  }`}
+                  disabled={true}
+                  className="w-full py-2.5 rounded-xl font-medium bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed"
                 >
-                  {membershipStatus.membership?.plan_id === plan.id 
-                    ? 'Current Plan' 
-                    : loading && selectedPlan === plan.id 
-                    ? 'Processing...' 
-                    : 'Choose Plan'}
+                  Visit Gym Office to Register
                 </button>
               </div>
             ))}
           </div>
           <div className="mt-6 text-center">
-            <p className="text-gray-500">
-              Secure payment powered by Razorpay
+            <p className="text-gray-500 dark:text-gray-400">
+              Please visit our gym office for membership registration and more details
             </p>
           </div>
         </div>

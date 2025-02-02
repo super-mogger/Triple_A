@@ -21,7 +21,12 @@ import ProfileEdit from './pages/ProfileEdit';
 import MembershipDetails from './pages/MembershipDetails';
 import Achievements from './pages/Achievements';
 import Settings from './pages/Settings';
+import NotificationSettings from './pages/NotificationSettings';
+import PrivacyAndSecurity from './pages/PrivacyAndSecurity';
 import { useEffect } from 'react';
+import { NotificationProvider } from './context/NotificationContext';
+import { PrivacyProvider } from './context/PrivacyContext';
+import HelpAndSupport from './pages/HelpAndSupport';
 
 function AppRoutes() {
   const { user, loading } = useAuth();
@@ -47,13 +52,24 @@ function AppRoutes() {
       <Route path="/signup" element={user ? <Navigate to="/dashboard" replace /> : <SignUp />} />
       <Route path="/verify-email" element={<VerifyEmail />} />
       
-      {/* Protected routes */}
+      {/* Protected routes without Layout */}
       <Route path="/user-info" element={
         <PrivateRoute>
           <UserInfoForm />
         </PrivateRoute>
       } />
+      <Route path="/privacy" element={
+        <PrivateRoute>
+          <PrivacyAndSecurity />
+        </PrivateRoute>
+      } />
+      <Route path="/support" element={
+        <PrivateRoute>
+          <HelpAndSupport />
+        </PrivateRoute>
+      } />
       
+      {/* Protected routes with Layout */}
       <Route element={
         <PrivateRoute>
           <Layout />
@@ -69,6 +85,7 @@ function AppRoutes() {
         <Route path="/membership" element={<MembershipDetails />} />
         <Route path="/achievements" element={<Achievements />} />
         <Route path="/settings" element={<Settings />} />
+        <Route path="/notifications" element={<NotificationSettings />} />
       </Route>
 
       {/* Catch-all route */}
@@ -79,23 +96,27 @@ function AppRoutes() {
 
 function App() {
   return (
-    <ThemeProvider>
-      <AuthProvider>
-        <ProfileProvider>
-          <Toaster 
-            position="top-right"
-            toastOptions={{
-              duration: 4000,
-              style: {
-                background: '#333',
-                color: '#fff',
-              }
-            }}
-          />
-          <AppRoutes />
-        </ProfileProvider>
-      </AuthProvider>
-    </ThemeProvider>
+    <NotificationProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <ProfileProvider>
+            <PrivacyProvider>
+              <Toaster 
+                position="top-right"
+                toastOptions={{
+                  duration: 4000,
+                  style: {
+                    background: '#333',
+                    color: '#fff',
+                  }
+                }}
+              />
+              <AppRoutes />
+            </PrivacyProvider>
+          </ProfileProvider>
+        </AuthProvider>
+      </ThemeProvider>
+    </NotificationProvider>
   );
 }
 

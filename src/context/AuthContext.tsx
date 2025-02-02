@@ -144,7 +144,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const updateUserProfileData = async (data: { displayName?: string; photoURL?: string }) => {
     if (!user) throw new Error('No user logged in');
-    await updateUserProfile(user, data);
+    
+    try {
+      // Update Firebase Auth profile
+      await updateUserProfile(user, data);
+      
+      // If photoURL is being updated, also update Firestore profile
+      if (data.photoURL) {
+        const { error: updateError } = await updateProfile(user.uid, {
+          photoURL: data.photoURL,
+          updated_at: Timestamp.now()
+        });
+        
+        if (updateError) throw updateError;
+      }
+      
+      // Force refresh the user to get updated profile
+      await user.reload();
+    } catch (error) {
+      console.error('Error updating user profile:', error);
+      throw error;
+    }
   };
 
   const value: AuthContextType = {

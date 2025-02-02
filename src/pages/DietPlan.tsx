@@ -51,6 +51,11 @@ const DietPlanCard = React.memo(({
   const [imageError, setImageError] = useState(false);
   const [cardImage, setCardImage] = useState<string>(image);
   
+  const handleStartPlan = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onStartPlan();
+  };
+
   const handleCardClick = () => {
     if (isPremium && !isGenerating) {
       onClick();
@@ -131,7 +136,7 @@ const DietPlanCard = React.memo(({
           </span>
         </div>
         <button
-          onClick={() => navigate('/diet/plan-details')}
+          onClick={handleStartPlan}
           className="mt-4 w-full px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-all duration-300"
         >
           Start Diet Plan
@@ -216,9 +221,9 @@ export default function DietPlan() {
     setSelectedPlan(plan);
   };
 
-  const handleStartPlan = async () => {
-    if (!selectedPlan || !profile || !user) {
-      toast.error('Please select a plan first');
+  const handleStartPlan = async (plan: DietPlanType) => {
+    if (!profile || !user) {
+      toast.error('Please log in to start a diet plan');
       return;
     }
 
@@ -238,21 +243,21 @@ export default function DietPlan() {
         userId: user.uid
       };
       
-      const plan = await generateDietPlan(userProfile, selectedPlan.type);
+      const dietPlan = await generateDietPlan(userProfile, plan.type);
       
-      if (!plan) {
+      if (!dietPlan) {
         throw new Error('Failed to generate diet plan');
       }
       
       // Save plan data to localStorage
-      localStorage.setItem('selectedDietPlanType', selectedPlan.type);
-      localStorage.setItem('currentDietPlan', JSON.stringify(plan));
+      localStorage.setItem('selectedDietPlanType', plan.type);
+      localStorage.setItem('currentDietPlan', JSON.stringify(dietPlan));
       
-      toast.success('Diet plan generated successfully!');
-      navigate('/diet/plan-details');
+      // Navigate to plan details
+      navigate('/diet/plan-details', { state: { plan: dietPlan } });
     } catch (error) {
       console.error('Error generating diet plan:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to generate diet plan. Please try again.');
+      toast.error('Failed to generate diet plan. Please try again.');
     } finally {
       setIsGenerating(false);
     }
@@ -296,19 +301,19 @@ export default function DietPlan() {
 
   return (
     <div className="min-h-screen bg-white dark:bg-[#121212] py-8">
-      <div className="max-w-7xl mx-auto px-4">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-8">Diet Plans</h1>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {dietPlans.map((plan) => (
+          {dietPlans.map((plan, index) => (
             <DietPlanCard
-              key={plan.type}
+              key={index}
               {...plan}
               onClick={() => handlePlanSelect(plan)}
               isSelected={selectedPlan?.type === plan.type}
               isPremium={isPremium}
               isGenerating={isGenerating}
-              onStartPlan={handleStartPlan}
+              onStartPlan={() => handleStartPlan(plan)}
             />
           ))}
         </div>

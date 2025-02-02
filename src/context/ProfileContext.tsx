@@ -4,6 +4,7 @@ import { getProfile as getFirestoreProfile, updateProfile as updateFirestoreProf
 import { toast } from 'react-hot-toast';
 import { Profile } from '../types/profile';
 import { Timestamp } from 'firebase/firestore';
+import { updateProfile as updateAuthProfile } from 'firebase/auth';
 
 interface ProfileContextType {
   profile: Profile | null;
@@ -91,12 +92,23 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
         ...data,
         updated_at: Timestamp.now()
       };
+
+      // Update Firestore profile
       const { error: updateError } = await updateFirestoreProfile(user.uid, updatedData);
       if (updateError) throw updateError;
+
+      // If photoURL is being updated, also update the auth profile
+      if (data.photoURL && user) {
+        await updateAuthProfile(user, {
+          photoURL: data.photoURL
+        });
+      }
       
       await fetchProfile(); // Refresh profile data
+      toast.success('Profile updated successfully');
     } catch (err) {
       console.error('Error updating profile:', err);
+      toast.error('Failed to update profile');
       throw err;
     }
   };

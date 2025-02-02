@@ -1,7 +1,6 @@
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ProfileProvider } from './context/ProfileContext';
-import { PaymentProvider } from './context/PaymentContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { Toaster } from 'react-hot-toast';
 import Layout from './components/Layout';
@@ -20,10 +19,8 @@ import VerifyEmail from './pages/VerifyEmail';
 import Workouts from './pages/Workouts';
 import ProfileEdit from './pages/ProfileEdit';
 import MembershipDetails from './pages/MembershipDetails';
-import PaymentHistory from './pages/PaymentHistory';
 import Achievements from './pages/Achievements';
 import Settings from './pages/Settings';
-import PaymentTest from './components/PaymentTest';
 import { useEffect } from 'react';
 
 function AppRoutes() {
@@ -70,10 +67,8 @@ function AppRoutes() {
         <Route path="/profile" element={<Profile />} />
         <Route path="/profile/edit" element={<ProfileEdit />} />
         <Route path="/membership" element={<MembershipDetails />} />
-        <Route path="/payment-history" element={<PaymentHistory />} />
         <Route path="/achievements" element={<Achievements />} />
         <Route path="/settings" element={<Settings />} />
-        <Route path="/payment-test" element={<PaymentTest />} />
       </Route>
 
       {/* Catch-all route */}
@@ -87,19 +82,17 @@ function App() {
     <ThemeProvider>
       <AuthProvider>
         <ProfileProvider>
-          <PaymentProvider>
-            <Toaster 
-              position="top-right"
-              toastOptions={{
-                duration: 4000,
-                style: {
-                  background: '#333',
-                  color: '#fff',
-                }
-              }}
-            />
-            <AppRoutes />
-          </PaymentProvider>
+          <Toaster 
+            position="top-right"
+            toastOptions={{
+              duration: 4000,
+              style: {
+                background: '#333',
+                color: '#fff',
+              }
+            }}
+          />
+          <AppRoutes />
         </ProfileProvider>
       </AuthProvider>
     </ThemeProvider>

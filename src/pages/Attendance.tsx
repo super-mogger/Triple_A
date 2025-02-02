@@ -7,7 +7,6 @@ import { Trophy, Clock, Calendar as CalendarIcon, CheckCircle2, XCircle } from '
 import toast from 'react-hot-toast';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
-import { usePayment } from '../context/PaymentContext';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { checkMembershipStatus } from '../services/FirestoreService';
@@ -15,7 +14,6 @@ import type { Membership } from '../services/FirestoreService';
 
 const Attendance = () => {
   const { profile } = useProfile();
-  const { membership } = usePayment();
   const navigate = useNavigate();
   const { user } = useAuth();
   const [showScanner, setShowScanner] = useState(false);

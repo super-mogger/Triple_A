@@ -10,7 +10,6 @@ import {
   type WeeklySchedule
 } from '../services/WorkoutService';
 import { Dumbbell, Filter, ChevronDown, X, Clock, Target, Gauge, Wrench, Calendar, Play, Info, BarChart } from 'lucide-react';
-import { usePayment } from '../context/PaymentContext';
 import { useProfile } from '../context/ProfileContext';
 import { useNavigate } from 'react-router-dom';
 import { MuscleRadarChart } from '../components/MuscleRadarChart';
@@ -134,7 +133,7 @@ const calculateMuscleTargeting = (exercise: Exercise): MuscleData[] => {
 
 const filterWorkoutsByEquipment = (workouts: WorkoutPlan[], equipment: string[]): WorkoutPlan[] => {
   return workouts.filter(workout => {
-    const requiredEquipment = workout.equipment || [];
+    const requiredEquipment = Array.isArray(workout.equipment) ? workout.equipment : [];
     return requiredEquipment.every((item: string) => equipment.includes(item.toLowerCase()));
   });
 };
@@ -252,11 +251,10 @@ function WeekdaySchedule({ schedule, currentDay, setCurrentDay }: WeekdaySchedul
 
 // Initial states
 export default function Workouts() {
-  const { user } = useAuth();
-  const navigate = useNavigate();
   const { profile } = useProfile();
-  
-  // States
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const [loading, setLoading] = useState(true);
   const [currentDay, setCurrentDay] = useState<string>(() => {
     const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     return days[new Date().getDay()];
@@ -266,7 +264,6 @@ export default function Workouts() {
     membership: Membership | null;
     error: string | null;
   }>({ isActive: false, membership: null, error: null });
-  const [loading, setLoading] = useState(true);
   const [workouts, setWorkouts] = useState<WorkoutPlan[]>([]);
   const [filteredWorkouts, setFilteredWorkouts] = useState<WorkoutPlan[]>([]);
   const [selectedWorkout, setSelectedWorkout] = useState<WorkoutPlan | null>(null);

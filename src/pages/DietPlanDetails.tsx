@@ -269,44 +269,41 @@ const MealCard = memo(({ meal, onFoodClick }: {
 export default function DietPlanDetails() {
   const navigate = useNavigate();
   const location = useLocation();
+  const [plan, setPlan] = useState<WeeklyDietPlan | null>(null);
   const [selectedFood, setSelectedFood] = useState<Food | null>(null);
-  const [currentDayPlan, setCurrentDayPlan] = useState<Meal[] | null>(null);
-  const [dietPlan, setDietPlan] = useState<WeeklyDietPlan | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const savedPlanType = localStorage.getItem('selectedDietPlanType');
-    const savedPlan = localStorage.getItem('currentDietPlan');
-    
-    if (!savedPlanType || !savedPlan) {
-      console.error('No saved diet plan found');
-      navigate('/diet');
-      return;
-    }
+    const loadPlan = () => {
+      try {
+        // Try to get plan from navigation state first
+        if (location.state?.plan) {
+          setPlan(location.state.plan);
+          setLoading(false);
+          return;
+        }
 
-    try {
-      const plan = JSON.parse(savedPlan);
-      
-      // Verify that the loaded plan matches the selected type
-      if (plan.type !== savedPlanType) {
-        console.error('Plan type mismatch, redirecting to diet selection');
-        navigate('/diet');
-        return;
+        // If not in navigation state, try localStorage
+        const savedPlan = localStorage.getItem('currentDietPlan');
+        if (savedPlan) {
+          setPlan(JSON.parse(savedPlan));
+          setLoading(false);
+          return;
+        }
+
+        // If no plan is found, show error
+        setError('No diet plan found. Please select a plan first.');
+        setLoading(false);
+      } catch (err) {
+        console.error('Error loading diet plan:', err);
+        setError('Failed to load diet plan. Please try again.');
+        setLoading(false);
       }
+    };
 
-      setDietPlan(plan);
-
-      // Set current day plan based on the first day's meals
-      if (plan.weeklyPlan?.[0]?.meals) {
-        setCurrentDayPlan(plan.weeklyPlan[0].meals);
-      } else {
-        throw new Error('Invalid plan structure');
-      }
-    } catch (error) {
-      console.error('Error loading diet plan:', error);
-      toast.error('Failed to load diet plan. Please try generating a new one.');
-      navigate('/diet');
-    }
-  }, [navigate]);
+    loadPlan();
+  }, [location.state]);
 
   const handleFoodClick = useCallback((food: Food) => {
     setSelectedFood(food);
@@ -318,23 +315,23 @@ export default function DietPlanDetails() {
 
   // Memoize nutritional goals calculations
   const nutritionalGoals = useMemo(() => {
-    if (!dietPlan?.nutritionalGoals) return null;
+    if (!plan?.nutritionalGoals) return null;
     return {
-      calories: dietPlan.nutritionalGoals.calories,
+      calories: plan.nutritionalGoals.calories,
       protein: {
-        grams: dietPlan.nutritionalGoals.protein.grams,
-        percentage: dietPlan.nutritionalGoals.protein.percentage
+        grams: plan.nutritionalGoals.protein.grams,
+        percentage: plan.nutritionalGoals.protein.percentage
       },
       carbs: {
-        grams: dietPlan.nutritionalGoals.carbs.grams,
-        percentage: dietPlan.nutritionalGoals.carbs.percentage
+        grams: plan.nutritionalGoals.carbs.grams,
+        percentage: plan.nutritionalGoals.carbs.percentage
       },
       fats: {
-        grams: dietPlan.nutritionalGoals.fats.grams,
-        percentage: dietPlan.nutritionalGoals.fats.percentage
+        grams: plan.nutritionalGoals.fats.grams,
+        percentage: plan.nutritionalGoals.fats.percentage
       }
     };
-  }, [dietPlan?.nutritionalGoals]);
+  }, [plan?.nutritionalGoals]);
 
   // Get plan type specific details
   const getPlanTypeDetails = () => {
@@ -374,10 +371,27 @@ export default function DietPlanDetails() {
 
   const planDetails = getPlanTypeDetails();
 
-  if (!dietPlan || !currentDayPlan) {
+  if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-[#121212] flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-emerald-500"></div>
+      </div>
+    );
+  }
+
+  if (error || !plan) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-semibold mb-4">Error Loading Diet Plan</h2>
+          <p className="text-gray-600 mb-4">{error || 'No diet plan found'}</p>
+          <button
+            onClick={() => navigate('/diet')}
+            className="bg-emerald-500 text-white px-6 py-2 rounded-lg hover:bg-emerald-600 transition-colors"
+          >
+            Select a Diet Plan
+          </button>
+        </div>
       </div>
     );
   }
@@ -395,37 +409,37 @@ export default function DietPlanDetails() {
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
-            <h1 className="text-xl sm:text-2xl font-bold">{dietPlan?.title}</h1>
+            <h1 className="text-xl sm:text-2xl font-bold">{plan?.title}</h1>
             <span className="ml-auto px-3 py-1 text-xs bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-full">
-              {dietPlan?.level}
+              {plan?.level}
             </span>
           </div>
 
           {/* Description */}
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            {dietPlan?.description}
+            {plan?.description}
           </p>
 
           {/* Macro Stats Grid */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="bg-gray-50 dark:bg-gray-800/50 p-3 rounded-xl">
               <p className="text-xs text-gray-500 dark:text-gray-400">Daily Calories</p>
-              <p className="text-lg font-semibold">{dietPlan?.nutritionalGoals?.calories} kcal</p>
+              <p className="text-lg font-semibold">{plan?.nutritionalGoals?.calories} kcal</p>
             </div>
             <div className="bg-gray-50 dark:bg-gray-800/50 p-3 rounded-xl">
               <p className="text-xs text-gray-500 dark:text-gray-400">Protein</p>
-              <p className="text-lg font-semibold">{dietPlan?.nutritionalGoals?.protein?.grams}g</p>
-              <p className="text-xs text-gray-500">{dietPlan?.nutritionalGoals?.protein?.percentage}%</p>
+              <p className="text-lg font-semibold">{plan?.nutritionalGoals?.protein?.grams}g</p>
+              <p className="text-xs text-gray-500">{plan?.nutritionalGoals?.protein?.percentage}%</p>
             </div>
             <div className="bg-gray-50 dark:bg-gray-800/50 p-3 rounded-xl">
               <p className="text-xs text-gray-500 dark:text-gray-400">Carbs</p>
-              <p className="text-lg font-semibold">{dietPlan?.nutritionalGoals?.carbs?.grams}g</p>
-              <p className="text-xs text-gray-500">{dietPlan?.nutritionalGoals?.carbs?.percentage}%</p>
+              <p className="text-lg font-semibold">{plan?.nutritionalGoals?.carbs?.grams}g</p>
+              <p className="text-xs text-gray-500">{plan?.nutritionalGoals?.carbs?.percentage}%</p>
             </div>
             <div className="bg-gray-50 dark:bg-gray-800/50 p-3 rounded-xl">
               <p className="text-xs text-gray-500 dark:text-gray-400">Fats</p>
-              <p className="text-lg font-semibold">{dietPlan?.nutritionalGoals?.fats?.grams}g</p>
-              <p className="text-xs text-gray-500">{dietPlan?.nutritionalGoals?.fats?.percentage}%</p>
+              <p className="text-lg font-semibold">{plan?.nutritionalGoals?.fats?.grams}g</p>
+              <p className="text-xs text-gray-500">{plan?.nutritionalGoals?.fats?.percentage}%</p>
             </div>
           </div>
         </div>
@@ -440,7 +454,7 @@ export default function DietPlanDetails() {
               <div className="flex-1">
                 <h3 className="text-lg font-semibold mb-1">Daily Water Intake</h3>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Recommended daily intake: {dietPlan?.waterIntake}L
+                  Recommended daily intake: {plan?.waterIntake}L
                 </p>
                 <div className="mt-3 space-y-2">
                   <h4 className="text-sm font-medium">Tips:</h4>
@@ -459,7 +473,7 @@ export default function DietPlanDetails() {
         <div className="p-4 sm:p-6">
           <h3 className="text-lg font-semibold mb-4">Supplement Recommendations</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {dietPlan?.supplementation?.map((supplement: Supplement, index: number) => (
+            {plan?.supplementation?.map((supplement: Supplement, index: number) => (
               <div 
                 key={index}
                 className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4 space-y-2"
@@ -483,7 +497,7 @@ export default function DietPlanDetails() {
 
         {/* Meals */}
         <div className="space-y-6">
-          {currentDayPlan.map((meal, index) => (
+          {plan.weeklyPlan?.[0]?.meals.map((meal, index) => (
             <MealCard
               key={`${meal.type}-${index}`}
               meal={meal}

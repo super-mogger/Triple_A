@@ -1,4 +1,4 @@
-import { Edit, Crown, ArrowLeft, Activity, Calendar, User2, Scale, Heart } from 'lucide-react';
+import { Edit, Crown, ArrowLeft, Activity, Calendar, User2, Scale, Heart, Phone } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useState, useEffect } from 'react';
@@ -135,6 +135,12 @@ export default function Profile() {
                   <p className="text-sm text-gray-500 dark:text-gray-400">
                     Member since {profile.created_at?.toDate().toLocaleDateString()}
                   </p>
+                  {profile.personal_info?.contact && (
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 flex items-center gap-1">
+                      <Phone className="w-4 h-4" />
+                      <span>{profile.personal_info.contact}</span>
+                    </p>
+                  )}
                 </div>
               </div>
               

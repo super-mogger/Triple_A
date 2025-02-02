@@ -5,6 +5,7 @@ export interface Profile {
   avatar_url?: string;
   phone?: string;
   address?: string;
+  setup_complete?: boolean;
   personal_info?: {
     gender?: 'male' | 'female' | 'other';
     date_of_birth?: string;

@@ -1,5 +1,5 @@
 import { Exercise } from '../types/exercise';
-import { exerciseDatabase } from '../data/exerciseDatabase';
+import { getAllExercises, getExercisesByCategory, getExercisesByMuscleGroup } from './ExerciseService';
 
 export interface DayWorkout {
   day: string;
@@ -30,20 +30,8 @@ export interface ExerciseDetails extends Exercise {
   // Additional fields specific to exercise details can be added here
 }
 
-export const getAllExercises = async (): Promise<Exercise[]> => {
-  // Get all exercises from the local database
-  const allExercises: Exercise[] = [];
-  const muscleGroups = ['chest', 'back', 'shoulders', 'legs', 'arms', 'core'];
-  
-  for (const muscleGroup of muscleGroups) {
-    const exercises = exerciseDatabase.intermediate[muscleGroup as keyof typeof exerciseDatabase.intermediate];
-    allExercises.push(...exercises.map(exercise => ({
-      ...exercise,
-      muscleGroup
-    })));
-  }
-  
-  return allExercises;
+export const getAllExercisesFromDB = async (): Promise<Exercise[]> => {
+  return await getAllExercises();
 };
 
 export const getExerciseDetails = async (exerciseName: string): Promise<ExerciseDetails> => {
@@ -57,19 +45,18 @@ export const getExerciseDetails = async (exerciseName: string): Promise<Exercise
   return exercise as ExerciseDetails;
 };
 
-export const generateWeeklySchedule = (
+export const generateWeeklySchedule = async (
   level: string,
   goal: string,
   equipment: string,
   splitType: 'bro-split' | 'push-pull-legs' | 'upper-lower'
-): DayWorkout[] => {
+): Promise<DayWorkout[]> => {
   try {
     console.log('Starting generateWeeklySchedule with params:', { level, goal, equipment, splitType });
     
     // Get exercises for each muscle group and ensure proper formatting
-    const formatExercise = (e: Exercise, muscleGroup: string): Exercise => ({
+    const formatExercise = (e: Exercise): Exercise => ({
       ...e,
-      muscleGroup,
       sets: e.sets || '3',
       reps: e.reps || '8-12',
       notes: e.notes || '',
@@ -83,25 +70,34 @@ export const generateWeeklySchedule = (
       category: e.category || ''
     });
 
-    const exercises = {
-      chest: exerciseDatabase.intermediate.chest.map(e => formatExercise(e, 'chest')),
-      back: exerciseDatabase.intermediate.back.map(e => formatExercise(e, 'back')),
-      shoulders: exerciseDatabase.intermediate.shoulders.map(e => formatExercise(e, 'shoulders')),
-      legs: exerciseDatabase.intermediate.legs.map(e => formatExercise(e, 'legs')),
-      arms: exerciseDatabase.intermediate.arms.map(e => formatExercise(e, 'arms')),
-      core: exerciseDatabase.intermediate.core.map(e => formatExercise(e, 'core'))
-    };
+    // Fetch exercises from database
+    const [chestExercises, backExercises, shoulderExercises, legExercises, armExercises, coreExercises] = 
+      await Promise.all([
+        getExercisesByMuscleGroup('chest'),
+        getExercisesByMuscleGroup('back'),
+        getExercisesByMuscleGroup('shoulders'),
+        getExercisesByMuscleGroup('legs'),
+        getExercisesByMuscleGroup('arms'),
+        getExercisesByMuscleGroup('core')
+      ]);
 
-    console.log('Formatted exercises:', Object.entries(exercises).map(([group, exs]) => ({
-      group,
-      count: exs.length,
-      sample: exs[0] ? {
-        name: exs[0].name,
-        muscleGroup: exs[0].muscleGroup,
-        sets: exs[0].sets,
-        reps: exs[0].reps
-      } : null
-    })));
+    console.log('Fetched exercises:', {
+      chest: chestExercises.length,
+      back: backExercises.length,
+      shoulders: shoulderExercises.length,
+      legs: legExercises.length,
+      arms: armExercises.length,
+      core: coreExercises.length
+    });
+
+    const exercises = {
+      chest: chestExercises.map(formatExercise),
+      back: backExercises.map(formatExercise),
+      shoulders: shoulderExercises.map(formatExercise),
+      legs: legExercises.map(formatExercise),
+      arms: armExercises.map(formatExercise),
+      core: coreExercises.map(formatExercise)
+    };
 
     // Organize exercises by category
     const categorizedExercises = {
@@ -168,11 +164,28 @@ export const generateWeeklySchedule = (
     categorizedExercises.pull = categorizedExercises.pull.map(adjustExercise);
     categorizedExercises.legs = categorizedExercises.legs.map(adjustExercise);
 
-    console.log('Exercise counts after categorization:', {
-      push: categorizedExercises.push.length,
-      pull: categorizedExercises.pull.length,
-      legs: categorizedExercises.legs.length
-    });
+    // Ensure we have at least some exercises for each category
+    if (categorizedExercises.push.length === 0) {
+      console.warn('No push exercises found, adding default push-ups');
+      categorizedExercises.push = [{
+        id: 'default-pushups',
+        name: 'Push-ups',
+        category: 'push',
+        difficulty: 'Beginner',
+        equipment: ['None'],
+        muscleGroup: 'chest',
+        targetMuscles: ['Chest', 'Triceps'],
+        secondaryMuscles: ['Shoulders', 'Core'],
+        sets: '3',
+        reps: '10-15',
+        instructions: ['Start in plank position', 'Lower chest to ground', 'Push back up'],
+        tips: ['Keep body straight', 'Control the movement'],
+        muscles_worked: ['chest', 'triceps', 'shoulders'],
+        common_mistakes: ['Sagging hips', 'Half reps'],
+        variations: ['Knee Push-ups', 'Incline Push-ups'],
+        videoUrl: ''
+      }];
+    }
 
     let result: DayWorkout[];
 
@@ -182,32 +195,32 @@ export const generateWeeklySchedule = (
           {
             day: 'Monday',
             focus: 'Push Day',
-            exercises: categorizedExercises.push
+            exercises: categorizedExercises.push.slice(0, 4)
           },
           {
             day: 'Tuesday',
             focus: 'Pull Day',
-            exercises: categorizedExercises.pull
+            exercises: categorizedExercises.pull.slice(0, 4)
           },
           {
             day: 'Wednesday',
             focus: 'Legs Day',
-            exercises: categorizedExercises.legs
+            exercises: categorizedExercises.legs.slice(0, 4)
           },
           {
             day: 'Thursday',
             focus: 'Push Day',
-            exercises: categorizedExercises.push
+            exercises: categorizedExercises.push.slice(0, 4)
           },
           {
             day: 'Friday',
             focus: 'Pull Day',
-            exercises: categorizedExercises.pull
+            exercises: categorizedExercises.pull.slice(0, 4)
           },
           {
             day: 'Saturday',
             focus: 'Legs Day',
-            exercises: categorizedExercises.legs
+            exercises: categorizedExercises.legs.slice(0, 4)
           },
           {
             day: 'Sunday',
@@ -217,37 +230,38 @@ export const generateWeeklySchedule = (
           }
         ];
         break;
+
       case 'bro-split':
         result = [
           {
             day: 'Monday',
             focus: 'Chest Day',
-            exercises: exercises.chest
+            exercises: exercises.chest.slice(0, 4)
           },
           {
             day: 'Tuesday',
             focus: 'Back Day',
-            exercises: exercises.back
+            exercises: exercises.back.slice(0, 4)
           },
           {
             day: 'Wednesday',
             focus: 'Legs Day',
-            exercises: exercises.legs
+            exercises: exercises.legs.slice(0, 4)
           },
           {
             day: 'Thursday',
             focus: 'Shoulders Day',
-            exercises: exercises.shoulders
+            exercises: exercises.shoulders.slice(0, 4)
           },
           {
             day: 'Friday',
             focus: 'Arms Day',
-            exercises: exercises.arms
+            exercises: exercises.arms.slice(0, 4)
           },
           {
             day: 'Saturday',
             focus: 'Core Day',
-            exercises: exercises.core
+            exercises: exercises.core.slice(0, 4)
           },
           {
             day: 'Sunday',
@@ -257,17 +271,24 @@ export const generateWeeklySchedule = (
           }
         ];
         break;
+
       case 'upper-lower':
+        const upperExercises = [
+          ...exercises.chest,
+          ...exercises.back,
+          ...exercises.shoulders,
+          ...exercises.arms
+        ];
         result = [
           {
             day: 'Monday',
             focus: 'Upper Body',
-            exercises: [...categorizedExercises.push, ...categorizedExercises.pull]
+            exercises: upperExercises.slice(0, 6)
           },
           {
             day: 'Tuesday',
             focus: 'Lower Body',
-            exercises: categorizedExercises.legs
+            exercises: exercises.legs.slice(0, 6)
           },
           {
             day: 'Wednesday',
@@ -278,17 +299,17 @@ export const generateWeeklySchedule = (
           {
             day: 'Thursday',
             focus: 'Upper Body',
-            exercises: [...categorizedExercises.push, ...categorizedExercises.pull]
+            exercises: upperExercises.slice(0, 6)
           },
           {
             day: 'Friday',
             focus: 'Lower Body',
-            exercises: categorizedExercises.legs
+            exercises: exercises.legs.slice(0, 6)
           },
           {
             day: 'Saturday',
-            focus: 'Core Day',
-            exercises: exercises.core
+            focus: 'Core & Cardio',
+            exercises: exercises.core.slice(0, 4)
           },
           {
             day: 'Sunday',
@@ -298,29 +319,16 @@ export const generateWeeklySchedule = (
           }
         ];
         break;
+
+      default:
+        throw new Error(`Invalid split type: ${splitType}`);
     }
 
-    // Apply sets and reps to all exercises in the schedule
-    result = result.map(day => ({
-      ...day,
-      exercises: day.exercises.map(adjustExercise)
-    }));
-
-    console.log('Generated workout schedule:', result.map(day => ({
-      day: day.day,
-      focus: day.focus,
-      exerciseCount: day.exercises.length,
-      sampleExercise: day.exercises[0] ? {
-        name: day.exercises[0].name,
-        muscleGroup: day.exercises[0].muscleGroup,
-        sets: day.exercises[0].sets,
-        reps: day.exercises[0].reps
-      } : null
-    })));
-
+    console.log('Generated workout schedule:', result);
     return result;
+
   } catch (error) {
-    console.error('Error in generateWeeklySchedule:', error);
+    console.error('Error generating weekly schedule:', error);
     throw error;
   }
 };
@@ -378,7 +386,7 @@ export const scrapeWorkoutPlans = async (): Promise<WorkoutPlan[]> => {
 export const scrapeWorkoutDetails = async (id: string): Promise<{ schedule: WeeklySchedule }> => {
   try {
     console.log('Generating workout details for ID:', id);
-    const days = generateWeeklySchedule('Intermediate', 'Build Muscle', 'Full Gym', 'push-pull-legs');
+    const days = await generateWeeklySchedule('Intermediate', 'Build Muscle', 'Full Gym', 'push-pull-legs');
     console.log('Generated schedule:', days);
     return { schedule: { days } };
   } catch (error) {

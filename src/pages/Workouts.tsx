@@ -275,6 +275,7 @@ export default function Workouts() {
   const [error, setError] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [showWorkoutList, setShowWorkoutList] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
 
   const [filters, setFilters] = useState<Filters>({
     level: '',
@@ -341,7 +342,7 @@ export default function Workouts() {
 
   // Memoize the getCurrentDayWorkout function
   const getCurrentDayWorkout = React.useCallback(() => {
-    if (!selectedWorkout?.schedule?.days) {
+    if (!selectedWorkout?.schedule?.days || !Array.isArray(selectedWorkout.schedule.days)) {
       console.log('No schedule or days found in selected workout');
       return null;
     }
@@ -358,8 +359,6 @@ export default function Workouts() {
         focus: workout.focus,
         exerciseCount: workout.exercises?.length || 0
       });
-    } else {
-      console.log('No workout found for current day');
     }
 
     return workout;
@@ -371,6 +370,10 @@ export default function Workouts() {
     if (savedWorkout) {
       try {
         const parsedWorkout = JSON.parse(savedWorkout);
+        // Ensure schedule.days is an array
+        if (parsedWorkout.schedule && !Array.isArray(parsedWorkout.schedule.days)) {
+          parsedWorkout.schedule.days = [];
+        }
         setSelectedWorkout(parsedWorkout);
         setShowWorkoutList(false);
       } catch (error) {
@@ -382,12 +385,30 @@ export default function Workouts() {
 
   // Update exercises when selected workout or current day changes
   useEffect(() => {
-    if (selectedWorkout) {
-      const dayWorkout = getCurrentDayWorkout();
-      setExercises(dayWorkout?.exercises || []);
-    } else {
-      setExercises([]);
-    }
+    const loadExercises = async () => {
+      if (selectedWorkout) {
+        const dayWorkout = getCurrentDayWorkout();
+        if (dayWorkout?.exercises) {
+          try {
+            setLoadingExercises(true);
+            // Ensure exercises is an array
+            const exerciseList = Array.isArray(dayWorkout.exercises) ? dayWorkout.exercises : [];
+            setExercises(exerciseList);
+          } catch (error) {
+            console.error('Error loading exercises:', error);
+            setError('Failed to load exercises');
+          } finally {
+            setLoadingExercises(false);
+          }
+        } else {
+          setExercises([]);
+        }
+      } else {
+        setExercises([]);
+      }
+    };
+
+    loadExercises();
   }, [selectedWorkout, getCurrentDayWorkout, currentDay]);
 
   // Apply filters when workouts or filters change
@@ -401,32 +422,29 @@ export default function Workouts() {
       setLoading(true);
       setError(null);
 
-      if (!workout.splitType || !Object.keys(splitTypes).includes(workout.splitType)) {
-        workout.splitType = 'bro-split'; // Set default split type if not specified
-      }
-
-      const days = generateWeeklySchedule(
+      // If no split type is selected, default to 'bro-split'
+      const splitType = workout.splitType || 'bro-split';
+      const days = await generateWeeklySchedule(
         workout.level || 'Intermediate',
         workout.goal || 'Build Muscle',
         workout.equipment || 'Full Gym',
-        workout.splitType as SplitType
+        splitType
       );
 
-      if (!days?.length) {
-        throw new Error('Failed to generate workout schedule');
-      }
-
-      const fullWorkout = {
+      const updatedWorkout: WorkoutPlan = {
         ...workout,
-        schedule: { days }
+        splitType,
+        schedule: { days: Array.isArray(days) ? days : [] },
+        showSplitMenu: false
       };
 
-      localStorage.setItem('selectedWorkout', JSON.stringify(fullWorkout));
-      setSelectedWorkout(fullWorkout);
+      setSelectedWorkout(updatedWorkout);
+      setCurrentDay('Monday');
       setShowWorkoutList(false);
-    } catch (err) {
-      console.error('Error selecting workout plan:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load workout details');
+      localStorage.setItem('selectedWorkout', JSON.stringify(updatedWorkout));
+    } catch (error) {
+      console.error('Error in selectWorkoutPlan:', error);
+      setError(error instanceof Error ? error.message : 'Failed to load workout details');
     } finally {
       setLoading(false);
     }
@@ -436,20 +454,19 @@ export default function Workouts() {
   const viewExerciseDetails = React.useCallback(async (exercise: Exercise) => {
     try {
       setLoadingExercise(true);
-      const muscleGroup = exercise.muscleGroup?.toLowerCase();
-      if (!muscleGroup) return;
-
-      const exercises = exerciseDatabase.intermediate[muscleGroup as keyof typeof exerciseDatabase.intermediate];
-      const details = exercises?.find(e => e.name === exercise.name);
+      setError(null);
+      
+      // Get the exercise details from the service
+      const details = await getExerciseDetails(exercise.name);
       
       if (!details) {
         throw new Error(`Exercise ${exercise.name} not found`);
       }
 
-      setSelectedExercise(details as unknown as Exercise);
+      setSelectedExercise(details);
     } catch (err) {
       console.error('Error loading exercise details:', err);
-      setError('Failed to load exercise details');
+      setError(err instanceof Error ? err.message : 'Failed to load exercise details');
     } finally {
       setLoadingExercise(false);
     }
@@ -476,6 +493,28 @@ export default function Workouts() {
   const handleDayChange = (day: string) => {
     setCurrentDay(day);
     // Additional logic for day change
+  };
+
+  const handleSplitTypeSelect = async (key: string) => {
+    if (!selectedWorkout) return;
+    
+    try {
+      setIsLoading(true);
+      const days = await generateWeeklySchedule(selectedWorkout.level, selectedWorkout.goal, selectedWorkout.equipment, key as SplitType);
+      const updatedWorkout: WorkoutPlan = {
+        ...selectedWorkout,
+        splitType: key as SplitType,
+        schedule: { days: Array.isArray(days) ? days : [] },
+        showSplitMenu: false
+      };
+      setSelectedWorkout(updatedWorkout);
+      setCurrentDay('Monday');
+      localStorage.setItem('selectedWorkout', JSON.stringify(updatedWorkout));
+    } catch (error) {
+      console.error('Error generating schedule:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   if (loading) {
@@ -535,18 +574,7 @@ export default function Workouts() {
                         {Object.entries(splitTypes).map(([key, value]) => (
                           <button
                             key={key}
-                            onClick={() => {
-                              const updatedWorkout = {
-                                ...selectedWorkout,
-                                splitType: key as SplitType,
-                                showSplitMenu: false,
-                                schedule: {
-                                  days: generateWeeklySchedule(selectedWorkout.level, selectedWorkout.goal, selectedWorkout.equipment, key as SplitType)
-                                }
-                              };
-                              setSelectedWorkout(updatedWorkout);
-                              localStorage.setItem('selectedWorkout', JSON.stringify(updatedWorkout));
-                            }}
+                            onClick={() => handleSplitTypeSelect(key)}
                             className={`w-full px-4 py-3 text-left text-sm hover:bg-gray-50 dark:hover:bg-[#282828] transition-colors ${
                               selectedWorkout.splitType === key 
                                 ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' 
@@ -807,6 +835,14 @@ export default function Workouts() {
             </div>
           ))}
         </div>
+
+        {selectedWorkout?.schedule?.days && Array.isArray(selectedWorkout.schedule.days) && selectedWorkout.schedule.days.length > 0 && (
+          <WeekdaySchedule
+            schedule={selectedWorkout.schedule}
+            currentDay={currentDay}
+            setCurrentDay={setCurrentDay}
+          />
+        )}
       </div>
     </div>
   );

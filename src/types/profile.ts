@@ -5,25 +5,58 @@ export interface Profile {
   user_id: string;
   email: string;
   username: string;
-  photoURL?: string;
+  avatar_url?: string;
+  full_name?: string;
+  experience_level?: 'beginner' | 'intermediate' | 'advanced';
   personal_info: {
-    gender: 'male' | 'female';
     date_of_birth: string;
+    gender: 'male' | 'female' | 'other';
     height: number;
     weight: number;
     contact: string;
-    blood_type?: string;
+    blood_type: string;
   };
   medical_info: {
     conditions: string;
   };
   preferences: {
-    dietary: string[];
-    workout_days: string[];
+    activity_level: 'beginner' | 'intermediate' | 'advanced';
+    dietary_preferences: string[];
+    workout_preferences: string[];
     fitness_goals: string[];
-    fitness_level: string;
-    activity_level: 'sedentary' | 'light' | 'moderate' | 'active' | 'veryActive';
+    dietary?: string[];
+    workout_time?: string;
+    workout_days?: string[];
+  };
+  stats?: {
+    workouts_completed: number;
+    total_time: number;
+    calories_burned: number;
+    attendance_streak: number;
   };
   created_at: Timestamp;
   updated_at: Timestamp;
+}
+
+export interface FirestoreProfile extends Profile {
+  stats: {
+    workouts_completed: number;
+    total_time: number;
+    calories_burned: number;
+    attendance_streak: number;
+  };
+}
+
+export interface Membership {
+  id: string;
+  plan_id: string;
+  plan_name: string;
+  start_date: Timestamp;
+  end_date: Timestamp;
+  status: 'active' | 'expired' | 'cancelled';
+}
+
+export interface FirestoreMembership extends Membership {
+  user_id: string;
+  amount_paid: number;
 } 

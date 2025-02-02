@@ -101,6 +101,7 @@ lint/tmp/
 .env.test.local
 .env.production.local
 Triple_A/.env
+functions/.env
 
 # Firebase Admin SDK
 src/config/triple-a-b8605-firebase-adminsdk-h9m98-0f803aa0e4.json

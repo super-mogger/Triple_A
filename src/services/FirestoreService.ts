@@ -16,315 +16,210 @@ import {
   writeBatch
 } from 'firebase/firestore';
 import type { FirestoreProfile, FirestoreMembership, FirestorePayment } from '../types/firestore.types';
-import { Profile } from '../types/profile';
+import { Profile, Membership } from '../types/profile';
 import { auth } from '../config/firebase';
 
-// Types
-export interface Membership {
-  id?: string;
-  amount: number;
-  created_at: Timestamp;
-  duration: number;
-  end_date: Timestamp;
-  is_active: boolean;
-  payment_method: string;
-  payment_status: 'pending' | 'completed' | 'failed';
-  plan_id: string;
-  plan_name: string;
-  start_date: Timestamp;
-  updated_at: Timestamp;
-  userId: string;
+interface FirestoreResponse<T> {
+  data: T | null;
+  error: string | null;
 }
 
 // Profile Operations
-export async function getProfile(userId: string): Promise<{ data: Profile | null; error: string | null }> {
+export const getProfile = async (userId: string): Promise<FirestoreResponse<Profile>> => {
   try {
-    console.log('Fetching profile for user:', userId);
     const profileRef = doc(db, 'profiles', userId);
     const profileSnap = await getDoc(profileRef);
-    
-    if (profileSnap.exists()) {
-      const data = profileSnap.data();
-      console.log('Profile found:', data);
-      return { 
-        data: {
-          id: profileSnap.id,
-          user_id: userId,
-          email: data.email || '',
-          username: data.username || '',
-          photoURL: data.photoURL || '',
-          personal_info: {
-            height: data.personal_info?.height || 170,
-            weight: data.personal_info?.weight || 70,
-            gender: data.personal_info?.gender || 'male',
-            date_of_birth: data.personal_info?.date_of_birth || '',
-            blood_type: data.personal_info?.blood_type || '',
-            contact: data.personal_info?.contact || ''
-          },
-          medical_info: {
-            conditions: data.medical_info?.conditions || ''
-          },
-          preferences: {
-            dietary: data.preferences?.dietary || [],
-            workout_days: data.preferences?.workout_days || [],
-            fitness_goals: data.preferences?.fitness_goals || [],
-            fitness_level: data.preferences?.fitness_level || 'beginner',
-            activity_level: data.preferences?.activity_level || 'moderate'
-          },
-          created_at: data.created_at || Timestamp.now(),
-          updated_at: data.updated_at || Timestamp.now()
-        } as Profile,
-        error: null
-      };
+
+    if (!profileSnap.exists()) {
+      return { data: null, error: 'Profile not found' };
     }
-    console.log('Profile not found for user:', userId);
-    return { data: null, error: 'Profile not found' };
-  } catch (error: any) {
-    console.error('Error getting profile:', error);
-    return { data: null, error: error.message };
-  }
-}
 
-export async function updateProfile(userId: string, data: Partial<Profile>): Promise<{ error: any }> {
-  try {
-    const user = auth.currentUser;
-    if (!user) throw new Error('No authenticated user');
-
-    const updates = {
-      ...data,
-      email: user.email || data.email,
-      username: user.displayName || data.username,
-      photoURL: user.photoURL || data.photoURL,
-      updated_at: Timestamp.now()
-    };
-
-    await updateDoc(doc(db, 'profiles', userId), updates);
-    return { error: null };
-  } catch (error) {
-    console.error('Error updating profile:', error);
-    return { error };
-  }
-}
-
-export async function createProfile(userId: string, data: Profile): Promise<{ error: string | null }> {
-  try {
-    const user = auth.currentUser;
-    if (!user) throw new Error('No authenticated user');
-
-    const profileData = {
-      id: userId,
+    const data = profileSnap.data();
+    const profile: Profile = {
+      id: profileSnap.id,
       user_id: userId,
-      email: user.email || '',
-      username: user.displayName || user.email?.split('@')[0] || `user_${userId.substring(0, 6)}`,
-      photoURL: user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${userId}`,
+      email: data.email || '',
+      username: data.username || '',
+      photoURL: data.photoURL,
+      avatar_url: data.avatar_url,
+      full_name: data.full_name,
+      experience_level: data.experience_level,
       personal_info: {
-        contact: '',
-        blood_type: '',
-        date_of_birth: '',
-        gender: 'male',
-        height: 170,
-        weight: 70
+        date_of_birth: data.personal_info?.date_of_birth || '',
+        gender: data.personal_info?.gender || 'male',
+        height: data.personal_info?.height || 0,
+        weight: data.personal_info?.weight || 0,
+        contact: data.personal_info?.contact || '',
+        blood_type: data.personal_info?.blood_type || ''
       },
       medical_info: {
-        conditions: ''
+        conditions: data.medical_info?.conditions || ''
       },
       preferences: {
-        activity_level: 'moderate',
-        dietary: [],
-        fitness_goals: [],
-        fitness_level: 'beginner',
-        workout_days: []
+        activity_level: data.preferences?.activity_level || 'beginner',
+        dietary_preferences: data.preferences?.dietary_preferences || [],
+        workout_preferences: data.preferences?.workout_preferences || [],
+        fitness_goals: data.preferences?.fitness_goals || [],
+        fitness_level: data.preferences?.fitness_level,
+        dietary: data.preferences?.dietary,
+        workout_time: data.preferences?.workout_time,
+        workout_days: data.preferences?.workout_days
       },
-      created_at: Timestamp.now(),
-      updated_at: Timestamp.now()
+      stats: data.stats || {
+        workouts_completed: 0,
+        total_time: 0,
+        calories_burned: 0,
+        attendance_streak: 0
+      },
+      created_at: data.created_at || Timestamp.now(),
+      updated_at: data.updated_at || Timestamp.now()
     };
 
-    await setDoc(doc(db, 'profiles', userId), profileData, { merge: true });
-    return { error: null };
-  } catch (error: any) {
+    return { data: profile, error: null };
+  } catch (error) {
+    console.error('Error getting profile:', error);
+    return { data: null, error: 'Failed to get profile' };
+  }
+};
+
+export const updateProfile = async (userId: string, data: Partial<Profile>): Promise<FirestoreResponse<void>> => {
+  try {
+    const profileRef = doc(db, 'profiles', userId);
+    
+    // Convert Timestamp objects to Firestore timestamps
+    const processedData: Record<string, any> = {
+      ...data,
+      updated_at: Timestamp.now(),
+      personal_info: data.personal_info ? {
+        ...data.personal_info,
+      } : undefined,
+      medical_info: data.medical_info ? {
+        ...data.medical_info,
+      } : undefined,
+      preferences: data.preferences ? {
+        ...data.preferences,
+      } : undefined,
+      stats: data.stats ? {
+        ...data.stats,
+      } : undefined
+    };
+
+    // Remove undefined fields to prevent overwriting with null
+    Object.keys(processedData).forEach(key => {
+      if (processedData[key] === undefined) {
+        delete processedData[key];
+      }
+    });
+
+    await updateDoc(profileRef, processedData);
+    return { data: null, error: null };
+  } catch (error) {
+    console.error('Error updating profile:', error);
+    return { data: null, error: 'Failed to update profile' };
+  }
+};
+
+export const createProfile = async (userId: string, data: Profile): Promise<FirestoreResponse<void>> => {
+  try {
+    const profileRef = doc(db, 'profiles', userId);
+    await setDoc(profileRef, {
+      ...data,
+      created_at: Timestamp.now(),
+      updated_at: Timestamp.now()
+    });
+    return { data: null, error: null };
+  } catch (error) {
     console.error('Error creating profile:', error);
-    return { error: error.message };
+    return { data: null, error: 'Failed to create profile' };
+  }
+};
+
+// Membership Operations
+export async function getMembership(userId: string): Promise<FirestoreResponse<Membership | null>> {
+  try {
+    const membershipRef = collection(db, 'memberships');
+    const q = query(membershipRef, where('userId', '==', userId), orderBy('created_at', 'desc'), limit(1));
+    const querySnapshot = await getDocs(q);
+
+    if (querySnapshot.empty) {
+      return { data: null, error: null };
+    }
+
+    const membershipData = querySnapshot.docs[0].data() as Membership;
+    return { data: membershipData, error: null };
+  } catch (error) {
+    console.error('Error getting membership:', error);
+    return { data: null, error: 'Failed to get membership data' };
   }
 }
 
-// Membership Operations
-export const getMembership = async (userId: string): Promise<{ data: Membership | null; error: string | null }> => {
-  try {
-    console.log('Fetching membership for user:', userId);
-    
-    // First try to get from global memberships collection
-    const membershipRef = collection(db, 'memberships');
-    const membershipQuery = query(
-      membershipRef,
-      where('userId', '==', userId),
-      orderBy('created_at', 'desc'),
-      limit(1)
-    );
-    
-    const querySnapshot = await getDocs(membershipQuery);
-    
-    if (querySnapshot.empty) {
-      console.log('No membership found in global collection, checking user subcollection...');
-      
-      // Try user's membership subcollection as fallback
-      const userMembershipRef = doc(collection(db, 'users', userId, 'membership'), 'current');
-      const userMembershipDoc = await getDoc(userMembershipRef);
-      
-      if (!userMembershipDoc.exists()) {
-        console.log('No membership found for user:', userId);
-        return { data: null, error: null };
-      }
-      
-      const membershipData = userMembershipDoc.data() as Membership;
-      return handleMembershipData(membershipData, userMembershipDoc.id);
-    }
-
-    // Use the most recent membership from global collection
-    const membershipDoc = querySnapshot.docs[0];
-    const membershipData = membershipDoc.data() as Membership;
-    
-    // If found in global but not in user's collection, sync it
-    const userMembershipRef = doc(collection(db, 'users', userId, 'membership'), 'current');
-    await setDoc(userMembershipRef, {
-      ...membershipData,
-      updated_at: serverTimestamp()
-    });
-
-    return handleMembershipData(membershipData, membershipDoc.id);
-  } catch (error) {
-    console.error('Error fetching membership:', error);
-    return {
-      data: null,
-      error: error instanceof Error ? error.message : 'Failed to fetch membership'
-    };
-  }
-};
-
-// Helper function to handle membership data processing
-const handleMembershipData = async (
-  membershipData: Membership, 
-  docId: string
-): Promise<{ data: Membership | null; error: string | null }> => {
-  const now = new Date().getTime();
-  const endDate = membershipData.end_date instanceof Timestamp ? 
-    membershipData.end_date.toDate().getTime() : null;
-  
-  const shouldBeActive = endDate ? now <= endDate : false;
-  
-  if (membershipData.is_active !== shouldBeActive) {
-    // Update active status if it has changed
-    const userMembershipRef = doc(collection(db, 'users', membershipData.userId, 'membership'), 'current');
-    await updateDoc(userMembershipRef, {
-      is_active: shouldBeActive,
-      updated_at: serverTimestamp()
-    });
-    membershipData.is_active = shouldBeActive;
-  }
-
-  return { 
-    data: {
-      ...membershipData,
-      id: docId
-    }, 
-    error: null 
-  };
-};
-
-export const checkMembershipStatus = async (userId: string): Promise<{
-  isActive: boolean;
+export async function checkMembershipStatus(userId: string): Promise<{ 
+  isActive: boolean; 
   membership: Membership | null;
   error: string | null;
-}> => {
+}> {
   try {
     const { data: membership, error } = await getMembership(userId);
     
     if (error) {
-      return {
-        isActive: false,
-        membership: null,
-        error
-      };
+      return { isActive: false, membership: null, error };
     }
 
     if (!membership) {
-      return {
-        isActive: false,
-        membership: null,
-        error: null
-      };
+      return { isActive: false, membership: null, error: null };
     }
 
-    const now = new Date().getTime();
-    const endDate = membership.end_date.toDate().getTime();
-    const isActive = membership.is_active && now <= endDate && membership.payment_status === 'completed';
+    const now = Timestamp.now();
+    const isActive = membership.is_active && 
+                    membership.payment_status === 'completed' && 
+                    now.toMillis() <= membership.end_date.toMillis();
 
-    return {
-      isActive,
+    return { 
+      isActive, 
       membership,
-      error: null
+      error: null 
     };
   } catch (error) {
     console.error('Error checking membership status:', error);
-    return {
-      isActive: false,
-      membership: null,
-      error: error instanceof Error ? error.message : 'Failed to check membership status'
+    return { 
+      isActive: false, 
+      membership: null, 
+      error: 'Failed to check membership status' 
     };
   }
-};
+}
 
 export async function createMembership(
-  userId: string, 
-  membershipData: Partial<Membership>
-): Promise<{ data: Membership | null; error: any }> {
+  userId: string,
+  planId: string,
+  planName: string,
+  amount?: number,
+  duration?: number,
+  paymentMethod?: string
+): Promise<FirestoreResponse<void>> {
   try {
-    const batch = writeBatch(db);
-    
-    // Prepare membership data
-    const now = serverTimestamp();
-    const completeData: Membership = {
-      ...membershipData,
+    const membershipRef = collection(db, 'memberships');
+    const now = Timestamp.now();
+
+    const membershipData = {
       userId,
-      created_at: now,
-      updated_at: now,
+      plan_id: planId,
+      plan_name: planName,
+      amount: amount || 0,
+      duration: duration || 1,
+      payment_method: paymentMethod || 'admin',
+      payment_status: 'completed',
       is_active: true,
-      payment_status: 'completed'
-    } as Membership;
-
-    // Store in user's membership subcollection
-    const userMembershipRef = doc(collection(db, 'users', userId, 'membership'), 'current');
-    batch.set(userMembershipRef, completeData);
-
-    // Also store in global memberships collection for admin access
-    const globalMembershipRef = doc(collection(db, 'memberships'));
-    batch.set(globalMembershipRef, {
-      ...completeData,
-      membershipId: globalMembershipRef.id
-    });
-
-    // Update user's profile with membership status
-    const profileRef = doc(db, 'profiles', userId);
-    batch.update(profileRef, {
-      'membership_status': 'active',
-      'membership_end_date': membershipData.end_date,
-      'membership_plan': membershipData.plan_id,
-      'updated_at': now
-    });
-
-    await batch.commit();
-
-    return {
-      data: {
-        ...completeData,
-        id: userMembershipRef.id
-      },
-      error: null
+      start_date: now,
+      end_date: Timestamp.fromMillis(now.toMillis() + (duration || 1) * 30 * 24 * 60 * 60 * 1000),
+      created_at: now,
+      updated_at: now
     };
+
+    await addDoc(membershipRef, membershipData);
+    return { data: undefined, error: null };
   } catch (error) {
     console.error('Error creating membership:', error);
-    return {
-      data: null,
-      error: error instanceof Error ? error.message : 'Failed to create membership'
-    };
+    return { data: undefined, error: 'Failed to create membership' };
   }
 } 

@@ -3,7 +3,7 @@ import { useProfile } from '../context/ProfileContext';
 import { Activity, Award, Calendar, Clock, Crown, Dumbbell, Target, TrendingUp, User } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { checkMembershipStatus } from '../services/FirestoreService';
-import type { Membership } from '../services/FirestoreService';
+import type { Membership } from '../types/profile';
 import StreakCounter from '../components/StreakCounter';
 import { getAchievements, updateAchievement, checkStreakAchievements, checkWorkoutAchievements } from '../services/AchievementService';
 import { attendanceService } from '../services/AttendanceService';

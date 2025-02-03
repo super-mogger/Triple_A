@@ -10,7 +10,7 @@ export default function Login() {
   const [showResetModal, setShowResetModal] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
   const [resetStatus, setResetStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const { signIn, signInWithGoogle, resetPassword, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -23,58 +23,50 @@ export default function Login() {
     }
   }, [user, navigate]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setIsLoading(true);
+    const formData = new FormData(e.currentTarget);
+    const email = formData.get('email') as string;
+    const password = formData.get('password') as string;
+
     try {
-      setLoading(true);
-      console.log('Attempting email/password login');
       await signIn(email, password);
-    } catch (err) {
-      console.error('Login failed:', err);
-      toast.error(err instanceof Error ? err.message : 'Login failed');
+      navigate('/dashboard');
+    } catch (error) {
+      console.error('Login error:', error);
+      toast.error('Failed to sign in');
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
   const handleGoogleSignIn = async () => {
     try {
-      setLoading(true);
+      setIsLoading(true);
       console.log('Attempting Google sign in');
       await signInWithGoogle();
     } catch (err) {
       console.error('Google sign in failed:', err);
       // Error toast is handled in AuthContext
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
-  const handleResetPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleResetPassword = async () => {
+    if (!resetEmail) {
+      toast.error('Please enter your email address');
+      return;
+    }
+
     try {
-      setLoading(true);
-      console.log('Attempting password reset');
-      const { error } = await resetPassword(resetEmail);
-      if (error) throw error;
-      
-      setResetStatus({
-        type: 'success',
-        message: 'Password reset email sent! Please check your inbox.'
-      });
-      setTimeout(() => {
-        setShowResetModal(false);
-        setResetStatus(null);
-        setResetEmail('');
-      }, 3000);
-    } catch (err) {
-      console.error('Password reset failed:', err);
-      setResetStatus({
-        type: 'error',
-        message: 'Failed to send reset email. Please try again.'
-      });
-    } finally {
-      setLoading(false);
+      await resetPassword(resetEmail);
+      toast.success('Password reset email sent');
+      setShowResetModal(false);
+    } catch (error) {
+      console.error('Reset password error:', error);
+      toast.error('Failed to send reset email');
     }
   };
 
@@ -119,7 +111,7 @@ export default function Login() {
                   className="w-full pl-11 pr-4 py-3 rounded-xl border-2 border-red-500/30 bg-white/5 text-white placeholder:text-gray-500 focus:border-red-500 focus:bg-red-500/5 transition-all"
                   placeholder="Enter your email"
                   required
-                  disabled={loading}
+                  disabled={isLoading}
                 />
               </div>
             </div>
@@ -138,7 +130,7 @@ export default function Login() {
                   className="w-full pl-11 pr-4 py-3 rounded-xl border-2 border-red-500/30 bg-white/5 text-white placeholder:text-gray-500 focus:border-red-500 focus:bg-red-500/5 transition-all"
                   placeholder="Enter your password"
                   required
-                  disabled={loading}
+                  disabled={isLoading}
                 />
               </div>
             </div>
@@ -148,7 +140,7 @@ export default function Login() {
                 <input 
                   type="checkbox" 
                   className="rounded border-2 border-red-500/30 bg-white/5 text-red-500 focus:ring-red-500 focus:ring-offset-0"
-                  disabled={loading}
+                  disabled={isLoading}
                 />
                 <span className="text-sm text-gray-400 font-medium">Remember me</span>
               </label>
@@ -156,7 +148,7 @@ export default function Login() {
                 type="button" 
                 onClick={() => setShowResetModal(true)}
                 className="text-sm text-red-500 hover:text-red-400 transition-colors font-bold uppercase tracking-wider"
-                disabled={loading}
+                disabled={isLoading}
               >
                 Reset Password
               </button>
@@ -164,10 +156,10 @@ export default function Login() {
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={isLoading}
               className="w-full bg-gradient-to-r from-red-500 to-orange-500 text-white py-3 rounded-xl font-bold hover:from-red-600 hover:to-orange-600 transition-all transform hover:scale-[1.02] flex items-center justify-center space-x-2 group uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
             >
-              <span>{loading ? 'Signing in...' : 'Power Up'}</span>
+              <span>{isLoading ? 'Signing in...' : 'Power Up'}</span>
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </button>
 
@@ -183,11 +175,11 @@ export default function Login() {
             <button
               type="button"
               onClick={handleGoogleSignIn}
-              disabled={loading}
+              disabled={isLoading}
               className="w-full bg-white/5 backdrop-blur-sm border-2 border-red-500/30 py-3 rounded-xl font-bold hover:bg-red-500/10 transition-all transform hover:scale-[1.02] flex items-center justify-center space-x-3 group disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
             >
               <img src="https://www.google.com/favicon.ico" alt="Google" className="w-5 h-5" />
-              <span className="text-white uppercase tracking-wider">{loading ? 'Connecting...' : 'Continue with Google'}</span>
+              <span className="text-white uppercase tracking-wider">{isLoading ? 'Connecting...' : 'Continue with Google'}</span>
             </button>
           </form>
 
@@ -211,7 +203,7 @@ export default function Login() {
                 setResetEmail('');
               }}
               className="absolute right-4 top-4 text-gray-400 hover:text-white transition-colors"
-              disabled={loading}
+              disabled={isLoading}
             >
               <X className="w-5 h-5" />
             </button>
@@ -248,17 +240,17 @@ export default function Login() {
                     className="w-full pl-11 pr-4 py-3 rounded-xl border-2 border-red-500/30 bg-white/5 text-white placeholder:text-gray-500 focus:border-red-500 focus:bg-red-500/5 transition-all"
                     placeholder="Enter your email"
                     required
-                    disabled={loading}
+                    disabled={isLoading}
                   />
                 </div>
               </div>
 
               <button
                 type="submit"
-                disabled={loading}
+                disabled={isLoading}
                 className="w-full bg-gradient-to-r from-red-500 to-orange-500 text-white py-3 rounded-xl font-bold hover:from-red-600 hover:to-orange-600 transition-all transform hover:scale-[1.02] flex items-center justify-center space-x-2 group uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
               >
-                {loading ? 'Sending...' : 'Send Reset Instructions'}
+                {isLoading ? 'Sending...' : 'Send Reset Instructions'}
               </button>
             </form>
           </div>

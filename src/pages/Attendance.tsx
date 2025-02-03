@@ -10,7 +10,7 @@ import 'react-calendar/dist/Calendar.css';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { checkMembershipStatus } from '../services/FirestoreService';
-import type { Membership } from '../services/FirestoreService';
+import type { Membership } from '../types/profile';
 import MembershipRequired from '../components/MembershipRequired';
 
 const Attendance = () => {

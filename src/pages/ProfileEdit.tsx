@@ -1,56 +1,57 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useProfile } from '../context/ProfileContext';
 import { useAuth } from '../context/AuthContext';
+import { useProfile } from '../context/ProfileContext';
+import { Profile, ActivityLevel } from '../types/profile';
 import { ArrowLeft, Check, Calendar, User2, Activity, Heart, Scale, Stethoscope, Camera, Loader2, Lock } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { Profile } from '../types/profile';
 import { uploadImageToImgBB, validateImage } from '../services/ImgBBService';
 import { detectFace, loadFaceDetectionModels } from '../services/FaceDetectionService';
 import CameraCapture from '../components/CameraCapture';
 
-type FormData = {
-  email: string;
+interface FormData {
   username: string;
   photoURL?: string;
   personal_info: {
-    gender: 'male' | 'female';
+    gender: 'male' | 'female' | 'other';
     date_of_birth: string;
     height: number;
     weight: number;
     contact: string;
-    blood_type?: string;
+    blood_type: string;
   };
   medical_info: {
     conditions: string;
   };
   preferences: {
-    dietary: string[];
-    workout_days: string[];
+    activity_level: ActivityLevel;
+    dietary_preferences: string[];
+    workout_preferences: string[];
     fitness_goals: string[];
-    fitness_level: string;
-    activity_level: 'sedentary' | 'light' | 'moderate' | 'active' | 'veryActive';
+    fitness_level?: string;
+    dietary?: string[];
+    workout_time?: string;
+    workout_days?: string[];
   };
-};
+}
 
 export default function ProfileEdit() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { profile, updateProfile } = useProfile();
-  const { user, updateUserProfile } = useAuth();
   const [isProcessingImage, setIsProcessingImage] = useState(false);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [isFirstTimeUser, setIsFirstTimeUser] = useState(false);
   const isAdmin = user?.email === 'admin@example.com'; // Replace with your admin email check
   const [hasEditedName, setHasEditedName] = useState(false);
   const [formData, setFormData] = useState<FormData>({
-    email: profile?.email || '',
     username: profile?.username || '',
     photoURL: profile?.photoURL,
     personal_info: {
-      date_of_birth: profile?.personal_info?.date_of_birth || '',
       gender: profile?.personal_info?.gender || 'male',
-      height: Number(profile?.personal_info?.height) || 0,
-      weight: Number(profile?.personal_info?.weight) || 0,
+      date_of_birth: profile?.personal_info?.date_of_birth || '',
+      height: profile?.personal_info?.height || 0,
+      weight: profile?.personal_info?.weight || 0,
       contact: profile?.personal_info?.contact || '',
       blood_type: profile?.personal_info?.blood_type || ''
     },
@@ -58,27 +59,28 @@ export default function ProfileEdit() {
       conditions: profile?.medical_info?.conditions || ''
     },
     preferences: {
-      dietary: profile?.preferences?.dietary || [],
-      workout_days: profile?.preferences?.workout_days || [],
+      activity_level: (profile?.preferences?.activity_level || 'beginner') as ActivityLevel,
+      dietary_preferences: profile?.preferences?.dietary_preferences || [],
+      workout_preferences: profile?.preferences?.workout_preferences || [],
       fitness_goals: profile?.preferences?.fitness_goals || [],
       fitness_level: profile?.preferences?.fitness_level || '',
-      activity_level: profile?.preferences?.activity_level || 'moderate'
+      dietary: profile?.preferences?.dietary || [],
+      workout_time: profile?.preferences?.workout_time || '',
+      workout_days: profile?.preferences?.workout_days || []
     }
   });
   const [heightUnit, setHeightUnit] = useState<'cm' | 'ft'>('cm');
 
-  // Update form data when profile changes
   useEffect(() => {
     if (profile) {
       setFormData({
-        email: profile.email,
         username: profile.username || '',
         photoURL: profile.photoURL,
         personal_info: {
-          date_of_birth: profile.personal_info?.date_of_birth || '',
           gender: profile.personal_info?.gender || 'male',
-          height: Number(profile.personal_info?.height) || 0,
-          weight: Number(profile.personal_info?.weight) || 0,
+          date_of_birth: profile.personal_info?.date_of_birth || '',
+          height: profile.personal_info?.height || 0,
+          weight: profile.personal_info?.weight || 0,
           contact: profile.personal_info?.contact || '',
           blood_type: profile.personal_info?.blood_type || ''
         },
@@ -86,18 +88,20 @@ export default function ProfileEdit() {
           conditions: profile.medical_info?.conditions || ''
         },
         preferences: {
-          dietary: profile.preferences?.dietary || [],
-          workout_days: profile.preferences?.workout_days || [],
+          activity_level: (profile.preferences?.activity_level || 'beginner') as ActivityLevel,
+          dietary_preferences: profile.preferences?.dietary_preferences || [],
+          workout_preferences: profile.preferences?.workout_preferences || [],
           fitness_goals: profile.preferences?.fitness_goals || [],
           fitness_level: profile.preferences?.fitness_level || '',
-          activity_level: profile.preferences?.activity_level || 'moderate'
+          dietary: profile.preferences?.dietary || [],
+          workout_time: profile.preferences?.workout_time || '',
+          workout_days: profile.preferences?.workout_days || []
         }
       });
       setHasEditedName(!!profile.username);
     }
   }, [profile]);
 
-  // Check if user is first time user (no photo)
   useEffect(() => {
     if (profile && !profile.photoURL) {
       setIsFirstTimeUser(true);
@@ -105,12 +109,10 @@ export default function ProfileEdit() {
     }
   }, [profile]);
 
-  // Load face detection models when component mounts
   useEffect(() => {
     loadFaceDetectionModels().catch(console.error);
   }, []);
 
-  // Calculate age from DOB
   const calculateAge = (dob: string): string => {
     if (!dob) return '';
     const birthDate = new Date(dob);
@@ -137,7 +139,7 @@ export default function ProfileEdit() {
   ];
 
   const handleDietaryChange = (preference: string) => {
-    const currentDietary = formData.preferences.dietary;
+    const currentDietary = formData.preferences.dietary_preferences;
     const updatedDietary = currentDietary.includes(preference)
       ? currentDietary.filter((p: string) => p !== preference)
       : [...currentDietary, preference];
@@ -146,7 +148,7 @@ export default function ProfileEdit() {
       ...prevData,
       preferences: {
         ...prevData.preferences,
-        dietary: updatedDietary
+        dietary_preferences: updatedDietary
       }
     }));
   };
@@ -187,15 +189,16 @@ export default function ProfileEdit() {
     }
 
     try {
-      const updatedProfile: Profile = {
-        ...profile,
+      const updatedProfile: Partial<Profile> = {
         username: formData.username,
         personal_info: {
           ...formData.personal_info,
           height: Number(formData.personal_info.height),
           weight: Number(formData.personal_info.weight)
         },
-        medical_info: formData.medical_info,
+        medical_info: {
+          ...formData.medical_info
+        },
         preferences: formData.preferences
       };
 
@@ -208,53 +211,37 @@ export default function ProfileEdit() {
     }
   };
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !validateImage(file)) return;
-
+  const handleImageUpload = async (file: File) => {
     try {
       setIsProcessingImage(true);
       
-      // First, detect face in the image
       const hasFace = await detectFace(file);
-      if (!hasFace) return;
+      if (!hasFace) {
+        toast.error('No face detected in the image');
+        return;
+      }
 
-      // If face detection passes, upload to ImgBB
       const loadingToast = toast.loading('Uploading image...');
       const imageUrl = await uploadImageToImgBB(file);
       toast.dismiss(loadingToast);
       
       if (imageUrl && profile) {
-        // Update both Auth and Firestore profiles
-        await updateUserProfile({ photoURL: imageUrl });
-
-        // Update Firestore profile
         const updatedProfile = {
           ...profile,
-          photoURL: imageUrl,
-          personal_info: {
-            ...profile.personal_info,
-            height: Number(profile.personal_info?.height) || 0,
-            weight: Number(profile.personal_info?.weight) || 0
-          }
+          photoURL: imageUrl
         };
 
         await updateProfile(updatedProfile);
-
-        // Update local form data
         setFormData(prevData => ({
           ...prevData,
           photoURL: imageUrl
         }));
 
-        // Force a page reload to update the photo everywhere
-        window.location.reload();
-
-        toast.success('Profile picture updated successfully!');
+        toast.success('Profile photo updated successfully');
       }
     } catch (error) {
-      console.error('Error processing image:', error);
-      toast.error('Failed to process image. Please try again.');
+      console.error('Error uploading image:', error);
+      toast.error('Failed to upload image');
     } finally {
       setIsProcessingImage(false);
     }
@@ -264,45 +251,29 @@ export default function ProfileEdit() {
     try {
       setIsProcessingImage(true);
       
-      // First, detect face in the image
       const hasFace = await detectFace(file);
       if (!hasFace) {
         toast.error('No face detected. Please take a clear photo of your face.');
         return;
       }
 
-      // If face detection passes, upload to ImgBB
       const loadingToast = toast.loading('Uploading image...');
       const imageUrl = await uploadImageToImgBB(file);
       toast.dismiss(loadingToast);
       
       if (imageUrl && profile) {
-        // Update both Auth and Firestore profiles
-        await updateUserProfile({ photoURL: imageUrl });
-
-        // Update Firestore profile
         const updatedProfile = {
           ...profile,
-          photoURL: imageUrl,
-          personal_info: {
-            ...profile.personal_info,
-            height: Number(profile.personal_info?.height) || 0,
-            weight: Number(profile.personal_info?.weight) || 0
-          }
+          photoURL: imageUrl
         };
 
         await updateProfile(updatedProfile);
-
-        // Update local form data
         setFormData(prevData => ({
           ...prevData,
           photoURL: imageUrl
         }));
 
         setIsFirstTimeUser(false);
-        
-        // Force a page reload to update the photo everywhere
-        window.location.reload();
 
         toast.success('Profile picture updated successfully!');
       }
@@ -318,7 +289,6 @@ export default function ProfileEdit() {
     <>
     <div className="min-h-screen bg-gray-50 dark:bg-[#121212] text-gray-900 dark:text-white py-8">
       <div className="max-w-3xl mx-auto px-4">
-        {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-3">
             <button
@@ -332,7 +302,6 @@ export default function ProfileEdit() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Personal Information */}
           <div className="bg-white dark:bg-[#1E1E1E] rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-gray-800 transform transition-all duration-200 hover:shadow-xl">
             <div className="flex items-center gap-3 mb-6">
               <User2 className="w-5 h-5 text-emerald-500" />
@@ -342,7 +311,6 @@ export default function ProfileEdit() {
               </div>
             </div>
 
-              {/* Profile Picture Upload */}
               <div className="mb-6">
                 <div className="flex items-center gap-4">
                   <div className="relative">
@@ -404,7 +372,6 @@ export default function ProfileEdit() {
                 </div>
               </div>
 
-              {/* Full Name Field */}
               <div className="mb-6">
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-gray-500 dark:text-gray-400">
@@ -478,6 +445,7 @@ export default function ProfileEdit() {
                   <option value="">Select your gender</option>
                   <option value="male">Male</option>
                   <option value="female">Female</option>
+                  <option value="other">Other</option>
                 </select>
               </div>
               <div className="space-y-2">
@@ -524,7 +492,6 @@ export default function ProfileEdit() {
             </div>
           </div>
 
-          {/* Medical Information */}
           <div className="bg-white dark:bg-[#1E1E1E] rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-gray-800 transform transition-all duration-200 hover:shadow-xl">
             <div className="flex items-center gap-3 mb-6">
               <Stethoscope className="w-5 h-5 text-purple-500" />
@@ -539,9 +506,9 @@ export default function ProfileEdit() {
                 <div className="flex gap-4">
                   <button
                     type="button"
-                    onClick={() => handleChange('medical_info', 'conditions', '')}
+                    onClick={() => handleChange('preferences', 'fitness_level', '')}
                     className={`px-6 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
-                      !formData.medical_info.conditions
+                      !formData.preferences.fitness_level
                         ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/25'
                         : 'bg-gray-100 dark:bg-[#282828] text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-[#333]'
                     }`}
@@ -550,9 +517,9 @@ export default function ProfileEdit() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => handleChange('medical_info', 'conditions', ' ')}
+                    onClick={() => handleChange('preferences', 'fitness_level', ' ')}
                     className={`px-6 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
-                      formData.medical_info.conditions
+                      formData.preferences.fitness_level
                         ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/25'
                         : 'bg-gray-100 dark:bg-[#282828] text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-[#333]'
                     }`}
@@ -561,11 +528,11 @@ export default function ProfileEdit() {
                   </button>
                 </div>
               </div>
-              {formData.medical_info.conditions && (
+              {formData.preferences.fitness_level && (
                 <div className="space-y-2">
                   <textarea
-                    value={formData.medical_info.conditions}
-                    onChange={(e) => handleChange('medical_info', 'conditions', e.target.value)}
+                    value={formData.preferences.fitness_level}
+                    onChange={(e) => handleChange('preferences', 'fitness_level', e.target.value)}
                     className="w-full bg-gray-50 dark:bg-[#282828] rounded-xl px-4 py-3 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors h-24"
                     placeholder="Example: Asthma, Diabetes, High Blood Pressure, or any allergies..."
                   />
@@ -575,7 +542,6 @@ export default function ProfileEdit() {
             </div>
           </div>
 
-            {/* Physical Stats */}
             <div className="bg-white dark:bg-[#1E1E1E] rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-gray-800 transform transition-all duration-200 hover:shadow-xl">
               <div className="flex items-center gap-3 mb-6">
                 <Scale className="w-5 h-5 text-blue-500" />
@@ -673,7 +639,6 @@ export default function ProfileEdit() {
               </div>
             </div>
 
-          {/* Preferences */}
           <div className="bg-white dark:bg-[#1E1E1E] rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-gray-800 transform transition-all duration-200 hover:shadow-xl">
             <div className="flex items-center gap-3 mb-6">
               <Heart className="w-5 h-5 text-red-500" />
@@ -722,7 +687,7 @@ export default function ProfileEdit() {
                       type="button"
                       onClick={() => handleDietaryChange(option)}
                       className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
-                        formData.preferences.dietary.includes(option)
+                        formData.preferences.dietary_preferences.includes(option)
                           ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/25'
                           : 'bg-gray-100 dark:bg-[#282828] text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-[#333]'
                       }`}
@@ -736,7 +701,6 @@ export default function ProfileEdit() {
             </div>
           </div>
 
-          {/* Save Button */}
           <button
             type="submit"
             className="w-full bg-emerald-500 hover:bg-emerald-600 text-white py-4 rounded-2xl font-semibold transition-all duration-200 flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40"

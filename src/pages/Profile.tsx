@@ -2,15 +2,17 @@ import { Edit, Crown, ArrowLeft, Activity, Calendar, User2, Scale, Heart, Phone 
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useState, useEffect } from 'react';
-import { getProfile, getMembership } from '../services/FirestoreService';
-import type { FirestoreProfile, FirestoreMembership } from '../types/firestore.types';
+import { getProfile } from '../services/FirestoreService';
+import type { Profile } from '../types/profile';
+import { toast } from 'react-hot-toast';
+import { useMembership } from '../context/MembershipContext';
 
 export default function Profile() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
-  const [profile, setProfile] = useState<FirestoreProfile | null>(null);
-  const [membership, setMembership] = useState<FirestoreMembership | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const { membership, isActive, loading: membershipLoading } = useMembership();
 
   useEffect(() => {
     async function loadProfileData() {
@@ -21,7 +23,6 @@ export default function Profile() {
 
       setLoading(true);
       try {
-        // Load profile data
         const { data: profileData, error: profileError } = await getProfile(user.uid);
         
         if (profileError) {
@@ -29,14 +30,9 @@ export default function Profile() {
         }
         
         setProfile(profileData);
-
-        // Load membership data
-        const { data: membershipData, error: membershipError } = await getMembership(user.uid);
-        if (!membershipError && membershipData) {
-          setMembership(membershipData);
-        }
       } catch (error: any) {
         console.error('Error loading profile:', error);
+        toast.error(error.message || 'Failed to load profile');
       } finally {
         setLoading(false);
       }
@@ -115,11 +111,11 @@ export default function Profile() {
               <div className="flex items-center gap-4 w-full sm:w-auto">
                 <div className="relative">
                   <img
-                    src={profile.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${profile.username}`}
+                    src={profile?.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${profile?.username}`}
                     alt="Profile"
                     className="w-16 h-16 rounded-full object-cover border-2 border-emerald-500"
                   />
-                  {membership?.is_active && (
+                  {isActive && (
                     <div className="absolute -top-1 -right-1">
                       <Crown className="w-5 h-5 text-yellow-500" />
                     </div>
@@ -208,7 +204,7 @@ export default function Profile() {
               <Crown className="w-6 h-6 text-yellow-500" />
               Membership Status
             </h2>
-            {membership?.is_active ? (
+            {isActive ? (
               <span className="bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-4 py-1.5 rounded-full text-sm font-medium">
                 Active
               </span>
@@ -219,7 +215,7 @@ export default function Profile() {
             )}
           </div>
           <div className="p-8">
-            {membership?.is_active ? (
+            {isActive && membership ? (
               <div className="space-y-6">
                 <div className="flex justify-between items-start">
                   <div>
@@ -238,7 +234,10 @@ export default function Profile() {
                   No active membership. Click to view available plans.
                 </p>
                 <button 
-                  onClick={() => navigate('/membership')}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate('/membership');
+                  }}
                   className="bg-emerald-500 text-white px-6 py-2 rounded-lg hover:bg-emerald-600 transition-colors"
                 >
                   View Plans
@@ -249,62 +248,62 @@ export default function Profile() {
         </div>
 
         {/* Preferences Card */}
-        <div className="bg-white dark:bg-[#1E1E1E] rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 transform transition-all duration-200 hover:shadow-xl">
-          <div className="px-8 py-6 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
-            <h2 className="text-xl font-bold flex items-center gap-3 text-gray-900 dark:text-white">
-              <Heart className="w-6 h-6 text-red-500" />
-              Preferences
-            </h2>
+        <div className="bg-white dark:bg-[#1E1E1E] rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 p-6 transform transition-all duration-200 hover:shadow-xl">
+          <div className="flex items-center gap-3 mb-6">
+            <Heart className="w-5 h-5 text-emerald-500" />
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Preferences</h3>
           </div>
-          <div className="p-8">
-            <div className="space-y-6">
-              {profile.preferences ? (
-                <>
-                  {profile.preferences.dietary && profile.preferences.dietary.length > 0 && (
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Dietary Preferences</h3>
-                      <div className="flex flex-wrap gap-2">
-                        {profile.preferences.dietary.map((diet, index) => (
-                          <span
-                            key={index}
-                            className="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-3 py-1 rounded-full text-sm"
-                          >
-                            {diet}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {profile.preferences.workout_time && (
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Preferred Workout Time</h3>
-                      <span className="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-3 py-1 rounded-full text-sm capitalize">
-                        {profile.preferences.workout_time}
-                      </span>
-                    </div>
-                  )}
-                  {profile.preferences.workout_days && profile.preferences.workout_days.length > 0 && (
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Workout Days</h3>
-                      <div className="flex flex-wrap gap-2">
-                        {profile.preferences.workout_days.map((day, index) => (
-                          <span
-                            key={index}
-                            className="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-3 py-1 rounded-full text-sm capitalize"
-                          >
-                            {day}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <p className="text-gray-500 dark:text-gray-400 text-center">
-                  No preferences set. Update your profile to add preferences.
-                </p>
-              )}
-            </div>
+          <div className="space-y-6">
+            {/* Fitness Goals */}
+            {profile.preferences?.fitness_goals && profile.preferences.fitness_goals.length > 0 && (
+              <div>
+                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Fitness Goals</h4>
+                <div className="flex flex-wrap gap-2">
+                  {profile.preferences.fitness_goals.map((goal, index) => (
+                    <span
+                      key={index}
+                      className="px-3 py-1 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-full text-sm"
+                    >
+                      {goal}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Dietary Preferences */}
+            {profile.preferences?.dietary_preferences && profile.preferences.dietary_preferences.length > 0 && (
+              <div>
+                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Dietary Preferences</h4>
+                <div className="flex flex-wrap gap-2">
+                  {profile.preferences.dietary_preferences.map((pref, index) => (
+                    <span
+                      key={index}
+                      className="px-3 py-1 bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-full text-sm"
+                    >
+                      {pref}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Workout Preferences */}
+            {profile.preferences?.workout_preferences && profile.preferences.workout_preferences.length > 0 && (
+              <div>
+                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Workout Preferences</h4>
+                <div className="flex flex-wrap gap-2">
+                  {profile.preferences.workout_preferences.map((pref, index) => (
+                    <span
+                      key={index}
+                      className="px-3 py-1 bg-purple-50 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400 rounded-full text-sm"
+                    >
+                      {pref}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

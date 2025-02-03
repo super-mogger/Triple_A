@@ -3,10 +3,11 @@ import { ArrowLeft, Crown, Check, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { checkMembershipStatus, createMembership } from '../services/FirestoreService';
-import type { Membership } from '../services/FirestoreService';
+import type { Membership } from '../types/profile';
 import { useTheme } from '../context/ThemeContext';
 import { useProfile } from '../context/ProfileContext';
 import { Timestamp } from 'firebase/firestore';
+import { useMembership } from '../context/MembershipContext';
 
 interface Plan {
   id: string;
@@ -67,38 +68,8 @@ export default function MembershipDetails() {
   const navigate = useNavigate();
   const { profile } = useProfile();
   const { isDarkMode } = useTheme();
-  const [membershipStatus, setMembershipStatus] = useState<{
-    isActive: boolean;
-    membership: Membership | null;
-    error: string | null;
-  }>({ isActive: false, membership: null, error: null });
-  const [loading, setLoading] = useState(true);
+  const { membership, isActive, loading } = useMembership();
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
-
-  const fetchMembershipStatus = async () => {
-    if (!user?.uid) return;
-    const status = await checkMembershipStatus(user.uid);
-    setMembershipStatus(status);
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    fetchMembershipStatus();
-  }, [user]);
-
-  const handleCreateMembership = async (planData: any) => {
-    if (!user?.uid) return;
-    
-    try {
-      const result = await createMembership(user.uid, planData);
-      if (result.error) {
-        throw new Error(result.error.toString());
-      }
-      await fetchMembershipStatus();
-    } catch (error) {
-      console.error('Error creating membership:', error);
-    }
-  };
 
   const formatDate = (timestamp: Timestamp) => {
     return timestamp.toDate().toLocaleDateString();
@@ -141,36 +112,36 @@ export default function MembershipDetails() {
               <h2 className="text-xl font-bold text-gray-900 dark:text-white">Active Membership</h2>
             </div>
             <span className={`px-4 py-1.5 rounded-full text-sm font-medium ${
-              membershipStatus.isActive
+              isActive
                 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400'
                 : 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400'
             }`}>
-              {membershipStatus.isActive ? 'Active' : 'Inactive'}
+              {isActive ? 'Active' : 'Inactive'}
             </span>
           </div>
 
           <div className="mb-6">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
-              {membershipStatus.membership?.plan_name || 'No Active Plan'}
+              {membership?.plan_name || 'No Active Plan'}
             </h3>
             <p className="text-sm text-gray-600 dark:text-gray-400">
-              {membershipStatus.membership?.end_date ? `Valid until ${formatDate(membershipStatus.membership.end_date)}` : 'Not subscribed'}
+              {membership?.end_date ? `Valid until ${formatDate(membership.end_date)}` : 'Not subscribed'}
             </p>
           </div>
 
-          {membershipStatus.isActive && (
+          {isActive && membership && (
             <div className="relative pt-1">
               <div className="flex items-center justify-between mb-2">
                 <div>
                   <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
-                    {getDaysRemaining(membershipStatus.membership?.end_date)} days
+                    {getDaysRemaining(membership.end_date)} days
                   </span>
                   <span className="text-sm text-gray-600 dark:text-gray-400"> remaining</span>
                 </div>
               </div>
               <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                 <div
-                  style={{ width: `${(getDaysRemaining(membershipStatus.membership?.end_date) / 30) * 100}%` }}
+                  style={{ width: `${(getDaysRemaining(membership.end_date) / 30) * 100}%` }}
                   className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 dark:from-emerald-400 dark:to-teal-400 rounded-full transition-all duration-300"
                 ></div>
               </div>
@@ -202,7 +173,7 @@ export default function MembershipDetails() {
               <div
                 key={plan.id}
                 className={`bg-white dark:bg-[#1E1E1E] rounded-xl p-6 border ${
-                  membershipStatus.membership?.plan_id === plan.id
+                  membership?.plan_id === plan.id
                     ? 'border-emerald-500 dark:border-emerald-400'
                     : 'border-gray-200 dark:border-gray-800 hover:border-emerald-200 dark:hover:border-emerald-800'
                 } transition-all duration-300 hover:shadow-lg`}

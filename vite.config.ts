@@ -11,7 +11,8 @@ export default defineConfig({
     }
   },
   define: {
-    'process.env': process.env
+    'process.env': process.env,
+    global: 'globalThis'
   },
   build: {
     sourcemap: true,
@@ -22,6 +23,14 @@ export default defineConfig({
           firebase: ['firebase/app', 'firebase/auth', 'firebase/firestore']
         }
       }
+    },
+    commonjsOptions: {
+      transformMixedEsModules: true
+    }
+  },
+  optimizeDeps: {
+    esbuildOptions: {
+      target: 'es2020'
     }
   }
 });

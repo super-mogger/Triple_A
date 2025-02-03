@@ -10,31 +10,38 @@ import {
   onAuthStateChanged,
   updateProfile as updateUserProfile,
   updatePassword as updateUserPassword,
-  UserCredential
+  UserCredential,
+  sendEmailVerification
 } from 'firebase/auth';
 import { auth } from '../config/firebase';
 import { getProfile, createProfile, updateProfile } from '../services/FirestoreService';
 import { useNavigate } from 'react-router-dom';
 import { Timestamp } from 'firebase/firestore';
-import type { Profile } from '../types/profile';
+import { Profile, ActivityLevel } from '../types/profile';
 
 interface AuthContextType {
   user: User | null;
+  profile: Profile | null;
   loading: boolean;
   error: Error | null;
-  signUp: (email: string, password: string) => Promise<UserCredential>;
   signIn: (email: string, password: string) => Promise<UserCredential>;
+  signUp: (email: string, password: string) => Promise<UserCredential>;
   signInWithGoogle: () => Promise<UserCredential>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   updatePassword: (newPassword: string) => Promise<void>;
-  updateUserProfile: (data: { displayName?: string; photoURL?: string }) => Promise<void>;
+  updateProfile: (data: Partial<Profile>) => Promise<void>;
+  updateUserProfile: (data: { photoURL?: string; displayName?: string }) => Promise<void>;
+  sendVerificationEmail: () => Promise<void>;
+  isEmailVerified: boolean;
+  logout: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType | null>(null);
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const navigate = useNavigate();
@@ -71,11 +78,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 conditions: ''
               },
               preferences: {
+                activity_level: 'beginner' as ActivityLevel,
+                dietary_preferences: [],
+                workout_preferences: [],
+                fitness_goals: [],
+                fitness_level: '',
                 dietary: [],
                 workout_days: [],
-                fitness_goals: [],
-                fitness_level: 'beginner',
-                activity_level: 'moderate'
+                workout_time: ''
               },
               created_at: Timestamp.now(),
               updated_at: Timestamp.now()
@@ -142,7 +152,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await updateUserPassword(user, password);
   };
 
-  const updateUserProfileData = async (data: { displayName?: string; photoURL?: string }) => {
+  const updateUserProfileData = async (data: { photoURL?: string; displayName?: string }) => {
     if (!user) throw new Error('No user logged in');
     
     try {
@@ -167,17 +177,53 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const updateProfileData = async (data: Partial<Profile>) => {
+    if (!user) throw new Error('No user logged in');
+    if (!profile) throw new Error('No profile found');
+    
+    try {
+      const updatedProfile: Profile = {
+        ...profile,
+        ...data,
+        updated_at: Timestamp.now()
+      };
+      
+      // Update profile using ProfileContext's updateProfile function
+      await updateProfile(user.uid, updatedProfile);
+      
+      // Update local state
+      setProfile(updatedProfile);
+      
+      // Force refresh user data if needed
+      if (data.photoURL || data.username) {
+        await user.reload();
+      }
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      throw error;
+    }
+  };
+
   const value: AuthContextType = {
     user,
     loading,
     error,
+    profile,
     signUp,
     signIn,
     signInWithGoogle,
     signOut,
     resetPassword,
     updatePassword,
-    updateUserProfile: updateUserProfileData
+    updateUserProfile: updateUserProfileData,
+    updateProfile: updateProfileData,
+    sendVerificationEmail: async () => {
+      if (user) {
+        await sendEmailVerification(user);
+      }
+    },
+    isEmailVerified: user?.emailVerified || false,
+    logout: signOut
   };
 
   if (loading) {

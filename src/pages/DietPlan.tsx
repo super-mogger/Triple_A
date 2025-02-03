@@ -6,7 +6,7 @@ import { useDietService } from '../services/DietService';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import { checkMembershipStatus } from '../services/FirestoreService';
-import type { Membership } from '../services/FirestoreService';
+import type { Membership } from '../types/profile';
 import { fetchFoodImage } from '../services/DietService';
 import MembershipRequired from '../components/MembershipRequired';
 

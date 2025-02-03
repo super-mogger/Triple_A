@@ -1,11 +1,14 @@
 import { Timestamp } from 'firebase/firestore';
 
+export type ActivityLevel = 'beginner' | 'intermediate' | 'advanced' | 'moderate' | 'light' | 'sedentary' | 'active' | 'veryActive';
+
 export interface Profile {
   id: string;
   user_id: string;
   email: string;
   username: string;
   avatar_url?: string;
+  photoURL?: string;
   full_name?: string;
   experience_level?: 'beginner' | 'intermediate' | 'advanced';
   personal_info: {
@@ -20,10 +23,11 @@ export interface Profile {
     conditions: string;
   };
   preferences: {
-    activity_level: 'beginner' | 'intermediate' | 'advanced';
+    activity_level: ActivityLevel;
     dietary_preferences: string[];
     workout_preferences: string[];
     fitness_goals: string[];
+    fitness_level?: string;
     dietary?: string[];
     workout_time?: string;
     workout_days?: string[];
@@ -48,15 +52,20 @@ export interface FirestoreProfile extends Profile {
 }
 
 export interface Membership {
-  id: string;
+  amount: number;
+  created_at: Timestamp;
+  duration: number;
+  end_date: Timestamp;
+  is_active: boolean;
+  payment_method: string;
+  payment_status: string;
   plan_id: string;
   plan_name: string;
   start_date: Timestamp;
-  end_date: Timestamp;
-  status: 'active' | 'expired' | 'cancelled';
+  updated_at: Timestamp;
+  userId: string;
 }
 
 export interface FirestoreMembership extends Membership {
-  user_id: string;
   amount_paid: number;
 } 

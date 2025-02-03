@@ -3,51 +3,35 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
-import { getProfile, getMembership } from '../services/FirestoreService';
-import type { FirestoreProfile, FirestoreMembership } from '../types/firestore.types';
+import { getProfile } from '../services/FirestoreService';
+import type { Profile } from '../types/profile';
+import { useMembership } from '../context/MembershipContext';
 
 export default function Profile() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
-  const [profile, setProfile] = useState<FirestoreProfile | null>(null);
-  const [membership, setMembership] = useState<FirestoreMembership | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const { membership, isActive, loading: membershipLoading } = useMembership();
 
   useEffect(() => {
-    async function loadProfileData() {
-      if (!user?.uid) {
-        navigate('/login');
-        return;
-      }
-
-      setLoading(true);
+    const fetchProfileData = async () => {
+      if (!user) return;
       try {
-        // Load profile data
-        const { data: profileData, error: profileError } = await getProfile(user.uid);
-        
-        if (profileError) {
-          throw profileError;
+        // Fetch profile data from Firestore
+        const { data: profileData } = await getProfile(user.uid);
+        if (profileData) {
+          setProfile(profileData);
         }
-        
-        setProfile(profileData);
-
-        // Load membership data
-        const { data: membershipData, error: membershipError } = await getMembership(user.uid);
-        if (!membershipError && membershipData) {
-          setMembership(membershipData);
-        }
-
-        toast.success('Profile loaded successfully');
-      } catch (error: any) {
-        console.error('Error loading profile:', error);
-        toast.error(error.message || 'Failed to load profile');
+      } catch (error) {
+        console.error('Error fetching profile data:', error);
       } finally {
         setLoading(false);
       }
-    }
+    };
 
-    loadProfileData();
-  }, [user, navigate]);
+    fetchProfileData();
+  }, [user]);
 
   // Calculate BMI
   const calculateBMI = () => {
@@ -119,11 +103,11 @@ export default function Profile() {
               <div className="flex items-center gap-4 w-full sm:w-auto">
                 <div className="relative">
                   <img
-                    src={profile.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${profile.full_name}`}
+                    src={profile?.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${profile?.username}`}
                     alt="Profile"
                     className="w-16 h-16 rounded-full object-cover border-2 border-emerald-500"
                   />
-                  {membership?.is_active && (
+                  {isActive && (
                     <div className="absolute -top-1 -right-1">
                       <Crown className="w-5 h-5 text-yellow-500" />
                     </div>
@@ -131,10 +115,10 @@ export default function Profile() {
                 </div>
                 <div className="flex-1">
                   <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                    {profile.full_name || 'User'}
+                    {profile?.username || 'User'}
                   </h2>
                   <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Member since {profile.created_at.toDate().toLocaleDateString()}
+                    Member since {profile?.created_at.toDate().toLocaleDateString()}
                   </p>
                 </div>
               </div>
@@ -203,7 +187,7 @@ export default function Profile() {
               <Crown className="w-6 h-6 text-yellow-500" />
               Membership Status
             </h2>
-            {membership?.is_active ? (
+            {isActive ? (
               <span className="bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-4 py-1.5 rounded-full text-sm font-medium">
                 Active
               </span>
@@ -214,7 +198,7 @@ export default function Profile() {
             )}
           </div>
           <div className="p-8">
-            {membership?.is_active ? (
+            {isActive && membership ? (
               <div className="space-y-6">
                 <div className="flex justify-between items-start">
                   <div>
@@ -233,7 +217,10 @@ export default function Profile() {
                   No active membership. Click to view available plans.
                 </p>
                 <button 
-                  onClick={() => navigate('/membership')}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate('/membership');
+                  }}
                   className="bg-emerald-500 text-white px-6 py-2 rounded-lg hover:bg-emerald-600 transition-colors"
                 >
                   View Plans

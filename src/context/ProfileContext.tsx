@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { getProfile as getFirestoreProfile, updateProfile as updateFirestoreProfile, createProfile as createFirestoreProfile } from '../services/FirestoreService';
 import { toast } from 'react-hot-toast';
-import { Profile } from '../types/profile';
+import { Profile, ActivityLevel } from '../types/profile';
 import { Timestamp } from 'firebase/firestore';
 import { updateProfile as updateAuthProfile } from 'firebase/auth';
 
@@ -14,6 +14,17 @@ interface ProfileContextType {
 }
 
 const ProfileContext = createContext<ProfileContextType | undefined>(undefined);
+
+const defaultPreferences = {
+  activity_level: 'beginner' as ActivityLevel,
+  dietary_preferences: [],
+  workout_preferences: [],
+  fitness_goals: [],
+  fitness_level: '',
+  dietary: [],
+  workout_time: '',
+  workout_days: []
+};
 
 export function ProfileProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
@@ -47,6 +58,8 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
         const defaultProfile: Profile = {
           id: user.uid,
           user_id: user.uid,
+          email: user.email || '',
+          username: user.email?.split('@')[0] || '',
           personal_info: {
             date_of_birth: '',
             gender: 'male',
@@ -58,13 +71,7 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
           medical_info: {
             conditions: ''
           },
-          preferences: {
-            dietary: [],
-            workout_days: [],
-            fitness_goals: [],
-            fitness_level: '',
-            activity_level: 'moderate'
-          },
+          preferences: defaultPreferences,
           created_at: now,
           updated_at: now
         };
@@ -104,7 +111,17 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
         });
       }
       
-      await fetchProfile(); // Refresh profile data
+      // Immediately update local state
+      if (profile) {
+        const newProfile = {
+          ...profile,
+          ...updatedData
+        };
+        setProfile(newProfile);
+      }
+
+      // Fetch fresh data from server to ensure sync
+      await fetchProfile();
       toast.success('Profile updated successfully');
     } catch (err) {
       console.error('Error updating profile:', err);

@@ -27,6 +27,7 @@ import { useEffect } from 'react';
 import { NotificationProvider } from './context/NotificationContext';
 import { PrivacyProvider } from './context/PrivacyContext';
 import HelpAndSupport from './pages/HelpAndSupport';
+import { MembershipProvider } from './context/MembershipContext';
 
 function AppRoutes() {
   const { user, loading } = useAuth();
@@ -100,19 +101,21 @@ function App() {
       <ThemeProvider>
         <AuthProvider>
           <ProfileProvider>
-            <PrivacyProvider>
-              <Toaster 
-                position="top-right"
-                toastOptions={{
-                  duration: 4000,
-                  style: {
-                    background: '#333',
-                    color: '#fff',
-                  }
-                }}
-              />
-              <AppRoutes />
-            </PrivacyProvider>
+            <MembershipProvider>
+              <PrivacyProvider>
+                <Toaster 
+                  position="top-right"
+                  toastOptions={{
+                    duration: 4000,
+                    style: {
+                      background: '#333',
+                      color: '#fff',
+                    }
+                  }}
+                />
+                <AppRoutes />
+              </PrivacyProvider>
+            </MembershipProvider>
           </ProfileProvider>
         </AuthProvider>
       </ThemeProvider>

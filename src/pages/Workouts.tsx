@@ -17,7 +17,7 @@ import { exerciseDatabase } from '../data/exerciseDatabase';
 import type { Exercise, ExerciseDetails } from '../types/exercise';
 import { useAuth } from '../context/AuthContext';
 import { checkMembershipStatus } from '../services/FirestoreService';
-import type { Membership } from '../services/FirestoreService';
+import type { Membership } from '../types/profile';
 import MembershipRequired from '../components/MembershipRequired';
 
 type SplitType = 'bro-split' | 'push-pull-legs' | 'upper-lower';

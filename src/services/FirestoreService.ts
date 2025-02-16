@@ -174,6 +174,15 @@ export async function checkMembershipStatus(userId: string): Promise<{
                     membership.payment_status === 'completed' && 
                     now.toMillis() <= membership.end_date.toMillis();
 
+    // If membership is not active, return null membership to ensure UI updates
+    if (!isActive) {
+      return { 
+        isActive: false, 
+        membership: null,
+        error: null 
+      };
+    }
+
     return { 
       isActive, 
       membership,

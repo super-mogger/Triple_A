@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { Html5QrcodeScanner } from 'html5-qrcode';
 import { XCircle } from 'lucide-react';
 
-interface QRScannerProps {
+export interface QRScannerProps {
   onScanSuccess: (result: string) => void;
   onScanError: (error: string) => void;
   onClose: () => void;

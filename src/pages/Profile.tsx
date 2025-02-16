@@ -6,6 +6,11 @@ import { getProfile } from '../services/FirestoreService';
 import type { Profile } from '../types/profile';
 import { toast } from 'react-hot-toast';
 import { useMembership } from '../context/MembershipContext';
+import UserInfoCard from '../components/profile/UserInfoCard';
+import StatsGrid from '../components/profile/StatsGrid';
+import MembershipCard from '../components/profile/MembershipCard';
+import PreferencesCard from '../components/profile/PreferencesCard';
+import ProfileSetupModal from '../components/ProfileSetupModal';
 
 export default function Profile() {
   const navigate = useNavigate();
@@ -13,6 +18,7 @@ export default function Profile() {
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<Profile | null>(null);
   const { membership, isActive, loading: membershipLoading } = useMembership();
+  const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
 
   useEffect(() => {
     async function loadProfileData() {
@@ -59,6 +65,10 @@ export default function Profile() {
               Number(bmi) < 30 ? '60%' : '85%'
   } : null;
 
+  const handlePhotoUpdate = () => {
+    setIsPhotoModalOpen(true);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-[#121212] flex items-center justify-center">
@@ -91,222 +101,44 @@ export default function Profile() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#121212] py-8">
-      <div className="max-w-4xl mx-auto px-4 space-y-6">
-        {/* Back Button with Title */}
-        <div className="flex items-center gap-3 mb-2">
-          <button
-            onClick={() => navigate('/dashboard')}
-            className="p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Profile</h1>
-        </div>
-
-        {/* User Info Card */}
-        <div className="bg-white dark:bg-[#1E1E1E] rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 transform transition-all duration-200 hover:shadow-xl">
-          <div className="p-6">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-              <div className="flex items-center gap-4 w-full sm:w-auto">
-                <div className="relative">
-                  <img
-                    src={profile?.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${profile?.username}`}
-                    alt="Profile"
-                    className="w-16 h-16 rounded-full object-cover border-2 border-emerald-500"
-                  />
-                  {isActive && (
-                    <div className="absolute -top-1 -right-1">
-                      <Crown className="w-5 h-5 text-yellow-500" />
-                    </div>
-                  )}
-                </div>
-                <div className="flex-1">
-                  <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                    {profile.username}
-                  </h2>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    {profile.email}
-                  </p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Member since {profile.created_at?.toDate().toLocaleDateString()}
-                  </p>
-                  {profile.personal_info?.contact && (
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 flex items-center gap-1">
-                      <Phone className="w-4 h-4" />
-                      <span>{profile.personal_info.contact}</span>
-                    </p>
-                  )}
-                </div>
-              </div>
-              
-              <div className="w-full sm:w-auto mt-2 sm:mt-0 sm:ml-auto">
-                <button
-                  onClick={() => navigate('/profile/edit')}
-                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-                >
-                  <Edit className="w-4 h-4" />
-                  <span>Edit Profile</span>
-                </button>
-              </div>
-            </div>
+    <>
+      <div className="min-h-screen bg-gray-50 dark:bg-[#121212] py-8">
+        <div className="max-w-4xl mx-auto px-4 space-y-6">
+          {/* Back Button with Title */}
+          <div className="flex items-center gap-3 mb-2">
+            <button
+              onClick={() => navigate('/dashboard')}
+              className="p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Profile</h1>
           </div>
-        </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* BMI Card */}
-          {bmi && bmiInfo && (
-            <div className="bg-white dark:bg-[#1E1E1E] rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 p-6 transform transition-all duration-200 hover:shadow-xl">
-              <div className="flex items-center gap-3 mb-4">
-                <Scale className="w-5 h-5 text-emerald-500" />
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">BMI Status</h3>
-              </div>
-              <div className="space-y-4">
-                <div className="flex justify-between items-baseline">
-                  <span className="text-3xl font-bold text-gray-900 dark:text-white">{bmi}</span>
-                  <span className="text-lg font-medium text-emerald-500">{bmiInfo.category}</span>
-                </div>
-                <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-2.5">
-                  <div 
-                    className="bg-emerald-500 h-2.5 rounded-full transition-all duration-500 ease-out"
-                    style={{ width: bmiInfo.position }}
-                  />
-                </div>
-              </div>
-            </div>
-          )}
+          {/* User Info Card */}
+          <UserInfoCard 
+            profile={profile} 
+            isActive={isActive} 
+            onPhotoUpdate={handlePhotoUpdate}
+          />
 
-          {/* Activity Level Card */}
-          <div className="bg-white dark:bg-[#1E1E1E] rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 p-6 transform transition-all duration-200 hover:shadow-xl">
-            <div className="flex items-center gap-3 mb-4">
-              <Activity className="w-5 h-5 text-emerald-500" />
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Activity Level</h3>
-            </div>
-            <div className="space-y-2">
-              <div className="flex justify-between items-baseline">
-                <span className="text-3xl font-bold text-gray-900 dark:text-white capitalize">
-                  {profile.preferences?.activity_level || 'Beginner'}
-                </span>
-              </div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Current fitness level</p>
-            </div>
-          </div>
-        </div>
+          {/* Stats Grid */}
+          <StatsGrid profile={profile} bmi={bmi} bmiInfo={bmiInfo} />
 
-        {/* Membership Card */}
-        <div 
-          className="bg-white dark:bg-[#1E1E1E] rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 transform transition-all duration-200 hover:shadow-xl cursor-pointer"
-          onClick={() => navigate('/membership')}
-        >
-          <div className="px-8 py-6 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
-            <h2 className="text-xl font-bold flex items-center gap-3 text-gray-900 dark:text-white">
-              <Crown className="w-6 h-6 text-yellow-500" />
-              Membership Status
-            </h2>
-            {isActive ? (
-              <span className="bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-4 py-1.5 rounded-full text-sm font-medium">
-                Active
-              </span>
-            ) : (
-              <span className="bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 px-4 py-1.5 rounded-full text-sm font-medium">
-                Inactive
-              </span>
-            )}
-          </div>
-          <div className="p-8">
-            {isActive && membership ? (
-              <div className="space-y-6">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-1">
-                      {membership.plan_name}
-                    </h3>
-                    <p className="text-gray-500 dark:text-gray-400">
-                      Valid until {membership.end_date.toDate().toLocaleDateString()}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-6">
-                <p className="text-gray-500 dark:text-gray-400 mb-4">
-                  No active membership. Click to view available plans.
-                </p>
-                <button 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    navigate('/membership');
-                  }}
-                  className="bg-emerald-500 text-white px-6 py-2 rounded-lg hover:bg-emerald-600 transition-colors"
-                >
-                  View Plans
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
+          {/* Membership Card */}
+          <MembershipCard isActive={isActive} membership={membership} />
 
-        {/* Preferences Card */}
-        <div className="bg-white dark:bg-[#1E1E1E] rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 p-6 transform transition-all duration-200 hover:shadow-xl">
-          <div className="flex items-center gap-3 mb-6">
-            <Heart className="w-5 h-5 text-emerald-500" />
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Preferences</h3>
-          </div>
-          <div className="space-y-6">
-            {/* Fitness Goals */}
-            {profile.preferences?.fitness_goals && profile.preferences.fitness_goals.length > 0 && (
-              <div>
-                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Fitness Goals</h4>
-                <div className="flex flex-wrap gap-2">
-                  {profile.preferences.fitness_goals.map((goal, index) => (
-                    <span
-                      key={index}
-                      className="px-3 py-1 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-full text-sm"
-                    >
-                      {goal}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Dietary Preferences */}
-            {profile.preferences?.dietary_preferences && profile.preferences.dietary_preferences.length > 0 && (
-              <div>
-                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Dietary Preferences</h4>
-                <div className="flex flex-wrap gap-2">
-                  {profile.preferences.dietary_preferences.map((pref, index) => (
-                    <span
-                      key={index}
-                      className="px-3 py-1 bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-full text-sm"
-                    >
-                      {pref}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Workout Preferences */}
-            {profile.preferences?.workout_preferences && profile.preferences.workout_preferences.length > 0 && (
-              <div>
-                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Workout Preferences</h4>
-                <div className="flex flex-wrap gap-2">
-                  {profile.preferences.workout_preferences.map((pref, index) => (
-                    <span
-                      key={index}
-                      className="px-3 py-1 bg-purple-50 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400 rounded-full text-sm"
-                    >
-                      {pref}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
+          {/* Preferences Card */}
+          <PreferencesCard profile={profile} />
         </div>
       </div>
-    </div>
+
+      {/* Photo Update Modal */}
+      <ProfileSetupModal
+        isOpen={isPhotoModalOpen}
+        onClose={() => setIsPhotoModalOpen(false)}
+        isPhotoOnly={true}
+      />
+    </>
   );
 } 

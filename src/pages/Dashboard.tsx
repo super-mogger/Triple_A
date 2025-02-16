@@ -9,6 +9,7 @@ import { getAchievements, updateAchievement, checkStreakAchievements, checkWorko
 import { attendanceService } from '../services/AttendanceService';
 import { useAuth } from '../context/AuthContext';
 import ProfileSetupModal from '../components/ProfileSetupModal';
+import WaterIntakeCard from '../components/WaterIntakeCard';
 
 interface Achievement {
   id: string;
@@ -200,6 +201,28 @@ export default function Dashboard() {
             <p className="text-gray-600 dark:text-gray-300 mt-1">Let's stay active today</p>
           </div>
 
+          {/* Today's Workout Section */}
+          <div className="bg-white dark:bg-[#1E1E1E] rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-800 mb-8">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                <Dumbbell className="w-5 h-5 text-emerald-500" />
+                Today's Workout
+              </h2>
+            </div>
+            <div className="space-y-4">
+              <p className="text-gray-600 dark:text-gray-400">
+                Ready to crush your fitness goals? Start your workout now!
+              </p>
+              <button
+                onClick={() => navigate('/workouts')}
+                className="w-full sm:w-auto bg-emerald-500 hover:bg-emerald-600 text-white px-8 py-3 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2"
+              >
+                <Dumbbell className="w-5 h-5" />
+                Start Workout
+              </button>
+            </div>
+          </div>
+
           {/* Stats Grid */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
             {/* Attendance Streak Card */}
@@ -270,32 +293,19 @@ export default function Dashboard() {
             </div>
           </div>
 
+          {/* Water Intake Section */}
+          <div className="mb-8">
+            <WaterIntakeCard 
+              dailyGoal={2500}
+              onUpdate={(amount) => {
+                // TODO: Implement water intake tracking in the backend
+                console.log('Water intake updated:', amount);
+              }}
+            />
+          </div>
+
           {/* Main Content */}
           <div className="space-y-6">
-            {/* Today's Workout */}
-            <div className="bg-white dark:bg-[#1E1E1E] rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-800">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-medium text-gray-900 dark:text-white">Today's Workout</h2>
-                <button className="px-4 py-2 bg-emerald-500 text-white rounded-full text-sm font-medium hover:bg-emerald-600 transition-colors">
-                  Start
-                </button>
-              </div>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between py-3 border-b border-gray-100 dark:border-gray-800">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-emerald-50 dark:bg-emerald-500/10 rounded-xl">
-                      <Dumbbell className="w-5 h-5 text-emerald-500" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-900 dark:text-white">Warm Up</p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">5-10 minutes</p>
-                    </div>
-                  </div>
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Pending</span>
-                </div>
-              </div>
-            </div>
-
             {/* Profile Summary */}
             <div className="bg-white dark:bg-[#1E1E1E] rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-800">
               <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Profile Summary</h2>

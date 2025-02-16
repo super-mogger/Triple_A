@@ -19,8 +19,9 @@ export function MembershipProvider({ children }: { children: React.ReactNode }) 
   const [isActive, setIsActive] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [lastRefresh, setLastRefresh] = useState<number>(Date.now());
 
-  const fetchMembershipStatus = async () => {
+  const fetchMembershipStatus = async (force: boolean = false) => {
     if (!user?.uid) {
       setMembership(null);
       setIsActive(false);
@@ -32,9 +33,13 @@ export function MembershipProvider({ children }: { children: React.ReactNode }) 
       setLoading(true);
       const status = await checkMembershipStatus(user.uid);
       
-      setMembership(status.membership);
-      setIsActive(status.isActive);
-      setError(status.error);
+      // Only update if forced or there's a change in status
+      if (force || status.isActive !== isActive || JSON.stringify(status.membership) !== JSON.stringify(membership)) {
+        setMembership(status.membership);
+        setIsActive(status.isActive);
+        setError(status.error);
+        setLastRefresh(Date.now());
+      }
     } catch (err) {
       console.error('Error fetching membership:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch membership status');
@@ -45,19 +50,19 @@ export function MembershipProvider({ children }: { children: React.ReactNode }) 
 
   // Fetch membership data when user changes
   useEffect(() => {
-    fetchMembershipStatus();
+    fetchMembershipStatus(true);
   }, [user]);
 
-  // Set up periodic refresh (every minute)
+  // Set up periodic refresh (every 30 seconds)
   useEffect(() => {
     if (!user) return;
 
-    const intervalId = setInterval(fetchMembershipStatus, 60000);
+    const intervalId = setInterval(() => fetchMembershipStatus(false), 30000);
     return () => clearInterval(intervalId);
-  }, [user]);
+  }, [user, lastRefresh]);
 
   const refreshMembership = async () => {
-    await fetchMembershipStatus();
+    await fetchMembershipStatus(true);
   };
 
   return (

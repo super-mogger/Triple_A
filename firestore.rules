@@ -144,13 +144,9 @@ service cloud.firestore {
 
     match /profiles/{userId} {
 
-      allow read: if isAuthenticated();
+      allow read: if request.auth != null;
 
-      allow create: if isUserOwned(userId);
-
-      allow update: if isUserOwned(userId) || isAdmin();
-
-      allow delete: if isAdmin();
+      allow write: if request.auth != null && request.auth.uid == userId;
 
     }
 
@@ -205,6 +201,20 @@ service cloud.firestore {
          request.auth.uid == request.resource.data.userId || 
 
          isAdmin());
+
+    }
+
+
+
+    // Allow users to read and write their own water intake data
+
+    match /waterIntake/{document=**} {
+
+      allow read, write: if request.auth != null && 
+
+        request.auth.uid == resource.data.userId || 
+
+        (request.method == 'create' && request.auth.uid == request.resource.data.userId);
 
     }
 

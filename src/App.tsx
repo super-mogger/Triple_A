@@ -1,125 +1,134 @@
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { Suspense, lazy } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ProfileProvider } from './context/ProfileContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { Toaster } from 'react-hot-toast';
-import Layout from './components/Layout';
-import GetStarted from './pages/GetStarted';
-import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
-import PrivateRoute from './components/PrivateRoute';
-import Progress from './pages/Progress';
-import DietPlan from './pages/DietPlan';
-import DietPlanDetails from './pages/DietPlanDetails';
-import Attendance from './pages/Attendance';
-import UserInfoForm from './pages/UserInfoForm';
-import Profile from './pages/Profile';
-import SignUp from './pages/SignUp';
-import VerifyEmail from './pages/VerifyEmail';
-import Workouts from './pages/Workouts';
-import ProfileEdit from './pages/ProfileEdit';
-import MembershipDetails from './pages/MembershipDetails';
-import Achievements from './pages/Achievements';
-import Settings from './pages/Settings';
-import NotificationSettings from './pages/NotificationSettings';
-import PrivacyAndSecurity from './pages/PrivacyAndSecurity';
-import { useEffect } from 'react';
 import { NotificationProvider } from './context/NotificationContext';
 import { PrivacyProvider } from './context/PrivacyContext';
-import HelpAndSupport from './pages/HelpAndSupport';
 import { MembershipProvider } from './context/MembershipContext';
+
+// Lazy load components
+const Layout = lazy(() => import('./components/Layout'));
+const GetStarted = lazy(() => import('./pages/GetStarted'));
+const Login = lazy(() => import('./pages/Login'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const PrivateRoute = lazy(() => import('./components/PrivateRoute'));
+const Progress = lazy(() => import('./pages/Progress'));
+const DietPlan = lazy(() => import('./pages/DietPlan'));
+const DietPlanDetails = lazy(() => import('./pages/DietPlanDetails'));
+const Attendance = lazy(() => import('./pages/Attendance'));
+const UserInfoForm = lazy(() => import('./pages/UserInfoForm'));
+const Profile = lazy(() => import('./pages/Profile'));
+const SignUp = lazy(() => import('./pages/SignUp'));
+const VerifyEmail = lazy(() => import('./pages/VerifyEmail'));
+const Workouts = lazy(() => import('./pages/Workouts'));
+const ProfileEdit = lazy(() => import('./pages/ProfileEdit'));
+const MembershipDetails = lazy(() => import('./pages/MembershipDetails'));
+const Achievements = lazy(() => import('./pages/Achievements'));
+const Settings = lazy(() => import('./pages/Settings'));
+const NotificationSettings = lazy(() => import('./pages/NotificationSettings'));
+const PrivacyAndSecurity = lazy(() => import('./pages/PrivacyAndSecurity'));
+const HelpAndSupport = lazy(() => import('./pages/HelpAndSupport'));
+
+// Loading component
+const LoadingSpinner = () => (
+  <div className="min-h-screen bg-gray-50 dark:bg-[#121212] flex items-center justify-center">
+    <div className="text-center space-y-4">
+      <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto" />
+      <p className="text-gray-600 dark:text-gray-400">Loading...</p>
+    </div>
+  </div>
+);
 
 function AppRoutes() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-[#121212] flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-gray-600 dark:text-gray-400">Loading your profile...</p>
-        </div>
-      </div>
-    );
+    return <LoadingSpinner />;
   }
   
   return (
-    <Routes>
-      {/* Public routes */}
-      <Route path="/" element={<Navigate to="/welcome" replace />} />
-      <Route path="/welcome" element={user ? <Navigate to="/dashboard" replace /> : <GetStarted />} />
-      <Route path="/login" element={user ? <Navigate to="/dashboard" replace /> : <Login />} />
-      <Route path="/signup" element={user ? <Navigate to="/dashboard" replace /> : <SignUp />} />
-      <Route path="/verify-email" element={<VerifyEmail />} />
-      
-      {/* Protected routes without Layout */}
-      <Route path="/user-info" element={
-        <PrivateRoute>
-          <UserInfoForm />
-        </PrivateRoute>
-      } />
-      <Route path="/privacy" element={
-        <PrivateRoute>
-          <PrivacyAndSecurity />
-        </PrivateRoute>
-      } />
-      <Route path="/support" element={
-        <PrivateRoute>
-          <HelpAndSupport />
-        </PrivateRoute>
-      } />
-      
-      {/* Protected routes with Layout */}
-      <Route element={
-        <PrivateRoute>
-          <Layout />
-        </PrivateRoute>
-      }>
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/workouts" element={<Workouts />} />
-        <Route path="/diet" element={<DietPlan />} />
-        <Route path="/diet/plan-details" element={<DietPlanDetails />} />
-        <Route path="/attendance" element={<Attendance />} />
-        <Route path="/profile" element={<Profile />} />
-        <Route path="/profile/edit" element={<ProfileEdit />} />
-        <Route path="/membership" element={<MembershipDetails />} />
-        <Route path="/achievements" element={<Achievements />} />
-        <Route path="/settings" element={<Settings />} />
-        <Route path="/notifications" element={<NotificationSettings />} />
-      </Route>
+    <Suspense fallback={<LoadingSpinner />}>
+      <Routes>
+        {/* Public routes */}
+        <Route path="/" element={<Navigate to="/welcome" replace />} />
+        <Route path="/welcome" element={user ? <Navigate to="/dashboard" replace /> : <GetStarted />} />
+        <Route path="/login" element={user ? <Navigate to="/dashboard" replace /> : <Login />} />
+        <Route path="/signup" element={user ? <Navigate to="/dashboard" replace /> : <SignUp />} />
+        <Route path="/verify-email" element={<VerifyEmail />} />
+        
+        {/* Protected routes without Layout */}
+        <Route path="/user-info" element={
+          <PrivateRoute>
+            <UserInfoForm />
+          </PrivateRoute>
+        } />
+        <Route path="/privacy" element={
+          <PrivateRoute>
+            <PrivacyAndSecurity />
+          </PrivateRoute>
+        } />
+        <Route path="/support" element={
+          <PrivateRoute>
+            <HelpAndSupport />
+          </PrivateRoute>
+        } />
+        
+        {/* Protected routes with Layout */}
+        <Route element={
+          <PrivateRoute>
+            <Layout />
+          </PrivateRoute>
+        }>
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/workouts" element={<Workouts />} />
+          <Route path="/diet" element={<DietPlan />} />
+          <Route path="/diet/plan-details" element={<DietPlanDetails />} />
+          <Route path="/attendance" element={<Attendance />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/profile/edit" element={<ProfileEdit />} />
+          <Route path="/membership" element={<MembershipDetails />} />
+          <Route path="/achievements" element={<Achievements />} />
+          <Route path="/settings" element={<Settings />} />
+          <Route path="/notifications" element={<NotificationSettings />} />
+        </Route>
 
-      {/* Catch-all route */}
-      <Route path="*" element={<Navigate to="/welcome" replace />} />
-    </Routes>
+        {/* Catch-all route */}
+        <Route path="*" element={<Navigate to="/welcome" replace />} />
+      </Routes>
+    </Suspense>
   );
 }
 
 function App() {
   return (
-    <NotificationProvider>
-      <ThemeProvider>
-        <AuthProvider>
-          <ProfileProvider>
-            <MembershipProvider>
-              <PrivacyProvider>
-                <Toaster 
-                  position="top-right"
-                  toastOptions={{
-                    duration: 4000,
-                    style: {
-                      background: '#333',
-                      color: '#fff',
-                    }
-                  }}
-                />
-                <AppRoutes />
-              </PrivacyProvider>
-            </MembershipProvider>
-          </ProfileProvider>
-        </AuthProvider>
-      </ThemeProvider>
-    </NotificationProvider>
+    <Suspense fallback={<LoadingSpinner />}>
+      <NotificationProvider>
+        <ThemeProvider>
+          <AuthProvider>
+            <ProfileProvider>
+              <MembershipProvider>
+                <PrivacyProvider>
+                  <Toaster 
+                    position="top-right"
+                    toastOptions={{
+                      duration: 4000,
+                      style: {
+                        background: '#333',
+                        color: '#fff',
+                      }
+                    }}
+                  />
+                  <AppRoutes />
+                </PrivacyProvider>
+              </MembershipProvider>
+            </ProfileProvider>
+          </AuthProvider>
+        </ThemeProvider>
+      </NotificationProvider>
+    </Suspense>
   );
 }
 

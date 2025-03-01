@@ -17,76 +17,215 @@ import type { Membership } from '../types/profile';
 import MembershipRequired from '../components/MembershipRequired';
 import type { QRScannerProps } from '../components/QRScanner';
 
-// Custom CSS for calendar dark mode
+// Updated calendar dark styles
 const calendarDarkStyles = `
+  /* Calendar Container */
+  .react-calendar {
+    width: 100%;
+    max-width: 100%;
+    background: white;
+    border: none;
+    font-family: inherit;
+    line-height: 1.125em;
+    padding: 1rem;
+  }
+
   .dark .react-calendar {
-    background-color: #1E1E1E;
-    border: 1px solid #2D2D2D;
+    background-color: transparent;
+    border: none;
     color: #fff;
+  }
+
+  /* Navigation Section */
+  .react-calendar__navigation {
+    display: flex;
+    margin-bottom: 1.5rem;
+    background: transparent;
+  }
+
+  .react-calendar__navigation button {
+    min-width: 44px;
+    background: none;
+    font-size: 1rem;
+    padding: 0.5rem;
+    border-radius: 0.5rem;
+    color: #374151;
   }
 
   .dark .react-calendar__navigation button {
     color: #fff;
   }
 
+  .react-calendar__navigation button:enabled:hover,
+  .react-calendar__navigation button:enabled:focus {
+    background-color: #F3F4F6;
+    border-radius: 0.5rem;
+  }
+
   .dark .react-calendar__navigation button:enabled:hover,
   .dark .react-calendar__navigation button:enabled:focus {
-    background-color: #2D2D2D;
+    background-color: rgba(45, 45, 45, 0.8);
+  }
+
+  .react-calendar__navigation button[disabled] {
+    background: transparent;
+    opacity: 0.5;
+  }
+
+  /* Month View */
+  .react-calendar__month-view__weekdays {
+    text-align: center;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.5rem 0;
+    color: #6B7280;
+  }
+
+  .dark .react-calendar__month-view__weekdays {
+    color: #9CA3AF;
+  }
+
+  .react-calendar__month-view__weekdays__weekday {
+    padding: 0.75rem;
+  }
+
+  .react-calendar__month-view__weekdays__weekday abbr {
+    text-decoration: none;
+    cursor: default;
+  }
+
+  /* Calendar Tiles */
+  .react-calendar__tile {
+    padding: 1.5rem 0.5rem;
+    background: none;
+    text-align: center;
+    line-height: 16px;
+    font-size: 0.875rem;
+    position: relative;
+    border-radius: 0.5rem;
   }
 
   .dark .react-calendar__tile {
     color: #fff;
-    background: none;
+  }
+
+  .react-calendar__tile:enabled:hover,
+  .react-calendar__tile:enabled:focus {
+    background-color: #F3F4F6;
+    border-radius: 0.5rem;
   }
 
   .dark .react-calendar__tile:enabled:hover,
   .dark .react-calendar__tile:enabled:focus {
-    background-color: #2D2D2D;
+    background-color: rgba(45, 45, 45, 0.8);
+  }
+
+  /* Today's Date */
+  .react-calendar__tile--now {
+    background: rgba(16, 185, 129, 0.1);
+    border-radius: 0.5rem;
+    font-weight: 600;
   }
 
   .dark .react-calendar__tile--now {
-    background-color: rgba(16, 185, 129, 0.1);
+    background: rgba(16, 185, 129, 0.15);
   }
 
-  .dark .react-calendar__tile--now:enabled:hover,
-  .dark .react-calendar__tile--now:enabled:focus {
-    background-color: rgba(16, 185, 129, 0.2);
+  .react-calendar__tile--now:enabled:hover,
+  .react-calendar__tile--now:enabled:focus {
+    background: rgba(16, 185, 129, 0.2);
   }
 
-  .dark .react-calendar__tile--active {
-    background-color: #10B981;
+  /* Active Date */
+  .react-calendar__tile--active {
+    background: #10B981;
     color: white;
+    border-radius: 0.5rem;
   }
 
-  .dark .react-calendar__tile--active:enabled:hover,
-  .dark .react-calendar__tile--active:enabled:focus {
-    background-color: #059669;
+  .react-calendar__tile--active:enabled:hover,
+  .react-calendar__tile--active:enabled:focus {
+    background: #059669;
   }
 
-  .dark .react-calendar__month-view__days__day--weekend {
+  /* Weekend Days */
+  .react-calendar__month-view__days__day--weekend {
     color: #EF4444;
   }
 
-  .dark .react-calendar__month-view__days__day--neighboringMonth {
-    color: #6B7280;
+  .dark .react-calendar__month-view__days__day--weekend {
+    color: #F87171;
   }
 
-  .dark .attendance-present {
+  /* Neighboring Month Days */
+  .react-calendar__month-view__days__day--neighboringMonth {
+    color: #9CA3AF;
+  }
+
+  .dark .react-calendar__month-view__days__day--neighboringMonth {
+    color: #4B5563;
+  }
+
+  /* Attendance Status Styles */
+  .attendance-present {
     background-color: rgba(16, 185, 129, 0.1) !important;
   }
 
-  .dark .attendance-absent {
+  .dark .attendance-present {
+    background-color: rgba(16, 185, 129, 0.15) !important;
+  }
+
+  .attendance-present::after {
+    content: '';
+    position: absolute;
+    bottom: 0.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0.5rem;
+    height: 0.5rem;
+    background-color: #10B981;
+    border-radius: 9999px;
+  }
+
+  .attendance-absent {
     background-color: rgba(239, 68, 68, 0.1) !important;
   }
 
-  .dark .attendance-holiday {
+  .dark .attendance-absent {
+    background-color: rgba(239, 68, 68, 0.15) !important;
+  }
+
+  .attendance-absent::after {
+    content: '';
+    position: absolute;
+    bottom: 0.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0.5rem;
+    height: 0.5rem;
+    background-color: #EF4444;
+    border-radius: 9999px;
+  }
+
+  .attendance-holiday {
     background-color: rgba(107, 114, 128, 0.1) !important;
   }
 
-  .dark .react-calendar__tile--active.attendance-present,
-  .dark .react-calendar__tile--active.attendance-absent,
-  .dark .react-calendar__tile--active.attendance-holiday {
-    background-color: #10B981 !important;
+  .dark .attendance-holiday {
+    background-color: rgba(107, 114, 128, 0.15) !important;
+  }
+
+  .attendance-holiday::after {
+    content: '';
+    position: absolute;
+    bottom: 0.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0.5rem;
+    height: 0.5rem;
+    background-color: #6B7280;
+    border-radius: 9999px;
   }
 `;
 
@@ -407,11 +546,27 @@ const Attendance = () => {
           {/* Recent Attendance */}
           {renderRecentAttendance()}
 
-          {/* Calendar Section */}
-          <div className="bg-white dark:bg-[#1E1E1E] rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-800">
-            <div className="flex items-center gap-3 mb-6">
-              <CalendarIcon className="w-5 h-5 text-emerald-500" />
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Attendance Calendar</h3>
+          {/* Calendar Section - Updated container */}
+          <div className="bg-white dark:bg-[#1E1E1E] rounded-2xl p-6 shadow-lg border border-gray-100 dark:border-gray-800">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <CalendarIcon className="w-5 h-5 text-emerald-500" />
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Attendance Calendar</h3>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 bg-emerald-500 rounded-full"></span>
+                  <span className="text-sm text-gray-600 dark:text-gray-400">Present</span>
+                </div>
+                <div className="flex items-center gap-2 ml-4">
+                  <span className="w-2 h-2 bg-red-500 rounded-full"></span>
+                  <span className="text-sm text-gray-600 dark:text-gray-400">Absent</span>
+                </div>
+                <div className="flex items-center gap-2 ml-4">
+                  <span className="w-2 h-2 bg-gray-500 rounded-full"></span>
+                  <span className="text-sm text-gray-600 dark:text-gray-400">Holiday</span>
+                </div>
+              </div>
             </div>
             <div className="calendar-container overflow-hidden rounded-xl">
               <Calendar
@@ -419,6 +574,8 @@ const Attendance = () => {
                 tileClassName={tileClassName}
                 tileContent={tileContent}
                 className="border-0 w-full"
+                locale="en-US"
+                minDetail="month"
               />
             </div>
           </div>

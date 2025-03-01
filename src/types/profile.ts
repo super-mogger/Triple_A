@@ -38,6 +38,13 @@ export interface Profile {
     calories_burned: number;
     attendance_streak: number;
   };
+  // Admin sync fields
+  aadhaarCardFrontURL?: string;
+  aadhaarCardBackURL?: string;
+  isVerified?: boolean;
+  address?: string;
+  emergencyContact?: string;
+  notes?: string;
   created_at: Timestamp;
   updated_at: Timestamp;
 }

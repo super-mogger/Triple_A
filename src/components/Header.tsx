@@ -1,13 +1,30 @@
-import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useProfile } from '../context/ProfileContext';
 import { Settings, Dumbbell } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 
 export default function Header() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
+  const { profile, refetchProfile } = useProfile();
   const { isDarkMode } = useTheme();
+
+  // Refresh profile data when component mounts
+  useEffect(() => {
+    if (user?.uid) {
+      refetchProfile();
+    }
+  }, [user, refetchProfile]);
+  
+  // Refresh profile data on location change (page navigation)
+  useEffect(() => {
+    if (user?.uid) {
+      refetchProfile();
+    }
+  }, [location.pathname, user, refetchProfile]);
 
   return (
     <header className={`fixed top-0 left-0 right-0 z-50 pt-safe ${
@@ -44,13 +61,19 @@ export default function Header() {
               <span className={`text-sm font-medium hidden md:block ${
                 isDarkMode ? 'text-gray-200' : 'text-gray-700'
               }`}>
-                {user.displayName || user.email}
+                {profile?.username || user.displayName || user.email}
               </span>
               <div className="w-8 h-8 rounded-full overflow-hidden ring-2 ring-emerald-500/20">
                 <img
-                  src={user.photoURL || 'https://via.placeholder.com/40'}
+                  src={profile?.photoURL || user.photoURL || 'https://via.placeholder.com/40'}
                   alt="Profile"
                   className="w-full h-full object-cover"
+                  onError={(e) => {
+                    // If image fails to load, try refetching profile and retry with a fallback
+                    refetchProfile();
+                    e.currentTarget.src = 'https://via.placeholder.com/40';
+                  }}
+                  key={profile?.photoURL || user.photoURL || 'fallback'} // Force re-render when URL changes
                 />
               </div>
             </Link>

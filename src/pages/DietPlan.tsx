@@ -9,6 +9,7 @@ import { checkMembershipStatus } from '../services/FirestoreService';
 import type { Membership } from '../types/profile';
 import { fetchFoodImage } from '../services/DietService';
 import MembershipRequired from '../components/MembershipRequired';
+import { Droplets } from 'lucide-react';
 
 interface DietPlanCardProps {
   title: string;
@@ -22,6 +23,22 @@ interface DietPlanCardProps {
   isPremium: boolean;
   isGenerating: boolean;
   onStartPlan: () => void;
+  nutritionalGoals: {
+    calories: number;
+    protein: {
+      grams: number;
+      percentage: number;
+    };
+    carbs: {
+      grams: number;
+      percentage: number;
+    };
+    fats: {
+      grams: number;
+      percentage: number;
+    };
+  };
+  waterIntake: number;
 }
 
 interface DietPlanType {
@@ -31,6 +48,22 @@ interface DietPlanType {
   type: string;
   goal: string;
   image: string;
+  nutritionalGoals: {
+    calories: number;
+    protein: {
+      grams: number;
+      percentage: number;
+    };
+    carbs: {
+      grams: number;
+      percentage: number;
+    };
+    fats: {
+      grams: number;
+      percentage: number;
+    };
+  };
+  waterIntake: number;
 }
 
 // Memoized card component to prevent unnecessary re-renders
@@ -45,7 +78,9 @@ const DietPlanCard = React.memo(({
   isSelected,
   isPremium,
   isGenerating,
-  onStartPlan
+  onStartPlan,
+  nutritionalGoals,
+  waterIntake
 }: DietPlanCardProps) => {
   const { isDarkMode } = useTheme();
   const navigate = useNavigate();
@@ -128,14 +163,19 @@ const DietPlanCard = React.memo(({
         <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
           {description}
         </p>
-        <div className="flex items-center justify-between mt-4">
-          <span className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-            {duration}
-          </span>
+
+        <div className="mt-4 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Droplets className="w-4 h-4 text-blue-500" />
+            <span className="text-sm text-gray-600 dark:text-gray-400">
+              Water: {waterIntake}L/day
+            </span>
+          </div>
           <span className="px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-700">
             {goal}
           </span>
         </div>
+
         <button
           onClick={handleStartPlan}
           className="mt-4 w-full px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-all duration-300"
@@ -189,28 +229,76 @@ export default function DietPlan() {
 
   const dietPlans = useMemo<DietPlanType[]>(() => [
     {
-      title: "Weight Loss Plan",
-      description: "Calorie-controlled diet focused on sustainable weight loss",
+      title: "Weight Loss Diet Plan",
+      description: "A calorie-controlled diet focused on sustainable fat loss while preserving muscle mass.",
       duration: "12 weeks",
       type: "weight-loss",
       goal: "Lose Weight",
-      image: "/images/weight-loss.png"
+      image: "/images/weight-loss.png",
+      nutritionalGoals: {
+        calories: 2162,
+        protein: {
+          grams: 216,
+          percentage: 40
+        },
+        carbs: {
+          grams: 216,
+          percentage: 35
+        },
+        fats: {
+          grams: 72,
+          percentage: 25
+        }
+      },
+      waterIntake: 2.3
     },
     {
-      title: "Muscle Gain Plan",
-      description: "High-protein diet designed for muscle growth",
+      title: "Muscle Gain Diet Plan",
+      description: "A high-protein diet designed to support muscle growth and strength gains.",
       duration: "12 weeks",
       type: "muscle-gain",
       goal: "Build Muscle",
-      image: "/images/muscle-gain.png"
+      image: "/images/muscle-gain.png",
+      nutritionalGoals: {
+        calories: 2962,
+        protein: {
+          grams: 296,
+          percentage: 40
+        },
+        carbs: {
+          grams: 296,
+          percentage: 45
+        },
+        fats: {
+          grams: 66,
+          percentage: 15
+        }
+      },
+      waterIntake: 2.3
     },
     {
-      title: "Balanced Nutrition",
-      description: "Well-rounded diet for overall health and maintenance",
+      title: "Balanced Diet Plan",
+      description: "A personalized diet plan tailored to your goals.",
       duration: "12 weeks",
       type: "balanced",
       goal: "Maintain Health",
-      image: "/images/balanced.png"
+      image: "/images/balanced.png",
+      nutritionalGoals: {
+        calories: 2662,
+        protein: {
+          grams: 166,
+          percentage: 25
+        },
+        carbs: {
+          grams: 333,
+          percentage: 50
+        },
+        fats: {
+          grams: 74,
+          percentage: 25
+        }
+      },
+      waterIntake: 2.3
     }
   ], []);
 

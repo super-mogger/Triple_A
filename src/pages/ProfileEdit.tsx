@@ -39,7 +39,7 @@ interface FormData {
 export default function ProfileEdit() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { profile, updateProfile } = useProfile();
+  const { profile, updateProfile, refetchProfile } = useProfile();
   const [isProcessingImage, setIsProcessingImage] = useState(false);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [isFirstTimeUser, setIsFirstTimeUser] = useState(false);
@@ -74,6 +74,13 @@ export default function ProfileEdit() {
   const [heightFeet, setHeightFeet] = useState(0);
   const [heightInches, setHeightInches] = useState(0);
 
+  // Ensure we have the latest profile data
+  useEffect(() => {
+    if (user?.uid) {
+      refetchProfile();
+    }
+  }, [user, refetchProfile]);
+
   useEffect(() => {
     if (profile) {
       setFormData({
@@ -105,10 +112,10 @@ export default function ProfileEdit() {
     }
   }, [profile]);
 
+  // We no longer automatically open camera for first-time users since photo updates are admin-only
   useEffect(() => {
     if (profile && !profile.photoURL) {
       setIsFirstTimeUser(true);
-      setIsCameraOpen(true); // Automatically open camera for first-time users
     }
   }, [profile]);
 
@@ -215,6 +222,10 @@ export default function ProfileEdit() {
 
       await updateProfile(updatedProfile);
       setHasEditedName(true);
+      
+      // Ensure the latest data is displayed
+      await refetchProfile();
+      
       navigate('/profile');
     } catch (error) {
       console.error('Failed to update profile:', error);
@@ -223,6 +234,12 @@ export default function ProfileEdit() {
   };
 
   const handleImageUpload = async (file: File) => {
+    // This is only for admins now
+    if (!isAdmin) {
+      toast.error('Profile picture updates are restricted to administrators');
+      return;
+    }
+    
     try {
       setIsProcessingImage(true);
       
@@ -248,6 +265,9 @@ export default function ProfileEdit() {
           photoURL: imageUrl
         }));
 
+        // Ensure the latest data is displayed
+        await refetchProfile();
+        
         toast.success('Profile photo updated successfully');
       }
     } catch (error) {
@@ -259,6 +279,13 @@ export default function ProfileEdit() {
   };
 
   const handleCameraCapture = async (file: File) => {
+    // This is only for admins now
+    if (!isAdmin) {
+      toast.error('Profile picture updates are restricted to administrators');
+      setIsCameraOpen(false);
+      return;
+    }
+    
     try {
       setIsProcessingImage(true);
       
@@ -285,6 +312,9 @@ export default function ProfileEdit() {
         }));
 
         setIsFirstTimeUser(false);
+        
+        // Ensure the latest data is displayed
+        await refetchProfile();
 
         toast.success('Profile picture updated successfully!');
       }
@@ -299,6 +329,10 @@ export default function ProfileEdit() {
   const handleProfileUpdate = async (updatedProfile: Profile) => {
     try {
       await updateProfile(updatedProfile);
+      
+      // Ensure the latest data is displayed
+      await refetchProfile();
+      
       return true;
     } catch (error) {
       console.error('Error updating profile:', error);
@@ -384,43 +418,42 @@ export default function ProfileEdit() {
             </div>
 
           <div className="flex flex-col items-center gap-4">
-                  <div className="relative">
-                    <img
-                src={formData.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${formData.username}`}
-                      alt="Profile"
+            <div className="relative">
+              <img
+                src={profile.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${profile.username}`}
+                alt="Profile"
                 className="w-32 h-32 rounded-full object-cover border-4 border-emerald-500"
-                    />
-              {(!formData.photoURL || isAdmin) && (
-                        <button
+                key={profile.photoURL || 'default'} // Force re-render when URL changes
+                onError={(e) => {
+                  // Fallback if image fails to load
+                  e.currentTarget.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${profile.username}`;
+                }}
+              />
+              {isAdmin && (
+                <button
                   onClick={() => setIsCameraOpen(true)}
                   className="absolute bottom-0 right-0 p-2 bg-emerald-500 rounded-full text-white hover:bg-emerald-600 transition-colors"
-                          disabled={isProcessingImage}
-                        >
-                          {isProcessingImage ? (
+                  disabled={isProcessingImage}
+                >
+                  {isProcessingImage ? (
                     <Loader2 className="w-5 h-5 animate-spin" />
-                          ) : (
+                  ) : (
                     <Camera className="w-5 h-5" />
-                          )}
-                        </button>
-                    )}
-                        </div>
-            {formData.photoURL && !isAdmin ? (
-              <div className="text-center space-y-1">
-                <div className="flex items-center justify-center gap-1 text-gray-500 dark:text-gray-400">
-                  <Lock className="w-4 h-4" />
-                  <span className="text-sm">Admin only</span>
-                      </div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Contact an administrator to update your profile picture
-                </p>
-                  </div>
-            ) : (
+                  )}
+                </button>
+              )}
+            </div>
+            <div className="text-center space-y-1">
+              <div className="flex items-center justify-center gap-1 text-gray-500 dark:text-gray-400">
+                <Lock className="w-4 h-4" />
+                <span className="text-sm">Admin only</span>
+              </div>
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                Click the camera icon to update your profile picture
+                Contact an administrator to update your profile picture
               </p>
-                    )}
-                  </div>
-                </div>
+            </div>
+          </div>
+        </div>
 
         {/* Contact Information */}
         <ContactInfoCard 
@@ -690,13 +723,13 @@ export default function ProfileEdit() {
           </button>
     </div>
 
-      {/* Camera Modal */}
-      {isCameraOpen && (
-      <CameraCapture
-        isOpen={isCameraOpen}
+      {/* Camera Modal - Only shown to admins */}
+      {isCameraOpen && isAdmin && (
+        <CameraCapture
+          isOpen={isCameraOpen}
           onClose={() => setIsCameraOpen(false)}
-        onCapture={handleCameraCapture}
-      />
+          onCapture={handleCameraCapture}
+        />
       )}
     </div>
   );

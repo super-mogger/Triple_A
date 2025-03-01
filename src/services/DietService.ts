@@ -328,34 +328,62 @@ export const useDietService = () => {
       };
       const tdee = bmr * (activityMultipliers[profile.activityLevel as keyof typeof activityMultipliers] || 1.55);
 
+      // Calculate water intake based on weight and activity level
+      const waterIntake = calculateWaterIntake(profile.weight, profile.activityLevel);
+
       // Adjust calories based on plan type
       let targetCalories = tdee;
+      let proteinMultiplier = 2.0; // g per kg of body weight
+      let carbsPercentage = 0.4; // 40% of total calories
+      let fatsPercentage = 0.3; // 30% of total calories
+
       switch (planType) {
         case 'weight-loss':
           targetCalories = tdee - 500; // 500 calorie deficit
+          proteinMultiplier = 2.2; // Higher protein to preserve muscle
+          carbsPercentage = 0.35; // Lower carbs
+          fatsPercentage = 0.35; // Higher fats for satiety
           break;
         case 'muscle-gain':
           targetCalories = tdee + 300; // 300 calorie surplus
+          proteinMultiplier = 2.4; // Higher protein for muscle growth
+          carbsPercentage = 0.45; // Higher carbs for energy
+          fatsPercentage = 0.25; // Lower fats
           break;
-        case 'maintenance':
+        case 'balanced':
           targetCalories = tdee;
+          proteinMultiplier = 2.0;
+          carbsPercentage = 0.4;
+          fatsPercentage = 0.3;
           break;
       }
 
       // Calculate macronutrient goals
+      const proteinGrams = Math.round(profile.weight * proteinMultiplier);
+      const proteinCalories = proteinGrams * 4;
+      const proteinPercentage = Math.round((proteinCalories / targetCalories) * 100);
+
+      const carbsCalories = targetCalories * carbsPercentage;
+      const carbsGrams = Math.round(carbsCalories / 4);
+      const carbsPercentageActual = Math.round((carbsCalories / targetCalories) * 100);
+
+      const fatsCalories = targetCalories * fatsPercentage;
+      const fatsGrams = Math.round(fatsCalories / 9);
+      const fatsPercentageActual = Math.round((fatsCalories / targetCalories) * 100);
+
       const nutritionalGoals = {
         calories: Math.round(targetCalories),
         protein: {
-          grams: Math.round(profile.weight * 2.2), // 1g per lb of body weight
-          percentage: 30
+          grams: proteinGrams,
+          percentage: proteinPercentage
         },
         carbs: {
-          grams: Math.round((targetCalories * 0.4) / 4), // 40% of calories from carbs
-          percentage: 40
+          grams: carbsGrams,
+          percentage: carbsPercentageActual
         },
         fats: {
-          grams: Math.round((targetCalories * 0.3) / 9), // 30% of calories from fats
-          percentage: 30
+          grams: fatsGrams,
+          percentage: fatsPercentageActual
         }
       };
 
@@ -370,7 +398,7 @@ export const useDietService = () => {
         type: planType,
         goal: getGoal(planType),
         color: getColor(planType),
-        waterIntake: Math.round(profile.weight * 0.033 * 1000), // ml per day
+        waterIntake: waterIntake,
         supplementation: getSupplementation(planType),
         nutritionalGoals,
         weeklyPlan
@@ -381,13 +409,12 @@ export const useDietService = () => {
         const dietPlansRef = collection(db, 'dietPlans');
         await addDoc(dietPlansRef, {
           ...plan,
-          userId: profile.userId, // Make sure to pass userId in profile
+          userId: profile.userId,
           createdAt: Timestamp.now(),
           updatedAt: Timestamp.now()
         });
       } catch (error) {
         console.error('Error saving diet plan to database:', error);
-        // Continue even if save fails - user can still view the plan
       }
 
       return plan;
@@ -563,6 +590,26 @@ const getColor = (planType: string): string => {
     default:
       return 'gray';
   }
+};
+
+// Add water intake calculation function
+const calculateWaterIntake = (weight: number, activityLevel: string): number => {
+  // Base calculation: 30-35ml per kg of body weight
+  let baseIntake = weight * 0.033; // L per kg
+
+  // Adjust for activity level
+  const activityMultiplier = {
+    sedentary: 1,
+    light: 1.1,
+    moderate: 1.2,
+    active: 1.3,
+    veryActive: 1.4
+  };
+
+  const multiplier = activityMultiplier[activityLevel as keyof typeof activityMultiplier] || 1.2;
+  
+  // Round to 1 decimal place
+  return Math.round(baseIntake * multiplier * 10) / 10;
 };
 
 export const useAttendanceService = () => {

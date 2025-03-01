@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useProfile } from '../context/ProfileContext';
-import { Activity, Award, Calendar, Clock, Crown, Dumbbell, Target, TrendingUp, User } from 'lucide-react';
+import { Activity, Award, Calendar, Clock, Crown, Dumbbell, Target, TrendingUp, User, Scan, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { checkMembershipStatus } from '../services/FirestoreService';
 import type { Membership } from '../types/profile';
@@ -10,6 +10,7 @@ import { attendanceService } from '../services/AttendanceService';
 import { useAuth } from '../context/AuthContext';
 import ProfileSetupModal from '../components/ProfileSetupModal';
 import WaterIntakeCard from '../components/WaterIntakeCard';
+import { format } from 'date-fns';
 
 interface Achievement {
   id: string;
@@ -42,6 +43,7 @@ export default function Dashboard() {
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [attendanceStats, setAttendanceStats] = useState<AttendanceStats | null>(null);
   const [showSetupModal, setShowSetupModal] = useState(false);
+  const [showAttendanceReminder, setShowAttendanceReminder] = useState(false);
 
   useEffect(() => {
     if (!profile?.id) return;
@@ -129,6 +131,27 @@ export default function Dashboard() {
     }
   }, [profile]);
 
+  // Add this useEffect to check today's attendance
+  useEffect(() => {
+    const checkTodayAttendance = async () => {
+      if (!profile?.id) return;
+
+      try {
+        const today = new Date();
+        const records = await attendanceService.getAttendanceRecords(profile.id);
+        const todayRecord = records.find(record => 
+          format(record.date.toDate(), 'yyyy-MM-dd') === format(today, 'yyyy-MM-dd')
+        );
+
+        setShowAttendanceReminder(!todayRecord);
+      } catch (error) {
+        console.error('Error checking attendance:', error);
+      }
+    };
+
+    checkTodayAttendance();
+  }, [profile?.id]);
+
   const handleStreakBroken = () => {
     const audio = new Audio('/sounds/streak-broken.mp3');
     audio.volume = 0.3;
@@ -168,6 +191,11 @@ export default function Dashboard() {
     });
   };
 
+  // Add attendance reminder component
+  const renderAttendanceReminder = () => {
+    return null;
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -200,6 +228,48 @@ export default function Dashboard() {
             </h1>
             <p className="text-gray-600 dark:text-gray-300 mt-1">Let's stay active today</p>
           </div>
+
+          {/* Attendance Reminder */}
+          {showAttendanceReminder && (
+            <div className="mb-8 animate-slide-in-bottom">
+              <div className="bg-white dark:bg-[#1E1E1E] rounded-2xl p-6 shadow-lg border border-gray-100 dark:border-gray-800">
+                <div className="flex items-start gap-4">
+                  <div className="p-3 bg-emerald-50 dark:bg-emerald-500/10 rounded-xl">
+                    <Calendar className="w-6 h-6 text-emerald-500" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-gray-900 dark:text-white mb-1">
+                      Mark Your Attendance
+                    </h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                      Don't forget to mark your attendance for today's workout session!
+                    </p>
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => navigate('/attendance')}
+                        className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-sm font-medium transition-colors"
+                      >
+                        <Scan className="w-4 h-4" />
+                        Mark Attendance
+                      </button>
+                      <button
+                        onClick={() => setShowAttendanceReminder(false)}
+                        className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl text-sm font-medium transition-colors"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowAttendanceReminder(false)}
+                    className="text-gray-400 hover:text-gray-500 dark:text-gray-500 dark:hover:text-gray-400"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Today's Workout Section */}
           <div className="bg-white dark:bg-[#1E1E1E] rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-800 mb-8">

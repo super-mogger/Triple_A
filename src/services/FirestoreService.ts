@@ -18,6 +18,7 @@ import {
 import type { FirestoreProfile, FirestoreMembership, FirestorePayment } from '../types/firestore.types';
 import { Profile, Membership } from '../types/profile';
 import { auth } from '../config/firebase';
+import { updateProfile as updateAuthProfile } from 'firebase/auth';
 
 interface FirestoreResponse<T> {
   data: T | null;
@@ -71,9 +72,18 @@ export const getProfile = async (userId: string): Promise<FirestoreResponse<Prof
         calories_burned: 0,
         attendance_streak: 0
       },
+      aadhaarCardFrontURL: data.aadhaarCardFrontURL,
+      aadhaarCardBackURL: data.aadhaarCardBackURL,
+      isVerified: data.isVerified || false,
       created_at: data.created_at || Timestamp.now(),
       updated_at: data.updated_at || Timestamp.now()
     };
+
+    // Ensure auth profile is in sync with Firestore profile
+    // This ensures Firestore is the source of truth
+    if (auth.currentUser && auth.currentUser.uid === userId) {
+      await syncProfileToAuth(profile);
+    }
 
     return { data: profile, error: null };
   } catch (error) {
@@ -111,7 +121,20 @@ export const updateProfile = async (userId: string, data: Partial<Profile>): Pro
       }
     });
 
+    // Update Firestore first
     await updateDoc(profileRef, processedData);
+
+    // If profile photo is updated, sync to auth immediately
+    // This ensures changes from admin app persist
+    if (data.photoURL && auth.currentUser && auth.currentUser.uid === userId) {
+      await syncProfilePhotoToAuth(userId, data.photoURL);
+    } else if (data.username && auth.currentUser && auth.currentUser.uid === userId) {
+      // If username is updated, also update displayName in auth
+      await updateAuthProfile(auth.currentUser, { 
+        displayName: data.username 
+      });
+    }
+
     return { data: null, error: null };
   } catch (error) {
     console.error('Error updating profile:', error);
@@ -119,14 +142,72 @@ export const updateProfile = async (userId: string, data: Partial<Profile>): Pro
   }
 };
 
+// Helper to sync profile photo to Auth
+export const syncProfilePhotoToAuth = async (userId: string, photoURL: string): Promise<void> => {
+  try {
+    if (auth.currentUser && auth.currentUser.uid === userId) {
+      // Force refresh to avoid caching issues
+      await updateAuthProfile(auth.currentUser, { photoURL });
+      console.log('Auth profile photo updated successfully');
+      
+      // Force a reload of the current user to update the auth state
+      // This is critical to ensure the new photo URL is available immediately
+      await auth.currentUser.reload();
+    }
+  } catch (error) {
+    console.error('Error syncing profile photo to auth:', error);
+  }
+};
+
+// Helper to sync profile data to Auth
+export const syncProfileToAuth = async (profile: Profile): Promise<void> => {
+  try {
+    if (auth.currentUser && auth.currentUser.uid === profile.user_id) {
+      // Check if auth data doesn't match profile data
+      const needsUpdate = (
+        (profile.photoURL && profile.photoURL !== auth.currentUser.photoURL) ||
+        (profile.username && profile.username !== auth.currentUser.displayName)
+      );
+      
+      if (needsUpdate) {
+        await updateAuthProfile(auth.currentUser, { 
+          photoURL: profile.photoURL || auth.currentUser.photoURL,
+          displayName: profile.username || auth.currentUser.displayName
+        });
+        
+        // Force a reload of the current user to update the auth state
+        await auth.currentUser.reload();
+        
+        console.log('Auth profile updated successfully');
+      }
+    }
+  } catch (error) {
+    console.error('Error syncing profile to auth:', error);
+  }
+};
+
 export const createProfile = async (userId: string, data: Profile): Promise<FirestoreResponse<void>> => {
   try {
     const profileRef = doc(db, 'profiles', userId);
-    await setDoc(profileRef, {
+    
+    // Prepare data with timestamps
+    const profileData = {
       ...data,
       created_at: Timestamp.now(),
       updated_at: Timestamp.now()
-    });
+    };
+    
+    // Create in Firestore
+    await setDoc(profileRef, profileData);
+    
+    // Sync with Auth if applicable
+    if (auth.currentUser && auth.currentUser.uid === userId) {
+      await updateAuthProfile(auth.currentUser, {
+        displayName: data.username || auth.currentUser.displayName,
+        photoURL: data.photoURL || auth.currentUser.photoURL
+      });
+    }
+    
     return { data: null, error: null };
   } catch (error) {
     console.error('Error creating profile:', error);
@@ -230,5 +311,51 @@ export async function createMembership(
   } catch (error) {
     console.error('Error creating membership:', error);
     return { data: undefined, error: 'Failed to create membership' };
+  }
+}
+
+// New function to update verification status (for admin sync)
+export async function updateVerificationStatus(
+  userId: string, 
+  isVerified: boolean
+): Promise<FirestoreResponse<void>> {
+  try {
+    const profileRef = doc(db, 'profiles', userId);
+    await updateDoc(profileRef, {
+      isVerified,
+      updated_at: Timestamp.now()
+    });
+    return { data: undefined, error: null };
+  } catch (error) {
+    console.error('Error updating verification status:', error);
+    return { data: undefined, error: 'Failed to update verification status' };
+  }
+}
+
+// New function to update Aadhaar card images (for admin sync)
+export async function updateAadhaarImages(
+  userId: string,
+  frontURL?: string,
+  backURL?: string
+): Promise<FirestoreResponse<void>> {
+  try {
+    const profileRef = doc(db, 'profiles', userId);
+    const updateData: Record<string, any> = {
+      updated_at: Timestamp.now()
+    };
+    
+    if (frontURL) updateData.aadhaarCardFrontURL = frontURL;
+    if (backURL) updateData.aadhaarCardBackURL = backURL;
+    
+    // Auto-verify if both images are present
+    if (frontURL && backURL) {
+      updateData.isVerified = true;
+    }
+    
+    await updateDoc(profileRef, updateData);
+    return { data: undefined, error: null };
+  } catch (error) {
+    console.error('Error updating Aadhaar images:', error);
+    return { data: undefined, error: 'Failed to update Aadhaar images' };
   }
 } 

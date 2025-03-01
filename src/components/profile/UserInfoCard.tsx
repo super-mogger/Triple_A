@@ -6,9 +6,10 @@ import { format } from 'date-fns';
 interface UserInfoCardProps {
   profile: Profile;
   isActive: boolean;
+  onPhotoUpdate?: () => void;
 }
 
-export default function UserInfoCard({ profile, isActive }: UserInfoCardProps) {
+export default function UserInfoCard({ profile, isActive, onPhotoUpdate }: UserInfoCardProps) {
   const navigate = useNavigate();
   
   // Format join date from timestamp

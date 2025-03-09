@@ -168,7 +168,7 @@ export default function SignUp() {
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         @keyframes pulse-border {
           0% { border-color: rgba(239, 68, 68, 0.3); }
           50% { border-color: rgba(239, 68, 68, 0.6); }
@@ -176,6 +176,13 @@ export default function SignUp() {
         }
         .animate-pulse-border {
           animation: pulse-border 2s infinite;
+        }
+        .signup-container {
+          min-height: 100vh;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: linear-gradient(135deg, var(--color-bg) 0%, var(--color-bg-dark) 100%);
         }
       `}</style>
     </div>

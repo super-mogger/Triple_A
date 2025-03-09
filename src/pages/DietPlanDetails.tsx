@@ -54,8 +54,15 @@ const MacroCard = memo(({ label, value, percentage, unit, color }: MacroCardProp
   );
 });
 
+// Add or modify the Food interface to include benefits property
+interface ExtendedFood extends Food {
+  benefits?: string;
+  portionSize?: string;
+  servings?: number;
+}
+
 // Memoize the FoodModal component with useCallback for handlers
-const FoodModal = memo(({ food, onClose }: { food: Food; onClose: () => void }) => {
+const FoodModal = memo(({ food, onClose }: { food: ExtendedFood; onClose: () => void }) => {
   const handleClose = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     onClose();
@@ -306,10 +313,12 @@ const MealCard = memo(({ meal, onFoodClick }: {
 export default function DietPlanDetails() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { profile } = useProfile();
   const [plan, setPlan] = useState<WeeklyDietPlan | null>(null);
-  const [selectedFood, setSelectedFood] = useState<Food | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedFood, setSelectedFood] = useState<ExtendedFood | null>(null);
+  const [currentDay, setCurrentDay] = useState('day1');
 
   useEffect(() => {
     const loadPlan = () => {
@@ -343,7 +352,7 @@ export default function DietPlanDetails() {
   }, [location.state]);
 
   const handleFoodClick = useCallback((food: Food) => {
-    setSelectedFood(food);
+    setSelectedFood(food as ExtendedFood);
   }, []);
 
   const closeModal = useCallback(() => {

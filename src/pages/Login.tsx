@@ -3,7 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Dumbbell, Mail, Lock, ArrowRight, X, Sparkles, Flame } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-hot-toast';
-import { createTestAdmin } from '../utils/createTestAdmin';
+// import { createTestAdmin } from '../utils/createTestAdmin';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -76,7 +76,7 @@ const Login: React.FC = () => {
 
   const handleCreateAdmin = async () => {
     if (!email) {
-      setLocalError('Please enter an email address');
+      setLocalError('Please enter an email to create a test admin account');
       return;
     }
 
@@ -85,6 +85,12 @@ const Login: React.FC = () => {
       setLocalError(null);
       setAdminCreationMessage(null);
       
+      // Since createTestAdmin is missing, we'll show a toast message instead
+      toast.error('Admin creation function not available in this environment');
+      setLocalError('Admin creation is disabled in this build');
+      
+      /*
+      // Original code:
       const result = await createTestAdmin(email);
       if (result.success) {
         setAdminCreationMessage(result.message);
@@ -95,10 +101,10 @@ const Login: React.FC = () => {
         setLocalError(result.message);
         toast.error(result.message);
       }
+      */
     } catch (err: any) {
       console.error('Create admin error:', err);
       setLocalError(err.message || 'Failed to create test admin');
-      toast.error(err.message || 'Failed to create test admin');
     } finally {
       setLoading(false);
     }
@@ -359,14 +365,13 @@ const Login: React.FC = () => {
         </p>
       </div>
 
-      <style jsx>{`
-        @keyframes pulse-border {
-          0% { border-color: rgba(239, 68, 68, 0.3); }
-          50% { border-color: rgba(239, 68, 68, 0.6); }
-          100% { border-color: rgba(239, 68, 68, 0.3); }
-        }
-        .animate-pulse-border {
-          animation: pulse-border 2s infinite;
+      <style>{`
+        .login-container {
+          min-height: 100vh;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: linear-gradient(135deg, var(--color-bg) 0%, var(--color-bg-dark) 100%);
         }
       `}</style>
     </div>

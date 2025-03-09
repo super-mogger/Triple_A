@@ -519,8 +519,8 @@ export default function Workouts() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500"></div>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#121212]">
+        <div className="animate-spin rounded-full h-14 w-14 border-4 border-gray-200 dark:border-gray-700 border-t-emerald-500"></div>
       </div>
     );
   }
@@ -531,8 +531,8 @@ export default function Workouts() {
 
   if (loadingExercises) {
     return (
-      <div className="min-h-screen bg-white dark:bg-[#121212] flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500"></div>
+      <div className="min-h-screen bg-gray-50 dark:bg-[#121212] flex items-center justify-center">
+        <div className="animate-spin rounded-full h-14 w-14 border-4 border-gray-200 dark:border-gray-700 border-t-emerald-500"></div>
       </div>
     );
   }
@@ -542,15 +542,20 @@ export default function Workouts() {
 
     return (
       <>
-        <div className="min-h-screen bg-white dark:bg-[#121212] py-8">
+        <div className="min-h-screen bg-gray-50 dark:bg-[#121212] py-8">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            {/* Header Section */}
-            <div className="bg-white dark:bg-[#1E1E1E] rounded-3xl shadow-sm border border-gray-100 dark:border-gray-800 p-6 mb-6">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            {/* Header Section with Gradient Background */}
+            <div className="relative overflow-hidden bg-gradient-to-r from-emerald-500 to-teal-600 rounded-3xl shadow-lg p-6 mb-6">
+              <div className="absolute top-0 right-0 -mt-8 -mr-8 opacity-10">
+                <Dumbbell className="w-64 h-64 text-white" />
+              </div>
+              
+              <div className="relative z-10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
                 <div>
-                  <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900 dark:text-white">{selectedWorkout.title}</h1>
-                  <p className="text-gray-600 dark:text-gray-400 mt-2">{selectedWorkout.description}</p>
+                  <h1 className="text-2xl sm:text-3xl font-bold text-white">{selectedWorkout.title}</h1>
+                  <p className="text-emerald-50 mt-2 max-w-xl">{selectedWorkout.description}</p>
                 </div>
+                
                 <div className="flex flex-col gap-3 w-full sm:w-auto">
                   {/* Split Selection */}
                   <div className="relative">
@@ -561,21 +566,21 @@ export default function Workouts() {
                           showSplitMenu: !selectedWorkout.showSplitMenu
                         });
                       }}
-                      className="w-full bg-gray-50 dark:bg-[#282828] text-sm px-4 py-2.5 rounded-2xl flex items-center justify-between border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-[#333] transition-colors text-gray-700 dark:text-gray-200"
+                      className="w-full bg-white/20 backdrop-blur-sm text-white px-5 py-3 rounded-xl flex items-center justify-between border border-white/20 hover:bg-white/30 transition-all font-medium"
                     >
                       <span className="flex items-center gap-2">
-                        <BarChart className="w-4 h-4 text-emerald-500" />
+                        <BarChart className="w-4 h-4" />
                         Split: {splitTypes[selectedWorkout.splitType || 'bro-split'].name}
                       </span>
-                      <ChevronDown className="w-4 h-4 text-gray-500" />
+                      <ChevronDown className="w-4 h-4" />
                     </button>
                     {selectedWorkout.showSplitMenu && (
-                      <div className="absolute z-10 w-full mt-2 bg-white dark:bg-[#1E1E1E] rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                      <div className="absolute z-10 w-full mt-2 bg-white dark:bg-[#1E1E1E] rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
                         {Object.entries(splitTypes).map(([key, value]) => (
                           <button
                             key={key}
                             onClick={() => handleSplitTypeSelect(key)}
-                            className={`w-full px-4 py-3 text-left text-sm hover:bg-gray-50 dark:hover:bg-[#282828] transition-colors ${
+                            className={`w-full px-5 py-3 text-left hover:bg-gray-50 dark:hover:bg-[#282828] transition-all ${
                               selectedWorkout.splitType === key 
                                 ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' 
                                 : 'text-gray-700 dark:text-gray-200'
@@ -590,7 +595,7 @@ export default function Workouts() {
                   </div>
                   <button
                     onClick={changeWorkoutPlan}
-                    className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2.5 rounded-2xl transition-colors font-medium text-sm flex items-center justify-center gap-2"
+                    className="bg-white text-emerald-600 px-5 py-3 rounded-xl transition-all font-medium flex items-center justify-center gap-2 shadow-md hover:shadow-lg hover:-translate-y-0.5"
                   >
                     <Play className="w-4 h-4" />
                     Change Workout Plan
@@ -600,20 +605,26 @@ export default function Workouts() {
             </div>
 
             {/* Day Selection */}
-            <div className="bg-white dark:bg-[#1E1E1E] rounded-3xl shadow-sm border border-gray-100 dark:border-gray-800 p-4 sm:p-6 mb-4 sm:mb-6">
+            <div className="bg-white dark:bg-[#1E1E1E] rounded-3xl shadow-lg border border-gray-100 dark:border-gray-800 p-4 sm:p-6 mb-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2.5 bg-amber-50 dark:bg-amber-500/10 rounded-full">
+                  <Calendar className="w-5 h-5 text-amber-500" />
+                </div>
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Weekly Schedule</h2>
+              </div>
               <div className="grid grid-cols-4 sm:grid-cols-7 gap-2 sm:gap-3">
                 {selectedWorkout.schedule?.days.map((day) => (
                   <button
                     key={day.day}
                     onClick={() => handleDayChange(day.day)}
-                    className={`p-2 sm:p-4 rounded-xl sm:rounded-2xl text-center transition-all ${
+                    className={`p-3 sm:p-4 rounded-xl sm:rounded-2xl text-center transition-all ${
                       currentDay === day.day
-                        ? 'bg-emerald-500 text-white'
+                        ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-md'
                         : 'bg-gray-50 dark:bg-[#282828] text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#333] border border-gray-200 dark:border-gray-700'
                     }`}
                   >
-                    <div className="font-medium text-xs sm:text-sm">{day.day.slice(0, 3)}</div>
-                    <div className="text-[10px] sm:text-xs mt-0.5 sm:mt-1 opacity-80">{day.focus.split(' ')[0]}</div>
+                    <div className="font-semibold text-xs sm:text-sm">{day.day.slice(0, 3)}</div>
+                    <div className="text-[10px] sm:text-xs mt-1 sm:mt-1.5 opacity-80">{day.focus.split(' ')[0]}</div>
                   </button>
                 ))}
               </div>
@@ -621,42 +632,56 @@ export default function Workouts() {
 
             {/* Current Day Workout */}
             {currentDayWorkout && (
-              <div className="bg-white dark:bg-[#1E1E1E] rounded-3xl shadow-sm border border-gray-100 dark:border-gray-800">
-                <div className="p-4 sm:p-6 border-b border-gray-100 dark:border-gray-800">
-                  <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                    <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-500" />
-                    {currentDayWorkout.focus}
-                  </h2>
+              <div className="bg-white dark:bg-[#1E1E1E] rounded-3xl shadow-lg border border-gray-100 dark:border-gray-800 transition-all hover:shadow-xl">
+                <div className="p-5 sm:p-6 border-b border-gray-100 dark:border-gray-800">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 bg-gradient-to-br from-purple-400 to-purple-600 rounded-full">
+                      <Dumbbell className="w-5 h-5 text-white" />
+                    </div>
+                    <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                      {currentDayWorkout.focus}
+                    </h2>
+                  </div>
                 </div>
 
-                <div className="p-3 sm:p-6">
-                  <div className="space-y-2 sm:space-y-4">
+                <div className="p-5 sm:p-6">
+                  <div className="space-y-3 sm:space-y-4">
                     {exercises.map((exercise, index) => (
                       <button
                         key={index}
                         onClick={() => viewExerciseDetails(exercise)}
-                        className="w-full bg-gray-50 dark:bg-[#282828] hover:bg-gray-100 dark:hover:bg-[#333] rounded-xl sm:rounded-2xl p-3 sm:p-4 transition-colors text-left border border-gray-200 dark:border-gray-700"
+                        className="w-full bg-gray-50 dark:bg-[#282828] hover:bg-gray-100 dark:hover:bg-[#333] rounded-xl p-4 transition-all text-left border border-gray-200 dark:border-gray-700 hover:shadow-md"
                       >
-                        <div className="flex justify-between items-start gap-3 sm:gap-4">
-                          <div>
-                            <h4 className="font-medium text-sm sm:text-base text-gray-900 dark:text-white flex items-center gap-2">
-                              {exercise.name}
-                              <Info className="w-3 h-3 sm:w-4 sm:h-4 text-emerald-500" />
-                            </h4>
-                            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-0.5 sm:mt-1">{exercise.notes}</p>
+                        <div className="flex justify-between items-center gap-4">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-indigo-50 dark:bg-indigo-500/10 rounded-full">
+                              <Dumbbell className="w-4 h-4 text-indigo-500" />
+                            </div>
+                            <div>
+                              <h4 className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
+                                {exercise.name}
+                                <Info className="w-3.5 h-3.5 text-emerald-500" />
+                              </h4>
+                              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{exercise.notes}</p>
+                            </div>
                           </div>
-                          <div className="text-right">
-                            <p className="text-xs sm:text-sm font-medium text-emerald-500">
-                              {exercise.sets} sets × {exercise.reps}
-                            </p>
+                          <div className="flex-shrink-0">
+                            <div className="px-3 py-1.5 bg-emerald-50 dark:bg-emerald-500/10 rounded-lg">
+                              <p className="font-medium text-emerald-600 dark:text-emerald-400">
+                                {exercise.sets} sets × {exercise.reps}
+                              </p>
+                            </div>
                           </div>
                         </div>
                       </button>
                     ))}
                     {exercises.length === 0 && (
-                      <div className="text-center py-8 sm:py-12">
-                        <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400">
-                          {currentDayWorkout.notes || "Rest day"}
+                      <div className="text-center py-12 bg-gray-50 dark:bg-[#282828] rounded-xl">
+                        <div className="w-16 h-16 mx-auto mb-4 flex items-center justify-center rounded-full bg-amber-50 dark:bg-amber-500/10">
+                          <Calendar className="w-8 h-8 text-amber-500" />
+                        </div>
+                        <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto">
+                          {currentDayWorkout.notes || "Rest day - Take time to recover and prepare for your next workout session."}
                         </p>
                       </div>
                     )}
@@ -667,14 +692,19 @@ export default function Workouts() {
 
             {/* Exercise Modal */}
             {selectedExercise && (
-              <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-start sm:items-center justify-center p-2 sm:p-4 z-50">
-                <div className="bg-white dark:bg-[#1E1E1E] rounded-2xl sm:rounded-3xl p-4 sm:p-6 w-full max-w-4xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
+              <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-start sm:items-center justify-center p-4 z-50">
+                <div className="bg-white dark:bg-[#1E1E1E] rounded-2xl sm:rounded-3xl p-5 sm:p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-2xl border border-gray-100 dark:border-gray-800">
                   {/* Modal Header */}
-                  <div className="flex justify-between items-start mb-4 sm:mb-6 sticky top-0 bg-white dark:bg-[#1E1E1E] z-10 py-2">
-                    <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">{selectedExercise.name}</h2>
+                  <div className="flex justify-between items-start mb-5 sm:mb-6 sticky top-0 bg-white dark:bg-[#1E1E1E] z-10 py-2">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-gradient-to-br from-indigo-400 to-indigo-600 rounded-full">
+                        <Dumbbell className="w-5 h-5 text-white" />
+                      </div>
+                      <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">{selectedExercise.name}</h2>
+                    </div>
                     <button
                       onClick={() => setSelectedExercise(null)}
-                      className="p-1.5 sm:p-2 hover:bg-gray-100 dark:hover:bg-[#282828] rounded-lg sm:rounded-xl transition-colors"
+                      className="p-2 hover:bg-gray-100 dark:hover:bg-[#282828] rounded-xl transition-colors"
                     >
                       <X className="w-5 h-5 sm:w-6 sm:h-6 text-gray-500 dark:text-gray-400" />
                     </button>
@@ -682,7 +712,7 @@ export default function Workouts() {
 
                   {/* Video Section */}
                   <div className="mb-6 sm:mb-8">
-                    <div className="relative pt-[56.25%] rounded-lg overflow-hidden bg-black">
+                    <div className="relative pt-[56.25%] rounded-xl overflow-hidden bg-black shadow-md">
                       <iframe
                         src={selectedExercise.videoUrl}
                         className="absolute inset-0 w-full h-full"
@@ -693,9 +723,14 @@ export default function Workouts() {
                   </div>
 
                   {/* Muscle Targeting Chart */}
-                  <div className="mb-6 sm:mb-8 bg-gray-50 dark:bg-[#282828] p-4 sm:p-6 rounded-lg">
+                  <div className="mb-6 sm:mb-8 bg-gray-50 dark:bg-[#282828] p-5 sm:p-6 rounded-xl shadow-md">
                     <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">Muscle Activation Analysis</h3>
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-blue-50 dark:bg-blue-500/10 rounded-full">
+                          <BarChart className="w-5 h-5 text-blue-500" />
+                        </div>
+                        <h3 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">Muscle Activation Analysis</h3>
+                      </div>
                       <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
                         Hover over the chart for detailed percentages
                       </div>
@@ -707,13 +742,18 @@ export default function Workouts() {
                   </div>
 
                   {/* Exercise Info Grid */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 sm:gap-6 mb-6 sm:mb-8">
                     {/* Target Muscles */}
-                    <div className="bg-gray-50 dark:bg-[#282828] p-3 sm:p-4 rounded-lg">
-                      <h3 className="text-sm sm:text-base font-semibold mb-2 sm:mb-3 text-gray-900 dark:text-white">Primary Target Muscles</h3>
-                      <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                    <div className="bg-gray-50 dark:bg-[#282828] p-4 sm:p-5 rounded-xl shadow-md">
+                      <h3 className="text-base font-semibold mb-3 sm:mb-4 text-gray-900 dark:text-white flex items-center gap-2">
+                        <div className="p-1.5 bg-emerald-50 dark:bg-emerald-500/10 rounded-full">
+                          <Target className="w-4 h-4 text-emerald-500" />
+                        </div>
+                        Primary Target Muscles
+                      </h3>
+                      <div className="flex flex-wrap gap-2">
                         {selectedExercise.targetMuscles.map((muscle, index) => (
-                          <span key={index} className="bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm">
+                          <span key={index} className="bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-3 py-1.5 rounded-full text-sm font-medium">
                             {muscle}
                           </span>
                         ))}
@@ -721,11 +761,16 @@ export default function Workouts() {
                     </div>
 
                     {/* Secondary Muscles */}
-                    <div className="bg-gray-50 dark:bg-[#282828] p-3 sm:p-4 rounded-lg">
-                      <h3 className="text-sm sm:text-base font-semibold mb-2 sm:mb-3 text-gray-900 dark:text-white">Secondary Muscles</h3>
-                      <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                    <div className="bg-gray-50 dark:bg-[#282828] p-4 sm:p-5 rounded-xl shadow-md">
+                      <h3 className="text-base font-semibold mb-3 sm:mb-4 text-gray-900 dark:text-white flex items-center gap-2">
+                        <div className="p-1.5 bg-blue-50 dark:bg-blue-500/10 rounded-full">
+                          <Target className="w-4 h-4 text-blue-500" />
+                        </div>
+                        Secondary Muscles
+                      </h3>
+                      <div className="flex flex-wrap gap-2">
                         {selectedExercise.secondaryMuscles.map((muscle, index) => (
-                          <span key={index} className="bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm">
+                          <span key={index} className="bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 px-3 py-1.5 rounded-full text-sm font-medium">
                             {muscle}
                           </span>
                         ))}
@@ -735,14 +780,19 @@ export default function Workouts() {
 
                   {/* Instructions */}
                   <div className="mb-6 sm:mb-8">
-                    <h3 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-gray-900 dark:text-white">Instructions</h3>
-                    <div className="space-y-3 sm:space-y-4">
+                    <h3 className="text-lg sm:text-xl font-semibold mb-4 sm:mb-5 text-gray-900 dark:text-white flex items-center gap-3">
+                      <div className="p-2 bg-purple-50 dark:bg-purple-500/10 rounded-full">
+                        <Info className="w-5 h-5 text-purple-500" />
+                      </div>
+                      Instructions
+                    </h3>
+                    <div className="space-y-3 sm:space-y-4 bg-gray-50 dark:bg-[#282828] p-4 sm:p-5 rounded-xl shadow-md">
                       {selectedExercise.instructions.map((instruction, index) => (
                         <div key={index} className="flex gap-3 sm:gap-4">
-                          <div className="flex-shrink-0 w-6 h-6 sm:w-8 sm:h-8 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-full flex items-center justify-center font-medium text-sm sm:text-base">
+                          <div className="flex-shrink-0 w-7 h-7 sm:w-8 sm:h-8 bg-gradient-to-br from-purple-400 to-purple-600 text-white rounded-full flex items-center justify-center font-medium">
                             {index + 1}
                           </div>
-                          <p className="text-sm sm:text-base text-gray-700 dark:text-gray-300">{instruction}</p>
+                          <p className="text-gray-700 dark:text-gray-300 pt-1">{instruction}</p>
                         </div>
                       ))}
                     </div>
@@ -750,12 +800,17 @@ export default function Workouts() {
 
                   {/* Tips */}
                   <div>
-                    <h3 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-gray-900 dark:text-white">Pro Tips</h3>
-                    <div className="bg-gray-50 dark:bg-[#282828] rounded-lg p-3 sm:p-4">
-                      <ul className="space-y-2 sm:space-y-3">
+                    <h3 className="text-lg sm:text-xl font-semibold mb-4 sm:mb-5 text-gray-900 dark:text-white flex items-center gap-3">
+                      <div className="p-2 bg-amber-50 dark:bg-amber-500/10 rounded-full">
+                        <Wrench className="w-5 h-5 text-amber-500" />
+                      </div>
+                      Pro Tips
+                    </h3>
+                    <div className="bg-gray-50 dark:bg-[#282828] rounded-xl p-4 sm:p-5 shadow-md">
+                      <ul className="space-y-3 sm:space-y-4">
                         {selectedExercise.tips.map((tip, index) => (
-                          <li key={index} className="flex items-start gap-2 sm:gap-3 text-sm sm:text-base text-gray-700 dark:text-gray-300">
-                            <div className="flex-shrink-0 w-4 h-4 sm:w-5 sm:h-5 bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center text-[10px] sm:text-xs mt-0.5">
+                          <li key={index} className="flex items-start gap-3 sm:gap-4 text-gray-700 dark:text-gray-300">
+                            <div className="flex-shrink-0 w-5 h-5 sm:w-6 sm:h-6 bg-gradient-to-br from-amber-400 to-amber-500 text-white rounded-full flex items-center justify-center font-bold text-xs mt-0.5">
                               ✓
                             </div>
                             {tip}
@@ -770,8 +825,8 @@ export default function Workouts() {
 
             {/* Loading Overlay */}
             {loadingExercise && (
-              <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500"></div>
+              <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
+                <div className="animate-spin rounded-full h-14 w-14 border-4 border-gray-200 dark:border-gray-700 border-t-emerald-500"></div>
               </div>
             )}
           </div>
@@ -781,54 +836,81 @@ export default function Workouts() {
   }
 
   return (
-    <div className="min-h-screen bg-white dark:bg-[#121212] py-8">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#121212] py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-white dark:bg-[#1E1E1E] rounded-3xl shadow-sm border border-gray-100 dark:border-gray-800 p-6 mb-8">
-          <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">Workout Plans</h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-2">Choose a workout plan that matches your goals</p>
+        {/* Hero Section */}
+        <div className="relative overflow-hidden bg-gradient-to-r from-emerald-500 to-teal-600 rounded-3xl shadow-lg p-8 mb-8">
+          <div className="absolute top-0 right-0 -mt-8 -mr-8 opacity-10">
+            <Dumbbell className="w-64 h-64 text-white" />
+          </div>
+          <div className="relative z-10">
+            <h1 className="text-2xl sm:text-3xl font-bold text-white">Workout Plans</h1>
+            <p className="text-emerald-50 mt-2 max-w-xl text-lg">Choose a personalized workout plan that matches your fitness goals and experience level</p>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {workouts.map((workout, index) => (
             <div 
               key={index}
-              className="bg-white dark:bg-[#1E1E1E] rounded-3xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden group hover:shadow-md transition-shadow"
+              className="bg-white dark:bg-[#1E1E1E] rounded-3xl shadow-lg border border-gray-100 dark:border-gray-800 overflow-hidden group hover:shadow-xl transition-all transform hover:-translate-y-1"
             >
-              <div className="relative h-48">
+              <div className="relative h-52">
                 <img
                   src={workout.imageUrl}
                   alt={workout.title}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-                <div className="absolute bottom-0 left-0 right-0 p-4">
-                  <h3 className="text-lg font-semibold text-white">{workout.title}</h3>
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
+                <div className="absolute bottom-0 left-0 right-0 p-5">
+                  <h3 className="text-xl font-bold text-white">{workout.title}</h3>
                 </div>
               </div>
               <div className="p-6">
-                <div className="space-y-3 text-sm mb-4">
-                  <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                    <Clock className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                    <span>Duration: {workout.duration}</span>
+                <div className="grid grid-cols-2 gap-3 text-sm mb-5">
+                  <div className="flex items-center gap-3 bg-gray-50 dark:bg-gray-800/40 p-3 rounded-xl">
+                    <div className="p-2 bg-blue-50 dark:bg-blue-500/10 rounded-full">
+                      <Clock className="w-4 h-4 text-blue-500" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Duration</p>
+                      <p className="font-medium text-gray-900 dark:text-white">{workout.duration}</p>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                    <Target className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                    <span>Goal: {workout.goal}</span>
+                  <div className="flex items-center gap-3 bg-gray-50 dark:bg-gray-800/40 p-3 rounded-xl">
+                    <div className="p-2 bg-purple-50 dark:bg-purple-500/10 rounded-full">
+                      <Target className="w-4 h-4 text-purple-500" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Goal</p>
+                      <p className="font-medium text-gray-900 dark:text-white">{workout.goal}</p>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                    <Gauge className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                    <span>Level: {workout.level}</span>
+                  <div className="flex items-center gap-3 bg-gray-50 dark:bg-gray-800/40 p-3 rounded-xl">
+                    <div className="p-2 bg-emerald-50 dark:bg-emerald-500/10 rounded-full">
+                      <Gauge className="w-4 h-4 text-emerald-500" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Level</p>
+                      <p className="font-medium text-gray-900 dark:text-white">{workout.level}</p>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                    <Wrench className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                    <span>Equipment: {workout.equipment}</span>
+                  <div className="flex items-center gap-3 bg-gray-50 dark:bg-gray-800/40 p-3 rounded-xl">
+                    <div className="p-2 bg-amber-50 dark:bg-amber-500/10 rounded-full">
+                      <Wrench className="w-4 h-4 text-amber-500" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Equipment</p>
+                      <p className="font-medium text-gray-900 dark:text-white">{workout.equipment}</p>
+                    </div>
                   </div>
                 </div>
                 <p className="text-gray-600 dark:text-gray-400 text-sm mb-6">{workout.description}</p>
                 <button 
                   onClick={() => selectWorkout(workout)}
-                  className="w-full bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-3 rounded-2xl transition-colors font-medium"
+                  className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-4 py-3 rounded-xl transition-all font-medium shadow-md flex items-center justify-center gap-2"
                 >
+                  <Play className="w-4 h-4" />
                   Start Workout Plan
                 </button>
               </div>

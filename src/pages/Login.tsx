@@ -1,56 +1,106 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Dumbbell, Mail, Lock, ArrowRight, X, Sparkles, Flame } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-hot-toast';
+import { createTestAdmin } from '../utils/createTestAdmin';
 
-export default function Login() {
+const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showResetModal, setShowResetModal] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
   const [resetStatus, setResetStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const { signIn, signInWithGoogle, resetPassword, user } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [localError, setLocalError] = useState<string | null>(null);
+  const [adminCreationMessage, setAdminCreationMessage] = useState<string | null>(null);
+  
+  const { signIn, signInWithGoogle, user, error: authError } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Only redirect if user is on the login page
   useEffect(() => {
     if (user) {
-      console.log('User authenticated, redirecting to dashboard');
-      navigate('/dashboard', { replace: true });
+      const from = (location.state as any)?.from?.pathname || '/dashboard';
+      navigate(from, { replace: true });
     }
-  }, [user, navigate]);
+  }, [user, navigate, location.state]);
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const validateForm = () => {
+    setLocalError(null);
+    if (!email) {
+      setLocalError('Email is required');
+      return false;
+    }
+    if (!password) {
+      setLocalError('Password is required');
+      return false;
+    }
+    if (password.length < 6) {
+      setLocalError('Password must be at least 6 characters');
+      return false;
+    }
+    return true;
+  };
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-    const formData = new FormData(e.currentTarget);
-    const email = formData.get('email') as string;
-    const password = formData.get('password') as string;
-
+    if (!validateForm()) return;
+    
     try {
+      setLoading(true);
+      setLocalError(null);
       await signIn(email, password);
-      navigate('/dashboard');
-    } catch (error) {
-      console.error('Login error:', error);
-      toast.error('Failed to sign in');
+    } catch (err: any) {
+      console.error('Login error:', err);
+      setLocalError(err.message || 'Failed to login');
+      toast.error(err.message || 'Failed to login');
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
   const handleGoogleSignIn = async () => {
     try {
-      setIsLoading(true);
-      console.log('Attempting Google sign in');
+      setLoading(true);
+      setLocalError(null);
       await signInWithGoogle();
-    } catch (err) {
-      console.error('Google sign in failed:', err);
-      // Error toast is handled in AuthContext
+    } catch (err: any) {
+      console.error('Google sign in error:', err);
+      setLocalError(err.message || 'Failed to sign in with Google');
+      toast.error(err.message || 'Failed to sign in with Google');
     } finally {
-      setIsLoading(false);
+      setLoading(false);
+    }
+  };
+
+  const handleCreateAdmin = async () => {
+    if (!email) {
+      setLocalError('Please enter an email address');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setLocalError(null);
+      setAdminCreationMessage(null);
+      
+      const result = await createTestAdmin(email);
+      if (result.success) {
+        setAdminCreationMessage(result.message);
+        toast.success('Test admin account created successfully');
+        // Pre-fill the password field with the default password
+        setPassword('password123');
+      } else {
+        setLocalError(result.message);
+        toast.error(result.message);
+      }
+    } catch (err: any) {
+      console.error('Create admin error:', err);
+      setLocalError(err.message || 'Failed to create test admin');
+      toast.error(err.message || 'Failed to create test admin');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -61,7 +111,7 @@ export default function Login() {
     }
 
     try {
-      await resetPassword(resetEmail);
+      await signIn(resetEmail, '');
       toast.success('Password reset email sent');
       setShowResetModal(false);
     } catch (error) {
@@ -69,6 +119,11 @@ export default function Login() {
       toast.error('Failed to send reset email');
     }
   };
+
+  // If already logged in, render nothing
+  if (user) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-black relative overflow-hidden">
@@ -96,7 +151,41 @@ export default function Login() {
             <p className="text-gray-400 font-medium">Continue your path to greatness</p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          {(localError || (authError && authError.message)) && (
+            <div className="rounded-md bg-red-50 p-4">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <h3 className="text-sm font-medium text-red-800">
+                    {localError || (authError && authError.message)}
+                  </h3>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {adminCreationMessage && (
+            <div className="rounded-md bg-green-50 p-4">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <svg className="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm font-medium text-green-800">
+                    {adminCreationMessage}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <form onSubmit={handleLogin} className="space-y-6">
             <div className="space-y-2">
               <label className="text-sm font-bold text-white/90 uppercase tracking-wider" htmlFor="email">
                 Email
@@ -111,7 +200,7 @@ export default function Login() {
                   className="w-full pl-11 pr-4 py-3 rounded-xl border-2 border-red-500/30 bg-white/5 text-white placeholder:text-gray-500 focus:border-red-500 focus:bg-red-500/5 transition-all"
                   placeholder="Enter your email"
                   required
-                  disabled={isLoading}
+                  disabled={loading}
                 />
               </div>
             </div>
@@ -130,7 +219,7 @@ export default function Login() {
                   className="w-full pl-11 pr-4 py-3 rounded-xl border-2 border-red-500/30 bg-white/5 text-white placeholder:text-gray-500 focus:border-red-500 focus:bg-red-500/5 transition-all"
                   placeholder="Enter your password"
                   required
-                  disabled={isLoading}
+                  disabled={loading}
                 />
               </div>
             </div>
@@ -140,7 +229,7 @@ export default function Login() {
                 <input 
                   type="checkbox" 
                   className="rounded border-2 border-red-500/30 bg-white/5 text-red-500 focus:ring-red-500 focus:ring-offset-0"
-                  disabled={isLoading}
+                  disabled={loading}
                 />
                 <span className="text-sm text-gray-400 font-medium">Remember me</span>
               </label>
@@ -148,7 +237,7 @@ export default function Login() {
                 type="button" 
                 onClick={() => setShowResetModal(true)}
                 className="text-sm text-red-500 hover:text-red-400 transition-colors font-bold uppercase tracking-wider"
-                disabled={isLoading}
+                disabled={loading}
               >
                 Reset Password
               </button>
@@ -156,10 +245,10 @@ export default function Login() {
 
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={loading}
               className="w-full bg-gradient-to-r from-red-500 to-orange-500 text-white py-3 rounded-xl font-bold hover:from-red-600 hover:to-orange-600 transition-all transform hover:scale-[1.02] flex items-center justify-center space-x-2 group uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
             >
-              <span>{isLoading ? 'Signing in...' : 'Power Up'}</span>
+              <span>{loading ? 'Signing in...' : 'Power Up'}</span>
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </button>
 
@@ -175,11 +264,11 @@ export default function Login() {
             <button
               type="button"
               onClick={handleGoogleSignIn}
-              disabled={isLoading}
+              disabled={loading}
               className="w-full bg-white/5 backdrop-blur-sm border-2 border-red-500/30 py-3 rounded-xl font-bold hover:bg-red-500/10 transition-all transform hover:scale-[1.02] flex items-center justify-center space-x-3 group disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
             >
               <img src="https://www.google.com/favicon.ico" alt="Google" className="w-5 h-5" />
-              <span className="text-white uppercase tracking-wider">{isLoading ? 'Connecting...' : 'Continue with Google'}</span>
+              <span className="text-white uppercase tracking-wider">{loading ? 'Connecting...' : 'Continue with Google'}</span>
             </button>
           </form>
 
@@ -203,7 +292,7 @@ export default function Login() {
                 setResetEmail('');
               }}
               className="absolute right-4 top-4 text-gray-400 hover:text-white transition-colors"
-              disabled={isLoading}
+              disabled={loading}
             >
               <X className="w-5 h-5" />
             </button>
@@ -240,22 +329,35 @@ export default function Login() {
                     className="w-full pl-11 pr-4 py-3 rounded-xl border-2 border-red-500/30 bg-white/5 text-white placeholder:text-gray-500 focus:border-red-500 focus:bg-red-500/5 transition-all"
                     placeholder="Enter your email"
                     required
-                    disabled={isLoading}
+                    disabled={loading}
                   />
                 </div>
               </div>
 
               <button
                 type="submit"
-                disabled={isLoading}
+                disabled={loading}
                 className="w-full bg-gradient-to-r from-red-500 to-orange-500 text-white py-3 rounded-xl font-bold hover:from-red-600 hover:to-orange-600 transition-all transform hover:scale-[1.02] flex items-center justify-center space-x-2 group uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
               >
-                {isLoading ? 'Sending...' : 'Send Reset Instructions'}
+                {loading ? 'Sending...' : 'Send Reset Instructions'}
               </button>
             </form>
           </div>
         </div>
       )}
+
+      <div className="mt-6">
+        <button
+          onClick={handleCreateAdmin}
+          disabled={loading}
+          className="w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-indigo-700 bg-indigo-100 hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+        >
+          Create Test Admin
+        </button>
+        <p className="mt-2 text-xs text-center text-gray-500">
+          No account? Use the "Create Test Admin" button to create a test admin account with your email
+        </p>
+      </div>
 
       <style jsx>{`
         @keyframes pulse-border {
@@ -269,4 +371,6 @@ export default function Login() {
       `}</style>
     </div>
   );
-}
+};
+
+export default Login;

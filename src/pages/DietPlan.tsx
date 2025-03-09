@@ -140,12 +140,12 @@ const DietPlanCard = React.memo(({
     <div 
       onClick={handleCardClick}
       className={`
-        relative rounded-xl overflow-hidden shadow-lg transform transition-all duration-300 cursor-pointer
+        relative rounded-2xl overflow-hidden shadow-lg transform transition-all duration-300 cursor-pointer
         ${isDarkMode ? 'bg-[#1E1E1E]' : 'bg-white'}
-        ${isSelected ? 'ring-2 ring-blue-500 scale-[1.02]' : 'hover:scale-[1.02]'}
+        ${isSelected ? 'ring-2 ring-emerald-500 scale-[1.02]' : 'hover:scale-[1.02] hover:shadow-xl'}
       `}
     >
-      <div className="h-48 relative">
+      <div className="h-52 relative">
         <img 
           src={imageError ? getDefaultImage(type) : cardImage}
           alt={title} 
@@ -154,32 +154,56 @@ const DietPlanCard = React.memo(({
           loading="lazy"
         />
         {/* Gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
+        
+        {/* Title overlay */}
+        <div className="absolute bottom-0 left-0 right-0 p-4">
+          <h3 className="text-xl font-bold text-white">
+            {title}
+          </h3>
+          <span className="inline-block mt-1 px-3 py-1 rounded-full text-xs font-medium bg-emerald-500 text-white">
+            {goal}
+          </span>
+        </div>
       </div>
-      <div className="p-4">
-        <h3 className={`text-xl font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-          {title}
-        </h3>
-        <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+      
+      <div className="p-5">
+        <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} mb-4`}>
           {description}
         </p>
 
-        <div className="mt-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Droplets className="w-4 h-4 text-blue-500" />
-            <span className="text-sm text-gray-600 dark:text-gray-400">
-              Water: {waterIntake}L/day
-            </span>
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          <div className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-800/40">
+            <div className="p-2 bg-blue-50 dark:bg-blue-500/10 rounded-full">
+              <Droplets className="w-4 h-4 text-blue-500" />
+            </div>
+            <div>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Water</p>
+              <p className="font-medium text-gray-900 dark:text-white">{waterIntake}L/day</p>
+            </div>
           </div>
-          <span className="px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-700">
-            {goal}
-          </span>
+          
+          <div className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-800/40">
+            <div className="p-2 bg-emerald-50 dark:bg-emerald-500/10 rounded-full">
+              <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Calories</p>
+              <p className="font-medium text-gray-900 dark:text-white">{nutritionalGoals.calories}</p>
+            </div>
+          </div>
         </div>
 
         <button
           onClick={handleStartPlan}
-          className="mt-4 w-full px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-all duration-300"
+          className="mt-2 w-full px-4 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl font-medium hover:from-emerald-600 hover:to-teal-700 transition-all duration-300 shadow-md flex items-center justify-center gap-2"
         >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
           Start Diet Plan
         </button>
       </div>
@@ -365,8 +389,8 @@ export default function DietPlan() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500"></div>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#121212]">
+        <div className="animate-spin rounded-full h-14 w-14 border-4 border-gray-200 dark:border-gray-700 border-t-emerald-500"></div>
       </div>
     );
   }
@@ -376,9 +400,20 @@ export default function DietPlan() {
   }
 
   return (
-    <div className="min-h-screen bg-white dark:bg-[#121212] py-8">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#121212] py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-8">Diet Plans</h1>
+        {/* Hero Section */}
+        <div className="relative overflow-hidden bg-gradient-to-r from-emerald-500 to-teal-600 rounded-3xl shadow-lg p-8 mb-8">
+          <div className="absolute top-0 right-0 -mt-8 -mr-8 opacity-10">
+            <svg className="w-64 h-64 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+            </svg>
+          </div>
+          <div className="relative z-10">
+            <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Personalized Diet Plans</h1>
+            <p className="text-emerald-50 max-w-xl text-lg">Discover nutrition plans customized to your fitness goals, dietary preferences, and body requirements</p>
+          </div>
+        </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {dietPlans.map((plan, index) => (
@@ -395,16 +430,21 @@ export default function DietPlan() {
         </div>
 
         {!isPremium && (
-          <div className="text-center mt-8">
-            <p className="text-sm text-gray-500 mb-2">
-              Upgrade to premium to access all diet plans
-            </p>
-            <button
-              onClick={() => navigate('/membership')}
-              className="px-6 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all duration-300"
-            >
-              Upgrade to Premium
-            </button>
+          <div className="mt-10 bg-gradient-to-r from-purple-500 to-indigo-600 rounded-2xl shadow-lg p-6">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
+              <div>
+                <h3 className="text-xl font-bold text-white mb-2">Upgrade to Premium</h3>
+                <p className="text-purple-100">
+                  Get access to all diet plans, personalized recommendations, and advanced nutritional tracking
+                </p>
+              </div>
+              <button
+                onClick={() => navigate('/membership')}
+                className="px-6 py-3 bg-white text-purple-600 rounded-xl hover:bg-gray-50 transition-all duration-300 font-medium shadow-md"
+              >
+                Upgrade Now
+              </button>
+            </div>
           </div>
         )}
       </div>

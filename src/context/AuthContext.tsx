@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
 import {
   User,
   GoogleAuthProvider,
@@ -15,7 +15,6 @@ import {
 } from 'firebase/auth';
 import { auth } from '../config/firebase';
 import { getProfile, createProfile, updateProfile } from '../services/FirestoreService';
-import { useNavigate } from 'react-router-dom';
 import { Timestamp } from 'firebase/firestore';
 import { Profile, ActivityLevel } from '../types/profile';
 
@@ -44,140 +43,141 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
-  const navigate = useNavigate();
+
+  const handleProfile = useCallback(async (user: User) => {
+    try {
+      const { data: existingProfile, error } = await getProfile(user.uid);
+      
+      if (!existingProfile) {
+        console.log('Creating new profile for user:', user.email);
+        const defaultProfile: Profile = {
+          id: user.uid,
+          user_id: user.uid,
+          email: user.email || '',
+          username: user.displayName || user.email?.split('@')[0] || `user_${user.uid.substring(0, 6)}`,
+          photoURL: user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.uid}`,
+          personal_info: {
+            date_of_birth: '',
+            gender: 'male',
+            height: 170,
+            weight: 70,
+            contact: '',
+            blood_type: ''
+          },
+          medical_info: {
+            conditions: ''
+          },
+          preferences: {
+            activity_level: 'beginner' as ActivityLevel,
+            dietary_preferences: [],
+            workout_preferences: [],
+            fitness_goals: [],
+            fitness_level: '',
+            dietary: [],
+            workout_days: [],
+            workout_time: ''
+          },
+          created_at: Timestamp.now(),
+          updated_at: Timestamp.now()
+        };
+        
+        const { error: createError } = await createProfile(user.uid, defaultProfile);
+        if (createError) throw createError;
+        setProfile(defaultProfile);
+      } else {
+        console.log('Updating existing profile for user:', user.email);
+        const updates = {
+          email: user.email || existingProfile.email,
+          username: user.displayName || existingProfile.username,
+          photoURL: user.photoURL || existingProfile.photoURL,
+          updated_at: Timestamp.now()
+        };
+        const { error: updateError } = await updateProfile(user.uid, updates);
+        if (updateError) throw updateError;
+        setProfile({ ...existingProfile, ...updates });
+      }
+    } catch (error) {
+      console.error('Error managing profile:', error);
+      setError(error instanceof Error ? error : new Error('Failed to manage profile'));
+    }
+  }, []);
 
   useEffect(() => {
     console.log('Setting up auth state listener');
+    let isMounted = true;
+
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       console.log('Auth state changed:', user?.email);
-      setUser(user);
+      if (!isMounted) return;
 
       if (user) {
-        try {
-          // Check if profile exists
-          const { data: profile, error } = await getProfile(user.uid);
-          
-          if (!profile) {
-            console.log('Creating new profile for user:', user.email);
-            // Create default profile if none exists
-            const defaultProfile: Profile = {
-              id: user.uid,
-              user_id: user.uid,
-              email: user.email || '',
-              username: user.displayName || user.email?.split('@')[0] || `user_${user.uid.substring(0, 6)}`,
-              photoURL: user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.uid}`,
-              personal_info: {
-                date_of_birth: '',
-                gender: 'male',
-                height: 170,
-                weight: 70,
-                contact: '',
-                blood_type: ''
-              },
-              medical_info: {
-                conditions: ''
-              },
-              preferences: {
-                activity_level: 'beginner' as ActivityLevel,
-                dietary_preferences: [],
-                workout_preferences: [],
-                fitness_goals: [],
-                fitness_level: '',
-                dietary: [],
-                workout_days: [],
-                workout_time: ''
-              },
-              created_at: Timestamp.now(),
-              updated_at: Timestamp.now()
-            };
-            
-            const { error: createError } = await createProfile(user.uid, defaultProfile);
-            if (createError) {
-              console.error('Error creating profile:', createError);
-              setError(new Error('Failed to create profile'));
-            }
-          } else {
-            console.log('Updating existing profile for user:', user.email);
-            // Update profile with latest auth data
-            const updates = {
-              email: user.email || profile.email,
-              username: user.displayName || profile.username,
-              photoURL: user.photoURL || profile.photoURL,
-              updated_at: Timestamp.now()
-            };
-            const { error: updateError } = await updateProfile(user.uid, updates);
-            if (updateError) {
-              console.error('Error updating profile:', updateError);
-              setError(new Error('Failed to update profile'));
-            }
-          }
-        } catch (error) {
-          console.error('Error managing profile:', error);
-          setError(error instanceof Error ? error : new Error('Failed to manage profile'));
-        }
+        setUser(user);
+        await handleProfile(user);
+      } else {
+        setUser(null);
+        setProfile(null);
       }
-
+      
       setLoading(false);
     });
 
     return () => {
       console.log('Cleaning up auth state listener');
+      isMounted = false;
       unsubscribe();
     };
+  }, [handleProfile]);
+
+  const signIn = useCallback(async (email: string, password: string) => {
+    return signInWithEmailAndPassword(auth, email, password);
   }, []);
 
-  const signIn = async (email: string, password: string) => {
-    return signInWithEmailAndPassword(auth, email, password);
-  };
-
-  const signUp = async (email: string, password: string) => {
+  const signUp = useCallback(async (email: string, password: string) => {
     return createUserWithEmailAndPassword(auth, email, password);
-  };
+  }, []);
 
-  const signInWithGoogle = async () => {
+  const signInWithGoogle = useCallback(async () => {
     const provider = new GoogleAuthProvider();
     return signInWithPopup(auth, provider);
-  };
+  }, []);
 
-  const signOut = async () => {
+  const signOut = useCallback(async () => {
     await firebaseSignOut(auth);
-  };
+  }, []);
 
-  const resetPassword = async (email: string) => {
+  const resetPassword = useCallback(async (email: string) => {
     await sendPasswordResetEmail(auth, email);
-  };
+  }, []);
 
-  const updatePassword = async (password: string) => {
+  const updatePassword = useCallback(async (password: string) => {
     if (!user) throw new Error('No user logged in');
     await updateUserPassword(user, password);
-  };
+  }, [user]);
 
-  const updateUserProfileData = async (data: { photoURL?: string; displayName?: string }) => {
+  const updateUserProfileData = useCallback(async (data: { photoURL?: string; displayName?: string }) => {
     if (!user) throw new Error('No user logged in');
     
     try {
-      // Update Firebase Auth profile
       await updateUserProfile(user, data);
       
-      // If photoURL is being updated, also update Firestore profile
-      if (data.photoURL) {
+      if (data.photoURL && profile) {
         const { error: updateError } = await updateProfile(user.uid, {
           photoURL: data.photoURL,
           updated_at: Timestamp.now()
         });
         
         if (updateError) throw updateError;
+        setProfile({ ...profile, photoURL: data.photoURL });
       }
       
-      // Force refresh the user to get updated profile
       await user.reload();
     } catch (error) {
       console.error('Error updating user profile:', error);
       throw error;
     }
-  };
+  }, [user, profile]);
 
-  const updateProfileData = async (data: Partial<Profile>) => {
+  const updateProfileData = useCallback(async (data: Partial<Profile>) => {
     if (!user) throw new Error('No user logged in');
     if (!profile) throw new Error('No profile found');
     
@@ -188,13 +188,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         updated_at: Timestamp.now()
       };
       
-      // Update profile using ProfileContext's updateProfile function
       await updateProfile(user.uid, updatedProfile);
-      
-      // Update local state
       setProfile(updatedProfile);
       
-      // Force refresh user data if needed
       if (data.photoURL || data.username) {
         await user.reload();
       }
@@ -202,9 +198,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error('Error updating profile:', error);
       throw error;
     }
-  };
+  }, [user, profile]);
 
-  const value: AuthContextType = {
+  const value = useMemo(() => ({
     user,
     loading,
     error,
@@ -224,7 +220,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     },
     isEmailVerified: user?.emailVerified || false,
     logout: signOut
-  };
+  }), [
+    user,
+    loading,
+    error,
+    profile,
+    signUp,
+    signIn,
+    signInWithGoogle,
+    signOut,
+    resetPassword,
+    updatePassword,
+    updateUserProfileData,
+    updateProfileData
+  ]);
 
   if (loading) {
     return (
@@ -251,3 +260,5 @@ export function useAuth() {
   }
   return context;
 }
+
+export default AuthContext;

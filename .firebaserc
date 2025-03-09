@@ -1,5 +1,15 @@
 {
   "projects": {
     "default": "triple-a-b8605"
-  }
+  },
+  "targets": {
+    "triple-a-b8605": {
+      "hosting": {
+        "triple-a": [
+          "localhost:5173"
+        ]
+      }
+    }
+  },
+  "etags": {}
 }

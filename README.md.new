@@ -1,0 +1,173 @@
+# TripleA-Admin
+
+A Firebase-powered admin dashboard for gym/fitness center management with authentication, membership tracking, and attendance management.
+
+## Latest Updates (March 1, 2024)
+
+- **Member Verification System**: Added ability to verify member identities with visual indicators
+- **Aadhaar Card Management**: Enhanced document capture and storage for member verification
+- **Profile Data Synchronization**: Improved data flow between admin app and main member app
+- **Profile Photo Management**: Admins can now update member profile photos that sync to authentication
+
+## Project Overview
+
+TripleA-Admin is a comprehensive admin dashboard designed for fitness centers to manage members, track memberships, and monitor attendance. The application provides a secure admin interface with role-based authentication, allowing only authorized administrators to access the system.
+
+## Technology Stack
+
+- **Frontend**: React with TypeScript
+- **UI Framework**: Custom components with Tailwind CSS
+- **Authentication**: Firebase Authentication with custom claims for admin roles
+- **Database**: Firestore for data storage
+- **Cloud Functions**: Firebase Functions for backend logic
+- **Storage**: Firebase Storage for media files
+- **Analytics**: Firebase Analytics for usage tracking
+- **Payment Processing**: Razorpay integration
+
+## Application Architecture
+
+### Core Components
+
+1. **Authentication System**
+   - Email/password and Google Sign-in
+   - Admin role verification using Firebase custom claims
+   - Protected routes for admin-only access
+
+2. **Member Management**
+   - Member profiles with personal, medical, and preference information
+   - Document verification with Aadhaar card front/back scanning
+   - Profile photo management with ImgBB integration
+   - Member verification status tracking
+
+3. **Membership Management**
+   - Membership plans and pricing
+   - Member subscription tracking
+   - Payment history and invoicing
+   - Membership renewal and expiration management
+
+4. **Attendance Tracking**
+   - Daily attendance records
+   - Attendance statistics and reporting
+   - Check-in/check-out management
+   - Attendance history visualization
+
+5. **Data Synchronization**
+   - Real-time updates with the main Triple_A member app
+   - Secure data sharing between admin and member interfaces
+   - Profile verification that propagates to member view
+   - Consistent data model across both applications
+
+## Integration with Member App
+
+The TripleA-Admin dashboard integrates seamlessly with the main Triple_A member application:
+
+1. **Shared Data Model**
+   - Both applications operate on the same Firestore database
+   - Role-based security rules control data access and modification
+   - Changes in one app are immediately reflected in the other
+
+2. **Admin-Only Functions**
+   - Member verification
+   - Profile photo management
+   - Document verification
+   - Identity document storage and retrieval
+   - Membership adjustments
+
+3. **Data Flow**
+   - Admin app can modify fields that are read-only in the member app
+   - Profile photos updated by admins sync to Firebase Authentication
+   - Verification status flows from admin app to member app
+
+## Security Model
+
+1. **Admin Authentication**
+   - Firebase Authentication with custom admin claims
+   - Secure login with email/password or Google authentication
+   - Session management and timeout controls
+
+2. **Firestore Security Rules**
+   - Strict access control based on user roles
+   - Admin-only write access to critical fields
+   - Data validation at the database level
+   - Protection against unauthorized modifications
+
+3. **API Security**
+   - Secure Firebase Functions for sensitive operations
+   - Request validation and sanitization
+   - Rate limiting to prevent abuse
+   - Proper error handling for security events
+
+## Getting Started
+
+### Prerequisites
+- Node.js (v14 or higher)
+- npm or yarn
+- Firebase account with Blaze plan (for Functions)
+- ImgBB API key (for image hosting)
+
+### Installation
+
+1. Clone the repository
+```bash
+git clone https://github.com/yourusername/TripleA-Admin.git
+cd TripleA-Admin
+```
+
+2. Install dependencies
+```bash
+npm install
+# or
+yarn install
+```
+
+3. Configure Firebase
+   - Create a Firebase project (or use the same project as the main Triple_A app)
+   - Enable Authentication, Firestore, Storage, and Functions
+   - Generate service account credentials for admin functions
+
+4. Set up environment variables
+```
+# Create a .env file with the following variables
+VITE_FIREBASE_API_KEY=your_api_key
+VITE_FIREBASE_AUTH_DOMAIN=your_auth_domain
+VITE_FIREBASE_PROJECT_ID=your_project_id
+VITE_FIREBASE_STORAGE_BUCKET=your_storage_bucket
+VITE_FIREBASE_MESSAGING_SENDER_ID=your_messaging_sender_id
+VITE_FIREBASE_APP_ID=your_app_id
+VITE_IMGBB_API_KEY=your_imgbb_api_key
+```
+
+5. Run the development server
+```bash
+npm run dev
+# or
+yarn dev
+```
+
+6. Build for production
+```bash
+npm run build
+# or
+yarn build
+```
+
+## Deployment
+
+The application can be deployed to platforms like Vercel, Netlify, or Firebase Hosting.
+
+For Firebase Hosting:
+
+```bash
+npm install -g firebase-tools
+firebase login
+firebase init
+firebase deploy
+```
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details. 

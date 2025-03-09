@@ -27,7 +27,24 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onScanError, onClo
         }
       },
       (errorMessage: string) => {
-        if (!errorMessage.includes('No MultiFormat Readers')) {
+        // Filter common non-problematic errors that shouldn't trigger toast notifications
+        const ignoredErrors = [
+          'No MultiFormat Readers',
+          'No QR code found',
+          'Scanning ongoing',
+          'Camera access denied',
+          'Stream ended',
+          'QR code parse error',
+          'Invalid data found',
+          'Couldn\'t find enough finder patterns',
+          'Camera accessing'
+        ];
+        
+        // Only trigger onScanError for significant errors that aren't part of normal operation
+        const isCommonError = ignoredErrors.some(error => errorMessage.includes(error));
+        
+        if (!isCommonError) {
+          console.log('QR scan error:', errorMessage); // Log for debugging
           onScanError(errorMessage);
         }
       }

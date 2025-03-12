@@ -1,29 +1,15 @@
-import { ArrowLeft, Sun, Moon, Bell, Shield, HelpCircle, LogOut, User, Settings as SettingsIcon, CreditCard, Monitor, Calendar, Lock, Info, GiftIcon } from 'lucide-react';
+import { ArrowLeft, Sun, Moon, Bell, Shield, HelpCircle, LogOut, User, Settings as SettingsIcon, CreditCard, Monitor, Calendar, Lock, Info } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { useState, useEffect } from 'react';
 import { useNotification } from '../context/NotificationContext';
 
-// List of admin user IDs
-const ADMIN_IDS = [
-  // Add your admin UIDs here
-  'BbYkrpcPNrarNbXCCpQd1AvUaLu2' // Example admin UID
-];
-
 export default function Settings() {
   const navigate = useNavigate();
   const { themeMode, setThemeMode, isDarkMode } = useTheme();
   const { signOut, user } = useAuth();
   const [isThemeDropdownOpen, setIsThemeDropdownOpen] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
-
-  // Check if user is admin
-  useEffect(() => {
-    if (user) {
-      setIsAdmin(ADMIN_IDS.includes(user.uid));
-    }
-  }, [user]);
 
   const handleLogout = async () => {
     try {
@@ -250,27 +236,6 @@ export default function Settings() {
               </button>
             </div>
           </div>
-
-          {/* Admin Section - Only shown to admins */}
-          {isAdmin && (
-            <div className="bg-white dark:bg-[#1E1E1E] rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800">
-              <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800">
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Admin Settings</h2>
-              </div>
-              <div className="p-4">
-                <button
-                  onClick={() => navigate('/admin/holidays')}
-                  className="flex items-center w-full px-4 py-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
-                >
-                  <GiftIcon className="w-5 h-5 text-yellow-500 mr-3" />
-                  <div className="flex-1 text-left">
-                    <p className="text-gray-700 dark:text-gray-200 font-medium">Holiday Management</p>
-                    <p className="text-sm text-gray-500">Add and manage gym holidays</p>
-                  </div>
-                </button>
-              </div>
-            </div>
-          )}
 
           {/* Logout */}
           <button

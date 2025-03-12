@@ -4,12 +4,15 @@ import { useAuth } from '../context/AuthContext';
 import { useProfile } from '../context/ProfileContext';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
-import { format, isSameDay } from 'date-fns';
-import { CalendarIcon, CheckCircle2, Scan } from 'lucide-react';
+import { format, isSameDay, isToday, isBefore } from 'date-fns';
+import { CalendarIcon, CheckCircle2, Scan, RefreshCw, GiftIcon } from 'lucide-react';
 import toast from 'react-hot-toast';
 import QRScanner from '../components/QRScanner';
 import { attendanceService } from '../services/AttendanceService';
 import MembershipRequired from '../components/MembershipRequired';
+import { useMembership } from '../context/MembershipContext';
+import { getAllHolidays } from '../services/HolidayService';
+import { Holiday } from '../types/holiday';
 
 // Custom dark mode styles for calendar
 const calendarDarkStyles = `
@@ -61,59 +64,93 @@ const Attendance = () => {
   const { profile } = useProfile();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { isActive, loading: membershipLoading } = useMembership();
   const [showScanner, setShowScanner] = useState(false);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<any>(null);
   const [recentAttendance, setRecentAttendance] = useState<any[]>([]);
   const [allAttendance, setAllAttendance] = useState<any[]>([]);
-  const [membershipStatus, setMembershipStatus] = useState<{
-    isActive: boolean;
-    membership: any | null;
-    error: string | null;
-  }>({ isActive: false, membership: null, error: null });
+  const [attendanceMarkedToday, setAttendanceMarkedToday] = useState(false);
+  const [holidays, setHolidays] = useState<Holiday[]>([]);
+
+  // Function to check if attendance is marked for today
+  const checkTodayAttendance = () => {
+    if (!allAttendance.length) return false;
+    
+    const today = new Date();
+    const todayFormatted = format(today, 'yyyy-MM-dd');
+    
+    const todayRecord = allAttendance.find(record => {
+      const recordDate = format(record.date.toDate(), 'yyyy-MM-dd');
+      return recordDate === todayFormatted;
+    });
+    
+    return !!todayRecord;
+  };
 
   // Function to load attendance data
   const loadData = async (userId: string) => {
     try {
-      const stats = await attendanceService.getAttendanceStats(userId);
+      setLoading(true);
+      
+      // Force recalculate stats to ensure they're up to date
+      const stats = await attendanceService.forceRecalculateStats(userId);
+      if (!stats) {
+        // Fallback to regular getAttendanceStats if recalculation fails
+        const fallbackStats = await attendanceService.getAttendanceStats(userId);
+        setStats(fallbackStats);
+      } else {
+        setStats(stats);
+      }
+      
       const records = await attendanceService.getAttendanceRecords(userId);
-      setStats(stats);
       setAllAttendance(records);
+      
+      // After loading the attendance records, check if today's attendance is marked
+      const isMarkedToday = records.some(record => {
+        const recordDate = format(record.date.toDate(), 'yyyy-MM-dd');
+        return recordDate === format(new Date(), 'yyyy-MM-dd');
+      });
+      
+      setAttendanceMarkedToday(isMarkedToday);
+      setLoading(false);
     } catch (error) {
       console.error('Error loading attendance data:', error);
+      setLoading(false);
     }
+  };
+
+  // Load holidays
+  useEffect(() => {
+    const fetchHolidays = async () => {
+      try {
+        const holidays = await getAllHolidays();
+        setHolidays(holidays);
+      } catch (error) {
+        console.error('Error fetching holidays:', error);
+      }
+    };
+    
+    fetchHolidays();
+  }, []);
+
+  // Function to check if a date is a holiday
+  const isDateHoliday = (date: Date): Holiday | undefined => {
+    return holidays.find(holiday => 
+      isSameDay(holiday.date.toDate(), date)
+    );
   };
 
   useEffect(() => {
     if (!user?.uid) return;
-
-    const fetchMembershipStatus = async () => {
-      try {
-        // Directly check if membership is active for now
-        // We'll simplify this since checkMembershipStatus doesn't exist
-        const isActive = true; // For demo purposes, we'll assume active
-        setMembershipStatus({
-          isActive,
-          membership: null,
-          error: null
-        });
-        setLoading(false);
-      } catch (error) {
-        console.error('Error fetching membership status:', error);
-        setMembershipStatus({
-          isActive: false,
-          membership: null,
-          error: 'Failed to fetch membership status'
-        });
-        setLoading(false);
-      }
-    };
-
-    fetchMembershipStatus();
-  }, [user]);
+    if (!isActive) {
+      setLoading(false);
+      return;
+    }
+  }, [user, isActive]);
 
   useEffect(() => {
-    if (!profile?.id || !membershipStatus.isActive) return;
+    if (!profile?.id || !isActive) return;
 
     // Load initial data
     loadData(profile.id);
@@ -128,9 +165,9 @@ const Attendance = () => {
       // Cleanup realtime listener when component unmounts
       attendanceService.cleanup();
     };
-  }, [profile?.id, membershipStatus.isActive]);
+  }, [profile?.id, isActive]);
 
-  if (loading) {
+  if (membershipLoading || loading) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-[#121212] flex items-center justify-center">
         <div className="text-center space-y-4">
@@ -141,7 +178,7 @@ const Attendance = () => {
     );
   }
 
-  if (!membershipStatus.isActive) {
+  if (!isActive) {
     return <MembershipRequired feature="attendance" />;
   }
 
@@ -165,13 +202,33 @@ const Attendance = () => {
       
       if (response.success) {
         toast.success(response.message);
-        // Reload data after marking attendance
+        setAttendanceMarkedToday(true);
+        
+        // Force recalculate stats after marking attendance
+        const recalculateToast = toast.loading('Updating attendance stats...');
+        try {
+          const updatedStats = await attendanceService.forceRecalculateStats(profile.id);
+          toast.dismiss(recalculateToast);
+          if (updatedStats) {
+            setStats(updatedStats);
+            toast.success('Stats updated successfully');
+          } else {
+            toast.error('Failed to update stats');
+          }
+        } catch (statsError) {
+          toast.dismiss(recalculateToast);
+          console.error('Error recalculating stats:', statsError);
+          toast.error('Failed to update attendance stats');
+        }
+        
+        // Reload all attendance data
         await loadData(profile.id);
       } else {
         toast.error(response.message);
       }
     } catch (error) {
       toast.dismiss(loadingToast);
+      console.error('Error marking attendance:', error);
       toast.error('Failed to mark attendance');
     }
   };
@@ -186,32 +243,60 @@ const Attendance = () => {
     });
   };
 
+  // Modify the tileClassName function to include holiday styles
   const tileClassName = ({ date }: { date: Date }) => {
-    let classes = [];
+    // Format date for comparison
+    const dateString = format(date, 'yyyy-MM-dd');
     
-    // Check if day is present in attendance records
-    const isPresent = allAttendance.some(record => 
-      record.date && isSameDay(record.date.toDate(), date)
-    );
+    // Get records matching this date
+    const matchingRecords = allAttendance.filter(record => {
+      return format(record.date.toDate(), 'yyyy-MM-dd') === dateString;
+    });
     
-    // Add class based on attendance
-    if (isPresent) {
-      classes.push('bg-emerald-50 dark:bg-emerald-500/10 text-emerald-800 dark:text-emerald-400');
+    // Check if date is a holiday
+    const holiday = isDateHoliday(date);
+    
+    let classes = '';
+    
+    if (matchingRecords.length > 0) {
+      // User was present on this date
+      classes += 'bg-emerald-100 dark:bg-emerald-900/20 text-emerald-800 dark:text-emerald-300 ';
+    } else if (holiday) {
+      // Date is a holiday
+      classes += 'bg-yellow-100 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-300 ';
+    } else if (isBefore(date, new Date()) && !isToday(date)) {
+      // Past date with no attendance
+      classes += 'bg-red-100 dark:bg-red-900/20 text-red-800 dark:text-red-300 ';
     }
     
-    return classes.join(' ');
+    return classes;
   };
   
+  // Modify the tileContent function to show holiday icons
   const tileContent = ({ date }: { date: Date }) => {
-    // Check if day is present in attendance records
-    const attendance = allAttendance.find(record => 
-      record.date && isSameDay(record.date.toDate(), date)
-    );
+    // Check if date is a holiday
+    const holiday = isDateHoliday(date);
     
-    if (attendance) {
+    if (holiday) {
       return (
-        <div className="absolute bottom-1 right-1">
-          <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
+        <div className="flex justify-center">
+          <GiftIcon className="w-3 h-3 text-yellow-600 dark:text-yellow-400" />
+        </div>
+      );
+    }
+    
+    // Format date for comparison
+    const dateString = format(date, 'yyyy-MM-dd');
+    
+    // Get records matching this date
+    const matchingRecords = allAttendance.filter(record => {
+      return format(record.date.toDate(), 'yyyy-MM-dd') === dateString;
+    });
+    
+    if (matchingRecords.length > 0) {
+      return (
+        <div className="flex justify-center">
+          <CheckCircle2 className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
         </div>
       );
     }
@@ -399,6 +484,28 @@ const Attendance = () => {
     );
   };
 
+  const handleRefreshStats = async () => {
+    if (!profile?.id) return;
+    
+    const loadingToast = toast.loading('Refreshing attendance stats...');
+    
+    try {
+      const updatedStats = await attendanceService.forceRecalculateStats(profile.id);
+      toast.dismiss(loadingToast);
+      
+      if (updatedStats) {
+        setStats(updatedStats);
+        toast.success('Stats refreshed successfully');
+      } else {
+        toast.error('Failed to refresh stats');
+      }
+    } catch (error) {
+      toast.dismiss(loadingToast);
+      console.error('Error refreshing stats:', error);
+      toast.error('Failed to refresh attendance stats');
+    }
+  };
+
   return (
     <>
       <style>{calendarDarkStyles}</style>
@@ -414,13 +521,30 @@ const Attendance = () => {
                 <h1 className="text-3xl font-bold text-white">Attendance</h1>
                 <p className="text-emerald-50 mt-1 text-lg">Track your gym visits and build your streak</p>
               </div>
-              <button
-                onClick={() => setShowScanner(true)}
-                className="flex items-center gap-2 px-6 py-3 bg-white hover:bg-gray-100 text-emerald-600 rounded-xl font-semibold transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
-              >
-                <Scan className="w-5 h-5" />
-                <span>Mark Attendance</span>
-              </button>
+              <div className="flex gap-3 mt-4 sm:mt-0">
+                <button 
+                  onClick={handleRefreshStats}
+                  className="py-2 px-4 bg-white/10 hover:bg-white/20 text-white rounded-lg flex items-center gap-2 text-sm transition-all"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  Refresh Stats
+                </button>
+                
+                {!attendanceMarkedToday ? (
+                  <button 
+                    onClick={() => setShowScanner(true)}
+                    className="py-2 px-4 bg-white text-emerald-700 rounded-lg flex items-center gap-2 text-sm transition-all hover:bg-white/90"
+                  >
+                    <Scan className="w-4 h-4" />
+                    Mark Attendance
+                  </button>
+                ) : (
+                  <div className="py-2 px-4 bg-emerald-500/30 text-white rounded-lg flex items-center gap-2 text-sm">
+                    <CheckCircle2 className="w-4 h-4" />
+                    Marked for Today
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
@@ -430,7 +554,7 @@ const Attendance = () => {
           {/* Recent Attendance - Improved design */}
           {renderRecentAttendance()}
 
-          {/* Calendar Section - Enhanced container */}
+          {/* Calendar Section - Enhanced container with holiday list */}
           <div className="bg-white dark:bg-[#1E1E1E] rounded-2xl p-6 shadow-xl border border-gray-100 dark:border-gray-800 transition-all">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-3">
@@ -449,11 +573,40 @@ const Attendance = () => {
                   <span className="text-sm text-gray-600 dark:text-gray-400">Absent</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 bg-gray-500 rounded-full"></span>
+                  <span className="w-3 h-3 bg-yellow-500 rounded-full"></span>
                   <span className="text-sm text-gray-600 dark:text-gray-400">Holiday</span>
                 </div>
               </div>
             </div>
+            
+            {/* Upcoming holidays section */}
+            {holidays.length > 0 && (
+              <div className="mb-6 bg-gray-50 dark:bg-gray-800/40 rounded-xl p-4">
+                <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                  <GiftIcon className="w-4 h-4 text-yellow-500" />
+                  Upcoming Holidays
+                </h4>
+                <div className="space-y-2">
+                  {holidays
+                    .filter(holiday => isBefore(new Date(), holiday.date.toDate()) || isToday(holiday.date.toDate()))
+                    .slice(0, 3)
+                    .map(holiday => (
+                      <div key={holiday.id} className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{holiday.title}</p>
+                          <p className="text-xs text-gray-500">{format(holiday.date.toDate(), 'EEEE, MMMM d, yyyy')}</p>
+                        </div>
+                        {isToday(holiday.date.toDate()) && (
+                          <span className="px-2 py-1 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 text-xs rounded-full">
+                            Today
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
+            
             <div className="calendar-container overflow-hidden rounded-xl">
               <Calendar
                 value={new Date()}

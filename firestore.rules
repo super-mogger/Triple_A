@@ -75,18 +75,39 @@ service cloud.firestore {
 
     // Water Intake Collection
     match /waterIntake/{document} {
+      // Extract userId from document ID or use the userId field
+      function isDocumentOwner() {
+        return (
+          // Check userId field in the document
+          (resource != null && resource.data.userId == request.auth.uid) ||
+          // Check document ID format (userId_date)
+          document.split('_')[0] == request.auth.uid
+        );
+      }
+      
+      // Allow authenticated users to read their own documents
       allow read: if isAuthenticated() && (
-        request.auth.uid == resource.data.userId || 
-        request.auth.uid == document.split('_')[0] ||
+        isDocumentOwner() || 
         isAdmin()
       );
+      
+      // Allow authenticated users to create their own documents
       allow create: if isAuthenticated() && (
-        request.auth.uid == request.resource.data.userId ||
-        request.auth.uid == document.split('_')[0]
+        // Ensure userId in data matches auth ID
+        request.resource.data.userId == request.auth.uid &&
+        // Ensure document ID follows the format userId_date
+        document.split('_')[0] == request.auth.uid
       );
+      
+      // Allow authenticated users to update their own documents
       allow update: if isAuthenticated() && (
-        request.auth.uid == resource.data.userId ||
-        request.auth.uid == document.split('_')[0] ||
+        isDocumentOwner() || 
+        isAdmin()
+      );
+      
+      // Allow authenticated users to delete their own documents
+      allow delete: if isAuthenticated() && (
+        isDocumentOwner() || 
         isAdmin()
       );
     }
@@ -110,6 +131,14 @@ service cloud.firestore {
     match /admins/{adminId} {
       allow read: if isAdmin();
       allow write: if isAdmin();
+    }
+    
+    // Holidays Collection
+    match /holidays/{holidayId} {
+      // Anyone authenticated can read holidays
+      allow read: if isAuthenticated();
+      // Only admins can create, update, or delete holidays
+      allow create, update, delete: if isAdmin();
     }
   }
 }

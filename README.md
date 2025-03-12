@@ -181,60 +181,55 @@ The Triple A Fitness App works in conjunction with an admin dashboard (TripleA-A
 
 ---
 
-## Getting Started
+## Installation and Running the App
 
 ### Prerequisites
-- Node.js (v14 or higher)
-- npm or yarn
-- Firebase account
+- Node.js (v16 or newer)
+- npm (v7 or newer)
+- Git
 
-### Installation
+### Installation Steps
+1. Clone the repository:
+   ```
+   git clone https://github.com/yourusername/Triple_A.git
+   cd Triple_A
+   ```
 
-1. Clone the repository
-```bash
-git clone https://github.com/yourusername/Triple_A.git
-cd Triple_A
-```
+2. Install dependencies:
+   ```
+   npm install
+   ```
 
-2. Install dependencies
-```bash
-npm install
-# or
-yarn install
-```
+3. Start the development server:
+   
+   **For Unix/Mac/Git Bash:**
+   ```
+   npm run dev
+   ```
+   
+   **For Windows PowerShell:**
+   ```
+   npm run dev-win
+   ```
+   
+   **Alternatives for Windows:**
+   - Double-click the `start-dev.bat` file in the project root
+   - Right-click on `start-dev.ps1` and select "Run with PowerShell"
+   - Run `.\start-dev.ps1` in PowerShell (may require execution policy change)
 
-3. Set up Firebase
-   - Create a new Firebase project in the [Firebase Console](https://console.firebase.google.com)
-   - Enable Authentication (Email/Password and Google Sign-in)
-   - Enable Firestore Database
-   - Enable Storage (for profile pictures)
-   - Add a Web App to your Firebase project
-   - Copy the Firebase configuration
+4. Open your browser and navigate to `http://localhost:5173` (or the port shown in your terminal).
 
-4. Create a `.env` file in the root directory:
-```env
-VITE_FIREBASE_API_KEY=your_api_key
-VITE_FIREBASE_AUTH_DOMAIN=your_auth_domain
-VITE_FIREBASE_PROJECT_ID=your_project_id
-VITE_FIREBASE_STORAGE_BUCKET=your_storage_bucket
-VITE_FIREBASE_MESSAGING_SENDER_ID=your_messaging_sender_id
-VITE_FIREBASE_APP_ID=your_app_id
-VITE_IMGBB_API_KEY=your_imgbb_api_key
-```
-
-5. Run the development server
-```bash
-npm run dev
-# or
-yarn dev
-```
-
-6. Build for production
-```bash
-npm run build
-# or
-yarn build
-```
+### Building for Production
+   
+   **For Unix/Mac/Git Bash:**
+   ```
+   npm run build
+   ```
+   
+   **For Windows PowerShell:**
+   ```
+   npm run build-win
+   ```
 
 ## Deployment
 

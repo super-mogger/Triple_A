@@ -10,6 +10,7 @@ import type { Membership } from '../types/profile';
 import { fetchFoodImage } from '../services/DietService';
 import MembershipRequired from '../components/MembershipRequired';
 import { Droplets } from 'lucide-react';
+import { useMembership } from '../context/MembershipContext';
 
 interface DietPlanCardProps {
   title: string;
@@ -217,39 +218,20 @@ export default function DietPlan() {
   const { isDarkMode } = useTheme();
   const { profile } = useProfile();
   const { generateDietPlan } = useDietService();
+  const { isActive, loading: membershipLoading } = useMembership();
   const [selectedPlan, setSelectedPlan] = useState<DietPlanType | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [membershipStatus, setMembershipStatus] = useState<{
-    isActive: boolean;
-    membership: Membership | null;
-    error: string | null;
-  }>({ isActive: false, membership: null, error: null });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user?.uid) return;
-
-    const fetchMembershipStatus = async () => {
-      const status = await checkMembershipStatus(user.uid);
-      setMembershipStatus(status);
+    if (!membershipLoading) {
       setLoading(false);
-    };
-
-    fetchMembershipStatus();
-  }, [user]);
+    }
+  }, [membershipLoading]);
 
   const isPremium = useMemo(() => {
-    if (!membershipStatus.membership) return false;
-    if (!membershipStatus.isActive) return false;
-    
-    const now = new Date().getTime();
-    const endDate = membershipStatus.membership.end_date?.toDate().getTime();
-    
-    // If we have an active membership, consider it premium even if endDate is not set
-    if (membershipStatus.isActive && !endDate) return true;
-    
-    return membershipStatus.isActive && typeof endDate === 'number' && now < endDate;
-  }, [membershipStatus]);
+    return isActive;
+  }, [isActive]);
 
   const dietPlans = useMemo<DietPlanType[]>(() => [
     {
@@ -327,7 +309,7 @@ export default function DietPlan() {
   ], []);
 
   const handlePlanSelect = (plan: DietPlanType) => {
-    if (!isPremium) {
+    if (!isActive) {
       navigate('/membership');
       return;
     }
@@ -340,7 +322,7 @@ export default function DietPlan() {
       return;
     }
 
-    if (!isPremium) {
+    if (!isActive) {
       navigate('/membership');
       return;
     }
@@ -387,7 +369,7 @@ export default function DietPlan() {
     return age;
   };
 
-  if (loading) {
+  if (loading || membershipLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#121212]">
         <div className="animate-spin rounded-full h-14 w-14 border-4 border-gray-200 dark:border-gray-700 border-t-emerald-500"></div>
@@ -395,7 +377,7 @@ export default function DietPlan() {
     );
   }
 
-  if (!membershipStatus.isActive) {
+  if (!isActive) {
     return <MembershipRequired feature="diet" />;
   }
 

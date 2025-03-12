@@ -19,6 +19,7 @@ import { useAuth } from '../context/AuthContext';
 import { checkMembershipStatus } from '../services/FirestoreService';
 import type { Membership } from '../types/profile';
 import MembershipRequired from '../components/MembershipRequired';
+import { useMembership } from '../context/MembershipContext';
 
 type SplitType = 'bro-split' | 'push-pull-legs' | 'upper-lower';
 
@@ -255,16 +256,12 @@ export default function Workouts() {
   const { profile } = useProfile();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { isActive, loading: membershipLoading } = useMembership();
   const [loading, setLoading] = useState(true);
   const [currentDay, setCurrentDay] = useState<string>(() => {
     const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     return days[new Date().getDay()];
   });
-  const [membershipStatus, setMembershipStatus] = useState<{
-    isActive: boolean;
-    membership: Membership | null;
-    error: string | null;
-  }>({ isActive: false, membership: null, error: null });
   const [workouts, setWorkouts] = useState<WorkoutPlan[]>([]);
   const [filteredWorkouts, setFilteredWorkouts] = useState<WorkoutPlan[]>([]);
   const [selectedWorkout, setSelectedWorkout] = useState<WorkoutPlan | null>(null);
@@ -300,25 +297,14 @@ export default function Workouts() {
     }
   }, []);
 
-  // Check if user has active membership
+  // Update the useEffect that depends on membership status
   useEffect(() => {
-    if (!user?.uid) return;
-
-    const fetchMembershipStatus = async () => {
-      const status = await checkMembershipStatus(user.uid);
-      setMembershipStatus(status);
-      setLoading(false);
-    };
-
-    fetchMembershipStatus();
-  }, [user]);
-
-  // Fetch workouts when membership is active
-  useEffect(() => {
-    if (membershipStatus.isActive) {
+    if (isActive) {
       fetchWorkouts();
+    } else {
+      setLoading(false);
     }
-  }, [membershipStatus.isActive, fetchWorkouts]);
+  }, [isActive, fetchWorkouts]);
 
   // Define applyFilters at the top level
   const applyFilters = useCallback(() => {
@@ -517,7 +503,8 @@ export default function Workouts() {
     }
   };
 
-  if (loading) {
+  // Update loading check
+  if (loading || membershipLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#121212]">
         <div className="animate-spin rounded-full h-14 w-14 border-4 border-gray-200 dark:border-gray-700 border-t-emerald-500"></div>
@@ -525,7 +512,8 @@ export default function Workouts() {
     );
   }
 
-  if (!membershipStatus.isActive) {
+  // Update membership check
+  if (!isActive) {
     return <MembershipRequired feature="workout" />;
   }
 

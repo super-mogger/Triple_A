@@ -4,9 +4,11 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { ProfileProvider } from './context/ProfileContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { Toaster } from 'react-hot-toast';
-import { NotificationProvider } from './context/NotificationContext';
+import { NotificationProvider, useNotification } from './context/NotificationContext';
 import { PrivacyProvider } from './context/PrivacyContext';
 import { MembershipProvider } from './context/MembershipContext';
+import { useEffect } from 'react';
+import AdminHolidays from './pages/AdminHolidays';
 
 // Lazy load components
 const Layout = lazy(() => import('./components/Layout'));
@@ -40,6 +42,35 @@ const LoadingSpinner = () => (
     </div>
   </div>
 );
+
+// Component to initialize water reminders
+function WaterReminderInitializer() {
+  const { user } = useAuth();
+  const { notifications } = useNotification();
+  
+  useEffect(() => {
+    const initializeWaterReminders = async () => {
+      if (!user?.uid || !notifications.waterReminders) return;
+      
+      try {
+        // Dynamically import to reduce bundle size
+        const waterRemindersModule = await import('./hooks/useWaterReminders');
+        const waterReminders = waterRemindersModule.useWaterReminders();
+        
+        // Initialize water reminders if available
+        if (waterReminders.initializeReminders) {
+          waterReminders.initializeReminders();
+        }
+      } catch (error) {
+        console.error('Error initializing water reminders:', error);
+      }
+    };
+    
+    initializeWaterReminders();
+  }, [user?.uid, notifications.waterReminders]);
+  
+  return null; // This component doesn't render anything
+}
 
 function AppRoutes() {
   const { user, loading } = useAuth();
@@ -95,9 +126,17 @@ function AppRoutes() {
           <Route path="/notifications" element={<NotificationSettings />} />
         </Route>
 
+        {/* Admin Routes */}
+        <Route path="/admin">
+          <Route path="holidays" element={<AdminHolidays />} />
+        </Route>
+
         {/* Catch-all route */}
         <Route path="*" element={<Navigate to="/welcome" replace />} />
       </Routes>
+      
+      {/* Initialize water reminders */}
+      <WaterReminderInitializer />
     </Suspense>
   );
 }
@@ -105,9 +144,9 @@ function AppRoutes() {
 function App() {
   return (
     <Suspense fallback={<LoadingSpinner />}>
-      <NotificationProvider>
-        <ThemeProvider>
-          <AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <NotificationProvider>
             <ProfileProvider>
               <MembershipProvider>
                 <PrivacyProvider>
@@ -125,9 +164,9 @@ function App() {
                 </PrivacyProvider>
               </MembershipProvider>
             </ProfileProvider>
-          </AuthProvider>
-        </ThemeProvider>
-      </NotificationProvider>
+          </NotificationProvider>
+        </AuthProvider>
+      </ThemeProvider>
     </Suspense>
   );
 }

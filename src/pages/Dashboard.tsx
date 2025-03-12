@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useProfile } from '../context/ProfileContext';
-import { Activity, Award, Calendar, Clock, Crown, Dumbbell, Target, TrendingUp, User, Scan, X } from 'lucide-react';
+import { Activity, Award, Calendar, Clock, Crown, Dumbbell, Target, TrendingUp, User, Scan, X, CheckCircle2, GiftIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { checkMembershipStatus } from '../services/FirestoreService';
 import type { Membership } from '../types/profile';
@@ -10,7 +10,10 @@ import { attendanceService } from '../services/AttendanceService';
 import { useAuth } from '../context/AuthContext';
 import ProfileSetupModal from '../components/ProfileSetupModal';
 import WaterIntakeCard from '../components/WaterIntakeCard';
-import { format } from 'date-fns';
+import { format, isToday, isTomorrow, addDays, differenceInDays } from 'date-fns';
+import { useMembership } from '../context/MembershipContext';
+import { getNextHoliday, getUpcomingHolidays } from '../services/HolidayService';
+import { Holiday } from '../types/holiday';
 
 interface Achievement {
   id: string;
@@ -29,14 +32,10 @@ interface AttendanceStats {
 }
 
 export default function Dashboard() {
-  const { profile, loading } = useProfile();
+  const { profile, loading: profileLoading } = useProfile();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [membershipStatus, setMembershipStatus] = useState<{
-    isActive: boolean;
-    membership: Membership | null;
-    error: string | null;
-  }>({ isActive: false, membership: null, error: null });
+  const { isActive, loading: membershipLoading } = useMembership();
   const [streak, setStreak] = useState(0);
   const [lastWorkoutDate, setLastWorkoutDate] = useState<string | null>(null);
   const [showStreakBrokenAlert, setShowStreakBrokenAlert] = useState(false);
@@ -44,6 +43,11 @@ export default function Dashboard() {
   const [attendanceStats, setAttendanceStats] = useState<AttendanceStats | null>(null);
   const [showSetupModal, setShowSetupModal] = useState(false);
   const [showAttendanceReminder, setShowAttendanceReminder] = useState(false);
+  const [showPremiumAlert, setShowPremiumAlert] = useState(true);
+  const [attendanceMarkedToday, setAttendanceMarkedToday] = useState(false);
+  const [nextHoliday, setNextHoliday] = useState<Holiday | null>(null);
+  const [showHolidayAlert, setShowHolidayAlert] = useState(true);
+  const [upcomingHolidays, setUpcomingHolidays] = useState<Holiday[]>([]);
 
   useEffect(() => {
     if (!profile?.id) return;
@@ -107,23 +111,6 @@ export default function Dashboard() {
     }
   }, [attendanceStats]);
 
-  // Add membership status check
-  useEffect(() => {
-    if (!user?.uid) return;
-
-    const fetchMembershipStatus = async () => {
-      const status = await checkMembershipStatus(user.uid);
-      setMembershipStatus(status);
-    };
-
-    fetchMembershipStatus();
-
-    // Set up an interval to check membership status every minute
-    const intervalId = setInterval(fetchMembershipStatus, 60000);
-
-    return () => clearInterval(intervalId);
-  }, [user]);
-
   useEffect(() => {
     // Show setup modal if profile is incomplete
     if (profile && (!profile.username || !profile.photoURL)) {
@@ -131,7 +118,7 @@ export default function Dashboard() {
     }
   }, [profile]);
 
-  // Add this useEffect to check today's attendance
+  // Update the useEffect to check today's attendance and set the state
   useEffect(() => {
     const checkTodayAttendance = async () => {
       if (!profile?.id) return;
@@ -143,6 +130,8 @@ export default function Dashboard() {
           format(record.date.toDate(), 'yyyy-MM-dd') === format(today, 'yyyy-MM-dd')
         );
 
+        // Set both states based on whether attendance is marked today
+        setAttendanceMarkedToday(!!todayRecord);
         setShowAttendanceReminder(!todayRecord);
       } catch (error) {
         console.error('Error checking attendance:', error);
@@ -151,6 +140,31 @@ export default function Dashboard() {
 
     checkTodayAttendance();
   }, [profile?.id]);
+
+  // Update effect to fetch upcoming holidays (not just next one)
+  useEffect(() => {
+    const fetchNextHoliday = async () => {
+      try {
+        const holiday = await getNextHoliday();
+        setNextHoliday(holiday);
+      } catch (error) {
+        console.error('Error fetching next holiday:', error);
+      }
+    };
+    
+    const fetchUpcomingHolidays = async () => {
+      try {
+        // Get holidays for the next 60 days
+        const holidays = await getUpcomingHolidays(60);
+        setUpcomingHolidays(holidays);
+      } catch (error) {
+        console.error('Error fetching upcoming holidays:', error);
+      }
+    };
+    
+    fetchNextHoliday();
+    fetchUpcomingHolidays();
+  }, []);
 
   const handleStreakBroken = () => {
     const audio = new Audio('/sounds/streak-broken.mp3');
@@ -196,13 +210,29 @@ export default function Dashboard() {
     return null;
   };
 
-  if (loading || !profile) {
+  // Helper to format holiday date
+  const formatHolidayDate = (holiday: Holiday): string => {
+    const date = holiday.date.toDate();
+    
+    if (isToday(date)) {
+      return 'today';
+    } else if (isTomorrow(date)) {
+      return 'tomorrow';
+    } else {
+      const daysUntil = differenceInDays(date, new Date());
+      if (daysUntil <= 7) {
+        return `in ${daysUntil} days (${format(date, 'EEEE')})`;
+      } else {
+        return format(date, 'MMMM d, yyyy');
+      }
+    }
+  };
+
+  // Update loading check
+  if (profileLoading || membershipLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#121212]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-14 w-14 border-4 border-gray-200 dark:border-gray-700 border-t-emerald-500 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">Loading your dashboard...</p>
-        </div>
+        <div className="animate-spin rounded-full h-14 w-14 border-4 border-gray-200 dark:border-gray-700 border-t-emerald-500"></div>
       </div>
     );
   }
@@ -211,6 +241,71 @@ export default function Dashboard() {
     <>
       <div className="min-h-screen bg-gray-50 dark:bg-[#121212] py-4 sm:py-8">
         <div className="container mx-auto px-3 sm:px-4 md:px-6 pb-20 sm:pb-24 max-w-5xl">
+          
+          {/* Premium Membership Alert - Moved to top */}
+          {!isActive && showPremiumAlert && (
+            <div className="sticky top-0 z-50 bg-gradient-to-r from-purple-500 to-indigo-600 rounded-2xl sm:rounded-3xl p-5 sm:p-6 shadow-lg mb-5 sm:mb-8 animate-slide-in-top">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-6">
+                <div className="flex items-center gap-3 sm:gap-4">
+                  <div className="p-2.5 bg-white/20 backdrop-blur-sm rounded-xl animate-pulse">
+                    <Crown className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-white text-lg">Upgrade to Premium</h3>
+                    <p className="text-purple-100 text-sm sm:text-base">Unlock all features including Water Tracking & Attendance</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => navigate('/membership')}
+                    className="w-full sm:w-auto px-6 py-3.5 bg-white text-purple-600 rounded-xl text-sm font-bold hover:bg-gray-50 transition-colors shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-200"
+                  >
+                    Upgrade Now
+                  </button>
+                  <button 
+                    onClick={() => setShowPremiumAlert(false)}
+                    className="p-2.5 hover:bg-white/10 rounded-full text-white/70 hover:text-white"
+                    aria-label="Dismiss"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {/* Holiday Alert - Show upcoming holiday */}
+          {nextHoliday && showHolidayAlert && (
+            <div className="bg-gradient-to-r from-yellow-500 to-amber-500 rounded-2xl sm:rounded-3xl p-5 sm:p-6 shadow-lg mb-5 sm:mb-8 animate-slide-in-top">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-6 relative">
+                <div className="flex items-center gap-3 sm:gap-4">
+                  <div className="p-2.5 bg-white/20 backdrop-blur-sm rounded-xl animate-pulse">
+                    <GiftIcon className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-white text-lg">Upcoming Holiday</h3>
+                    <p className="text-yellow-50 text-sm sm:text-base">
+                      {isToday(nextHoliday.date.toDate()) 
+                        ? `Today is a holiday: ${nextHoliday.title}`
+                        : `The gym will be closed ${formatHolidayDate(nextHoliday)}: ${nextHoliday.title}`
+                      }
+                    </p>
+                    {nextHoliday.description && (
+                      <p className="text-yellow-100 text-xs mt-1">{nextHoliday.description}</p>
+                    )}
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setShowHolidayAlert(false)}
+                  className="absolute top-0 right-0 p-2.5 hover:bg-white/10 rounded-full text-white/70 hover:text-white"
+                  aria-label="Dismiss"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+          )}
+          
           {/* Streak Broken Alert - Make more visible on mobile */}
           {showStreakBrokenAlert && (
             <div className="fixed top-4 right-4 left-4 sm:left-auto bg-white dark:bg-[#1E1E1E] text-gray-900 dark:text-white px-4 py-4 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-800 animate-slide-in-right z-50">
@@ -259,14 +354,21 @@ export default function Dashboard() {
                 </div>
               </div>
               
-              {/* Single Action Button - Make larger touch target for mobile */}
-              <button
-                onClick={() => navigate('/attendance')}
-                className="w-full sm:w-auto bg-white/20 backdrop-blur-sm text-white px-5 py-4 rounded-xl font-semibold flex items-center justify-center gap-2 hover:bg-white/30 transition-all"
-              >
-                <Scan className="w-5 h-5" />
-                Mark Attendance
-              </button>
+              {/* Conditionally show Mark Attendance button or Already Marked message */}
+              {!attendanceMarkedToday ? (
+                <button
+                  onClick={() => navigate('/attendance')}
+                  className="w-full sm:w-auto bg-white/20 backdrop-blur-sm text-white px-5 py-4 rounded-xl font-semibold flex items-center justify-center gap-2 hover:bg-white/30 transition-all"
+                >
+                  <Scan className="w-5 h-5" />
+                  Mark Attendance
+                </button>
+              ) : (
+                <div className="w-full sm:w-auto bg-white/20 backdrop-blur-sm text-white px-5 py-4 rounded-xl font-semibold flex items-center justify-center gap-2">
+                  <CheckCircle2 className="w-5 h-5 text-green-300" />
+                  Attendance Marked for Today
+                </div>
+              )}
             </div>
           </div>
 
@@ -419,7 +521,77 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Water Intake Section - Mobile optimized */}
+          {/* Water Intake Section */}
+          {/* Add Holiday Calendar Section before Water Intake */}
+          {upcomingHolidays.length > 0 && (
+            <div className="mb-5 sm:mb-8">
+              <div className="bg-white dark:bg-[#1E1E1E] rounded-2xl sm:rounded-3xl p-5 sm:p-6 shadow-lg border border-gray-100 dark:border-gray-800">
+                <div className="flex items-center justify-between mb-5">
+                  <div className="flex items-center gap-3">
+                    <div className="p-3 bg-orange-50 dark:bg-orange-500/10 rounded-xl">
+                      <GiftIcon className="w-5 h-5 sm:w-6 sm:h-6 text-orange-500" />
+                    </div>
+                    <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">
+                      Upcoming Holidays
+                    </h2>
+                  </div>
+                </div>
+                
+                <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
+                  {upcomingHolidays.map((holiday, index) => {
+                    const holidayDate = holiday.date.toDate();
+                    const isToday = differenceInDays(holidayDate, new Date()) === 0;
+                    
+                    return (
+                      <div 
+                        key={holiday.id || index}
+                        className={`flex items-start sm:items-center gap-3 p-3 rounded-xl ${
+                          isToday 
+                            ? 'bg-orange-50 dark:bg-orange-500/10 border border-orange-100 dark:border-orange-500/20' 
+                            : 'bg-gray-50 dark:bg-gray-800/50'
+                        }`}
+                      >
+                        <div className={`p-2.5 rounded-xl ${
+                          isToday 
+                            ? 'bg-orange-500 text-white' 
+                            : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+                        }`}>
+                          <Calendar className="w-4 h-4" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-3">
+                            <h3 className="font-medium text-gray-900 dark:text-white">
+                              {holiday.title}
+                            </h3>
+                            <div className={`text-xs font-medium px-2 py-1 rounded-full ${
+                              isToday 
+                                ? 'bg-orange-500/20 text-orange-700 dark:text-orange-400' 
+                                : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+                            }`}>
+                              {formatHolidayDate(holiday)}
+                            </div>
+                          </div>
+                          {holiday.description && (
+                            <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                              {holiday.description}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                  
+                  {upcomingHolidays.length === 0 && (
+                    <div className="text-center py-8">
+                      <p className="text-gray-500 dark:text-gray-400">No upcoming holidays in the next 60 days.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {/* Water Intake Section */}
           <div className="mb-5 sm:mb-8">
             <WaterIntakeCard 
               dailyGoal={2500}
@@ -470,29 +642,6 @@ export default function Dashboard() {
                 </div>
               </div>
             </div>
-
-            {/* Membership Alert - Mobile Optimized */}
-            {!membershipStatus.isActive && (
-              <div className="bg-gradient-to-r from-purple-500 to-indigo-600 rounded-2xl sm:rounded-3xl p-5 sm:p-6 shadow-lg">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-6">
-                  <div className="flex items-center gap-3 sm:gap-4">
-                    <div className="p-2.5 bg-white/20 backdrop-blur-sm rounded-xl">
-                      <Crown className="w-5 h-5 text-white" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-white text-lg">Upgrade to Premium</h3>
-                      <p className="text-purple-100 text-sm sm:text-base">Unlock all features and premium workouts</p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => navigate('/membership')}
-                    className="w-full sm:w-auto px-6 py-3.5 bg-white text-purple-600 rounded-xl text-sm font-bold hover:bg-gray-50 transition-colors shadow-md"
-                  >
-                    Upgrade Now
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </div>

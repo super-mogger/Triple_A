@@ -1,7 +1,8 @@
 import { db } from '../config/firebase';
-import { collection, query, where, getDocs, addDoc, Timestamp, doc, updateDoc, deleteDoc, onSnapshot, orderBy } from 'firebase/firestore';
-import { format, subDays, differenceInDays, startOfDay, endOfDay } from 'date-fns';
+import { collection, query, where, getDocs, addDoc, Timestamp, doc, updateDoc, deleteDoc, onSnapshot, orderBy, setDoc, getDoc } from 'firebase/firestore';
+import { format, subDays, differenceInDays, startOfDay, endOfDay, isSameDay, isWithinInterval } from 'date-fns';
 import { checkAttendanceAchievements } from './AchievementService';
+import { isHoliday } from './HolidayService';
 
 export interface AttendanceStats {
   id?: string;
@@ -229,11 +230,23 @@ class AttendanceService {
 
   async getAttendanceStats(userId: string): Promise<AttendanceStats | null> {
     try {
+      // First, try to get stats using userId as document ID
+      const statsByIdRef = doc(db, 'attendanceStats', userId);
+      const statsByIdDoc = await getDoc(statsByIdRef);
+      
+      if (statsByIdDoc.exists()) {
+        // Found stats using userId as document ID
+        const data = statsByIdDoc.data() as AttendanceStats;
+        return { ...data, id: userId };
+      }
+      
+      // If not found, search by userId field
       const statsRef = collection(db, 'attendanceStats');
       const q = query(statsRef, where('userId', '==', userId));
       const querySnapshot = await getDocs(q);
 
       if (querySnapshot.empty) {
+        // No stats found, create a new document using userId as document ID
         const now = Timestamp.now();
         const newStats: AttendanceStats = {
           userId,
@@ -244,30 +257,111 @@ class AttendanceService {
           lastAttendance: null,
           lastUpdated: now
         };
-        const docRef = await addDoc(statsRef, newStats);
-        return { ...newStats, id: docRef.id };
+        
+        await setDoc(statsByIdRef, newStats);
+        return { ...newStats, id: userId };
       }
-
-      const data = querySnapshot.docs[0].data() as AttendanceStats;
-      return { ...data, id: querySnapshot.docs[0].id };
+      
+      // Found stats by userId field, migrate it to use userId as document ID
+      const oldDoc = querySnapshot.docs[0];
+      const data = oldDoc.data() as AttendanceStats;
+      
+      // If the document ID doesn't match userId, migrate it
+      if (oldDoc.id !== userId) {
+        console.log(`Migrating stats from ${oldDoc.id} to ${userId}`);
+        
+        // Create new document with userId as ID
+        await setDoc(statsByIdRef, data);
+        
+        // Delete the old document
+        await deleteDoc(oldDoc.ref);
+        
+        return { ...data, id: userId };
+      }
+      
+      return { ...data, id: oldDoc.id };
     } catch (error) {
       console.error('Error fetching attendance stats:', error);
       return null;
     }
   }
 
+  /**
+   * Calculate streak while accounting for holidays
+   */
+  private async calculateStreakWithHolidays(attendanceRecords: any[]): Promise<number> {
+    try {
+      if (attendanceRecords.length === 0) return 0;
+      
+      // Sort by date (newest first)
+      const sortedRecords = [...attendanceRecords].sort((a, b) => 
+        b.date.toDate().getTime() - a.date.toDate().getTime()
+      );
+      
+      let streakCount = 0;
+      let currentDate = new Date();
+      let lastAttendanceDate = sortedRecords[0].date.toDate();
+      
+      // If the last attendance wasn't today, check if we have attendance today
+      if (!isSameDay(currentDate, lastAttendanceDate)) {
+        // Check if today is a holiday
+        const todayHolidayCheck = await isHoliday(currentDate);
+        if (!todayHolidayCheck.isHoliday) {
+          // If not a holiday and no attendance today, break the streak
+          return 0;
+        }
+        // If today is a holiday, continue checking streak
+      }
+      
+      streakCount = 1; // Start with 1 for today/last attendance
+      
+      // Check previous days
+      let checkDate = subDays(lastAttendanceDate, 1);
+      let foundGap = false;
+      
+      while (!foundGap) {
+        // Check if the day was a holiday
+        const holidayCheck = await isHoliday(checkDate);
+        
+        if (holidayCheck.isHoliday) {
+          // If it's a holiday, it counts for the streak
+          streakCount++;
+          checkDate = subDays(checkDate, 1);
+          continue;
+        }
+        
+        // Check if there was attendance on this day
+        const hasAttendance = sortedRecords.some(record => 
+          isSameDay(record.date.toDate(), checkDate)
+        );
+        
+        if (hasAttendance) {
+          streakCount++;
+          checkDate = subDays(checkDate, 1);
+        } else {
+          foundGap = true;
+        }
+      }
+      
+      return streakCount;
+    } catch (error) {
+      console.error('Error calculating streak with holidays:', error);
+      return 0;
+    }
+  }
+
+  // Update the existing updateAttendanceStats to use the new streak calculation
   private async updateAttendanceStats(userId: string, isPresent: boolean): Promise<AttendanceStats | null> {
     try {
-      const statsRef = collection(db, 'attendanceStats');
-      const q = query(statsRef, where('userId', '==', userId));
-      const querySnapshot = await getDocs(q);
-
       const now = Timestamp.now();
+      
+      // Use userId as document ID to ensure consistent stats updating
+      const statsDocRef = doc(db, 'attendanceStats', userId);
+      const statsDoc = await getDocs(query(collection(db, 'attendanceStats'), where('userId', '==', userId)));
       let stats: AttendanceStats;
-      let docRef;
 
-      if (querySnapshot.empty) {
-        // Create new stats
+      if (statsDoc.empty) {
+        // Create new stats document with user ID as document ID
         const newStats = {
           userId,
           totalPresent: isPresent ? 1 : 0,
@@ -277,95 +371,131 @@ class AttendanceService {
           lastAttendance: isPresent ? now : null,
           lastUpdated: now
         };
-        docRef = await addDoc(statsRef, newStats);
-        stats = { ...newStats, id: docRef.id };
+        
+        // Use setDoc instead of addDoc to specify the document ID
+        await setDoc(statsDocRef, newStats);
+        stats = { ...newStats, id: userId };
+        console.log('Created new attendance stats with ID:', userId);
       } else {
         // Update existing stats
-        const doc = querySnapshot.docs[0];
-        const existingStats = doc.data() as AttendanceStats;
+        const existingDoc = statsDoc.docs[0];
+        const existingStats = existingDoc.data() as AttendanceStats;
+        const existingDocId = existingDoc.id;
         
-        // If marking absent, immediately reset streak to 0
-        if (!isPresent) {
+        // If this is a different document ID than the user ID, we need to migrate
+        if (existingDocId !== userId) {
+          console.log(`Migrating stats from ${existingDocId} to ${userId}`);
+          
+          // If marking absent, immediately reset streak to 0
+          if (!isPresent) {
+            const updatedStats = {
+              userId,
+              totalPresent: existingStats.totalPresent,
+              totalAbsent: existingStats.totalAbsent + 1,
+              currentStreak: 0, // Reset streak on absence
+              longestStreak: existingStats.longestStreak,
+              lastAttendance: existingStats.lastAttendance,
+              lastUpdated: now
+            };
+            
+            // Create a new document with userId as ID
+            await setDoc(statsDocRef, updatedStats);
+            
+            // Delete the old document
+            await deleteDoc(doc(db, 'attendanceStats', existingDocId));
+            
+            stats = { ...updatedStats, id: userId };
+            return stats;
+          }
+          
+          // Get all attendance records for the last few days
+          const attendanceRef = collection(db, 'attendance');
+          const lastWeekDate = new Date();
+          lastWeekDate.setDate(lastWeekDate.getDate() - 30); // Look back further for holidays
+          
+          const attendanceQuery = query(
+            attendanceRef,
+            where('userId', '==', userId),
+            where('date', '>=', Timestamp.fromDate(lastWeekDate)),
+            orderBy('date', 'desc')
+          );
+          
+          const attendanceSnapshot = await getDocs(attendanceQuery);
+          const attendanceRecords = attendanceSnapshot.docs.map(doc => ({
+            date: doc.data().date,
+            status: doc.data().status
+          }));
+
+          // Calculate streak taking holidays into account
+          let streakCount = await this.calculateStreakWithHolidays(attendanceRecords);
+          
           const updatedStats = {
-            totalPresent: existingStats.totalPresent,
-            totalAbsent: existingStats.totalAbsent + 1,
-            currentStreak: 0, // Reset streak on absence
-            longestStreak: existingStats.longestStreak,
-            lastAttendance: existingStats.lastAttendance,
+            userId,
+            totalPresent: existingStats.totalPresent + 1,
+            totalAbsent: existingStats.totalAbsent,
+            currentStreak: streakCount,
+            longestStreak: Math.max(streakCount, existingStats.longestStreak),
+            lastAttendance: now,
             lastUpdated: now
           };
-          await updateDoc(doc.ref, updatedStats);
-          stats = { ...updatedStats, id: doc.id, userId };
-          return stats;
-        }
 
-        // Get all attendance records for the last few days
-        const attendanceRef = collection(db, 'attendance');
-        const lastWeekDate = new Date();
-        lastWeekDate.setDate(lastWeekDate.getDate() - 7);
-        
-        const attendanceQuery = query(
-          attendanceRef,
-          where('userId', '==', userId),
-          where('date', '>=', Timestamp.fromDate(lastWeekDate)),
-          orderBy('date', 'desc')
-        );
-        
-        const attendanceSnapshot = await getDocs(attendanceQuery);
-        const attendanceRecords = attendanceSnapshot.docs.map(doc => ({
-          date: doc.data().date,
-          status: doc.data().status
-        }));
-
-        // Calculate streak for present attendance
-        let streakCount = 1; // Start with 1 for today's attendance
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        
-        let currentDate = new Date(today);
-        currentDate.setDate(currentDate.getDate() - 1); // Start checking from yesterday
-
-        // Sort records by date in descending order
-        const sortedRecords = attendanceRecords.sort((a, b) => 
-          b.date.toDate().getTime() - a.date.toDate().getTime()
-        );
-
-        let streakBroken = false;
-        while (!streakBroken && currentDate >= lastWeekDate) {
-          // Skip Sundays
-          if (currentDate.getDay() === 0) {
-            currentDate.setDate(currentDate.getDate() - 1);
-            continue;
+          // Create new document with userId as ID
+          await setDoc(statsDocRef, updatedStats);
+          
+          // Delete the old document
+          await deleteDoc(doc(db, 'attendanceStats', existingDocId));
+          
+          stats = { ...updatedStats, id: userId };
+        } else {
+          // Normal update to existing document with correct ID
+          // If marking absent, immediately reset streak to 0
+          if (!isPresent) {
+            const updatedStats = {
+              totalPresent: existingStats.totalPresent,
+              totalAbsent: existingStats.totalAbsent + 1,
+              currentStreak: 0, // Reset streak on absence
+              longestStreak: existingStats.longestStreak,
+              lastAttendance: existingStats.lastAttendance,
+              lastUpdated: now
+            };
+            await updateDoc(existingDoc.ref, updatedStats);
+            stats = { ...updatedStats, id: existingDocId, userId };
+            return stats;
           }
 
-          // Find attendance record for current date
-          const record = sortedRecords.find(r => {
-            const recordDate = r.date.toDate();
-            recordDate.setHours(0, 0, 0, 0);
-            return recordDate.getTime() === currentDate.getTime();
-          });
+          // Get all attendance records for the last few days
+          const attendanceRef = collection(db, 'attendance');
+          const lastWeekDate = new Date();
+          lastWeekDate.setDate(lastWeekDate.getDate() - 30); // Look back further for holidays
+          
+          const attendanceQuery = query(
+            attendanceRef,
+            where('userId', '==', userId),
+            where('date', '>=', Timestamp.fromDate(lastWeekDate)),
+            orderBy('date', 'desc')
+          );
+          
+          const attendanceSnapshot = await getDocs(attendanceQuery);
+          const attendanceRecords = attendanceSnapshot.docs.map(doc => ({
+            date: doc.data().date,
+            status: doc.data().status
+          }));
 
-          // If no record found or status is not present, break streak
-          if (!record || record.status !== 'present') {
-            streakBroken = true;
-            break;
-          }
+          // Calculate streak taking holidays into account
+          let streakCount = await this.calculateStreakWithHolidays(attendanceRecords);
 
-          streakCount++;
-          currentDate.setDate(currentDate.getDate() - 1);
+          const updatedStats = {
+            totalPresent: existingStats.totalPresent + 1,
+            totalAbsent: existingStats.totalAbsent,
+            currentStreak: streakCount,
+            longestStreak: Math.max(streakCount, existingStats.longestStreak),
+            lastAttendance: now,
+            lastUpdated: now
+          };
+
+          await updateDoc(existingDoc.ref, updatedStats);
+          stats = { ...updatedStats, id: existingDocId, userId };
         }
-
-        const updatedStats = {
-          totalPresent: existingStats.totalPresent + 1,
-          totalAbsent: existingStats.totalAbsent,
-          currentStreak: streakCount,
-          longestStreak: Math.max(streakCount, existingStats.longestStreak),
-          lastAttendance: now,
-          lastUpdated: now
-        };
-
-        await updateDoc(doc.ref, updatedStats);
-        stats = { ...updatedStats, id: doc.id, userId };
       }
 
       return stats;
@@ -374,7 +504,7 @@ class AttendanceService {
       return null;
     }
   }
-
+  
   // Helper function to check for absences between two dates
   private checkForAbsences(startDate: Date, endDate: Date, records: any[]): boolean {
     let currentDate = new Date(startDate);
@@ -444,6 +574,138 @@ class AttendanceService {
     if (this.unsubscribe) {
       this.unsubscribe();
       this.unsubscribe = null;
+    }
+  }
+
+  /**
+   * Force recalculation of attendance stats for a specific user
+   * This can be used to fix stats that aren't updating properly
+   */
+  async forceRecalculateStats(userId: string): Promise<AttendanceStats | null> {
+    try {
+      console.log('Force recalculating stats for user:', userId);
+      
+      // Get all attendance records for this user
+      const attendanceRef = collection(db, 'attendance');
+      const q = query(
+        attendanceRef,
+        where('userId', '==', userId),
+        orderBy('date', 'desc')
+      );
+      
+      const querySnapshot = await getDocs(q);
+      const attendanceRecords = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as AttendanceRecord[];
+      
+      console.log(`Found ${attendanceRecords.length} attendance records`);
+      
+      if (attendanceRecords.length === 0) {
+        // No attendance records, create empty stats
+        const statsRef = doc(db, 'attendanceStats', userId);
+        const newStats: any = {
+          userId,
+          totalPresent: 0,
+          totalAbsent: 0,
+          currentStreak: 0,
+          longestStreak: 0,
+          lastAttendance: null,
+          lastUpdated: Timestamp.now(),
+          // Add extra stats displayed in the UI
+          totalVisits: 0,
+          thisMonth: 0,
+          daysRemainingThisMonth: 0,
+          firstVisitDate: null
+        };
+        
+        await setDoc(statsRef, newStats);
+        console.log('Created new empty stats');
+        return { ...newStats, id: userId };
+      }
+      
+      // Calculate stats based on records
+      let totalPresent = attendanceRecords.filter(r => r.status === 'present').length;
+      let totalAbsent = attendanceRecords.filter(r => r.status === 'absent').length;
+      
+      // Sort by date (newest first)
+      const sortedRecords = [...attendanceRecords].sort((a, b) => 
+        b.date.toDate().getTime() - a.date.toDate().getTime()
+      );
+      
+      // Get the most recent attendance
+      const lastAttendance = sortedRecords.length > 0 ? sortedRecords[0].date : null;
+      
+      // Calculate current streak
+      const streakCount = await this.calculateStreakWithHolidays(sortedRecords);
+      
+      // Calculate longest streak by testing each possible starting point
+      let longestStreak = streakCount;
+      for (let i = 1; i < sortedRecords.length; i++) {
+        const potentialStreak = await this.calculateStreakWithHolidays(sortedRecords.slice(i));
+        longestStreak = Math.max(longestStreak, potentialStreak);
+      }
+      
+      // Additional stats for UI display
+      
+      // Total visits (same as totalPresent)
+      const totalVisits = totalPresent;
+      
+      // Find first visit date (oldest record)
+      const oldestRecord = [...attendanceRecords].sort((a, b) => 
+        a.date.toDate().getTime() - b.date.toDate().getTime()
+      )[0];
+      const firstVisitDate = oldestRecord ? oldestRecord.date : null;
+      
+      // Calculate this month's attendance
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const thisMonth = attendanceRecords.filter(record => {
+        const recordDate = record.date.toDate();
+        return recordDate >= startOfMonth && 
+               record.status === 'present';
+      }).length;
+      
+      // Calculate days remaining in month
+      const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      const daysInMonth = lastDayOfMonth.getDate();
+      const daysRemainingThisMonth = Math.max(0, daysInMonth - now.getDate() + 1);
+      
+      // Get or create stats document
+      const statsRef = doc(db, 'attendanceStats', userId);
+      
+      // Create updated stats with additional fields
+      const updatedStats: any = {
+        userId,
+        totalPresent,
+        totalAbsent,
+        currentStreak: streakCount,
+        longestStreak,
+        lastAttendance,
+        lastUpdated: Timestamp.now(),
+        // Additional stats for UI
+        totalVisits,
+        thisMonth,
+        daysRemainingThisMonth,
+        firstVisitDate
+      };
+      
+      // Save to Firestore
+      await setDoc(statsRef, updatedStats);
+      
+      console.log('Successfully recalculated stats:', {
+        totalPresent,
+        totalAbsent,
+        currentStreak: streakCount,
+        longestStreak,
+        totalVisits,
+        thisMonth
+      });
+      
+      return { ...updatedStats, id: userId };
+    } catch (error) {
+      console.error('Error force recalculating stats:', error);
+      return null;
     }
   }
 }

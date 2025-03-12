@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { Award, ChevronLeft, Lock, Filter, Search, TrendingUp } from 'lucide-react';
+import { Award, ChevronLeft, Lock, Filter, Search, TrendingUp, MapPin, Calendar } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Achievement, getAchievements } from '../services/AchievementService';
 
 type RarityType = 'common' | 'rare' | 'epic' | 'legendary';
-type CategoryType = 'all' | 'streak' | 'workout' | 'strength' | 'nutrition';
+type CategoryType = 'all' | 'streak' | 'workout' | 'strength' | 'nutrition' | 'attendance';
 
 const rarityColors = {
   common: {
@@ -89,7 +89,8 @@ export default function Achievements() {
     { id: 'streak', name: 'Streaks', icon: <TrendingUp size={16} /> },
     { id: 'workout', name: 'Workouts', icon: '💪' },
     { id: 'strength', name: 'Strength', icon: '🏋️‍♂️' },
-    { id: 'nutrition', name: 'Nutrition', icon: '🥗' }
+    { id: 'nutrition', name: 'Nutrition', icon: '🥗' },
+    { id: 'attendance', name: 'Attendance', icon: <Calendar size={16} /> }
   ] as const;
 
   const rarities = [

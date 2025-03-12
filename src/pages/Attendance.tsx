@@ -72,6 +72,8 @@ const Attendance = () => {
   const [allAttendance, setAllAttendance] = useState<any[]>([]);
   const [attendanceMarkedToday, setAttendanceMarkedToday] = useState(false);
   const [holidays, setHolidays] = useState<Holiday[]>([]);
+  const [isTodayHoliday, setIsTodayHoliday] = useState(false);
+  const [todayHoliday, setTodayHoliday] = useState<Holiday | null>(null);
 
   // Function to check if attendance is marked for today
   const checkTodayAttendance = () => {
@@ -126,6 +128,12 @@ const Attendance = () => {
       try {
         const holidays = await getAllHolidays();
         setHolidays(holidays);
+        
+        // Check if today is a holiday
+        const today = new Date();
+        const holiday = holidays.find(h => isSameDay(h.date.toDate(), today));
+        setIsTodayHoliday(!!holiday);
+        setTodayHoliday(holiday || null);
       } catch (error) {
         console.error('Error fetching holidays:', error);
       }
@@ -530,7 +538,12 @@ const Attendance = () => {
                   Refresh Stats
                 </button>
                 
-                {!attendanceMarkedToday ? (
+                {isTodayHoliday ? (
+                  <div className="py-2 px-4 bg-yellow-500/30 text-white rounded-lg flex items-center gap-2 text-sm">
+                    <GiftIcon className="w-4 h-4" />
+                    Today is Holiday: {todayHoliday?.title}
+                  </div>
+                ) : !attendanceMarkedToday ? (
                   <button 
                     onClick={() => setShowScanner(true)}
                     className="py-2 px-4 bg-white text-emerald-700 rounded-lg flex items-center gap-2 text-sm transition-all hover:bg-white/90"

@@ -10,9 +10,9 @@ import { attendanceService } from '../services/AttendanceService';
 import { useAuth } from '../context/AuthContext';
 import ProfileSetupModal from '../components/ProfileSetupModal';
 import WaterIntakeCard from '../components/WaterIntakeCard';
-import { format, isToday, isTomorrow, addDays, differenceInDays } from 'date-fns';
+import { format, isToday, isTomorrow, addDays, differenceInDays, isSameDay } from 'date-fns';
 import { useMembership } from '../context/MembershipContext';
-import { getNextHoliday, getUpcomingHolidays } from '../services/HolidayService';
+import { getNextHoliday, getUpcomingHolidays, getAllHolidays } from '../services/HolidayService';
 import { Holiday } from '../types/holiday';
 
 interface Achievement {
@@ -22,6 +22,8 @@ interface Achievement {
   icon: string;
   unlocked: boolean;
   date?: string;
+  category: 'streak' | 'workout' | 'strength' | 'nutrition' | 'attendance';
+  rarity: 'common' | 'rare' | 'epic' | 'legendary';
 }
 
 interface AttendanceStats {
@@ -42,12 +44,13 @@ export default function Dashboard() {
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [attendanceStats, setAttendanceStats] = useState<AttendanceStats | null>(null);
   const [showSetupModal, setShowSetupModal] = useState(false);
-  const [showAttendanceReminder, setShowAttendanceReminder] = useState(false);
   const [showPremiumAlert, setShowPremiumAlert] = useState(true);
   const [attendanceMarkedToday, setAttendanceMarkedToday] = useState(false);
   const [nextHoliday, setNextHoliday] = useState<Holiday | null>(null);
   const [showHolidayAlert, setShowHolidayAlert] = useState(true);
   const [upcomingHolidays, setUpcomingHolidays] = useState<Holiday[]>([]);
+  const [isTodayHoliday, setIsTodayHoliday] = useState(false);
+  const [todayHoliday, setTodayHoliday] = useState<Holiday | null>(null);
 
   useEffect(() => {
     if (!profile?.id) return;
@@ -118,7 +121,7 @@ export default function Dashboard() {
     }
   }, [profile]);
 
-  // Update the useEffect to check today's attendance and set the state
+  // Update the useEffect to check today's attendance without setting the attendance reminder
   useEffect(() => {
     const checkTodayAttendance = async () => {
       if (!profile?.id) return;
@@ -130,9 +133,8 @@ export default function Dashboard() {
           format(record.date.toDate(), 'yyyy-MM-dd') === format(today, 'yyyy-MM-dd')
         );
 
-        // Set both states based on whether attendance is marked today
+        // Only set attendance status, not reminder
         setAttendanceMarkedToday(!!todayRecord);
-        setShowAttendanceReminder(!todayRecord);
       } catch (error) {
         console.error('Error checking attendance:', error);
       }
@@ -154,9 +156,15 @@ export default function Dashboard() {
     
     const fetchUpcomingHolidays = async () => {
       try {
-        // Get holidays for the next 60 days
-        const holidays = await getUpcomingHolidays(60);
+        // Get all holidays instead of just upcoming ones
+        const holidays = await getAllHolidays();
         setUpcomingHolidays(holidays);
+        
+        // Check if today is a holiday using isSameDay instead of isToday
+        const today = new Date();
+        const holiday = holidays.find(h => isSameDay(h.date.toDate(), today));
+        setIsTodayHoliday(!!holiday);
+        setTodayHoliday(holiday || null);
       } catch (error) {
         console.error('Error fetching upcoming holidays:', error);
       }
@@ -203,11 +211,6 @@ export default function Dashboard() {
       checkStreakAchievements(newStreak);
       return newStreak;
     });
-  };
-
-  // Add attendance reminder component
-  const renderAttendanceReminder = () => {
-    return null;
   };
 
   // Helper to format holiday date
@@ -355,7 +358,12 @@ export default function Dashboard() {
               </div>
               
               {/* Conditionally show Mark Attendance button or Already Marked message */}
-              {!attendanceMarkedToday ? (
+              {isTodayHoliday ? (
+                <div className="w-full sm:w-auto bg-yellow-400/30 backdrop-blur-sm text-white px-5 py-4 rounded-xl font-semibold flex items-center justify-center gap-2">
+                  <GiftIcon className="w-5 h-5 text-yellow-300" />
+                  Today is Holiday: {todayHoliday?.title}
+                </div>
+              ) : !attendanceMarkedToday ? (
                 <button
                   onClick={() => navigate('/attendance')}
                   className="w-full sm:w-auto bg-white/20 backdrop-blur-sm text-white px-5 py-4 rounded-xl font-semibold flex items-center justify-center gap-2 hover:bg-white/30 transition-all"
@@ -371,48 +379,6 @@ export default function Dashboard() {
               )}
             </div>
           </div>
-
-          {/* Attendance Reminder - Mobile optimized */}
-          {showAttendanceReminder && (
-            <div className="mb-5 sm:mb-8 animate-slide-in-bottom">
-              <div className="bg-white dark:bg-[#1E1E1E] rounded-2xl p-5 shadow-xl border border-gray-100 dark:border-gray-800">
-                <div className="flex items-start gap-4">
-                  <div className="p-3 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-xl">
-                    <Calendar className="w-6 h-6 text-white" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-gray-900 dark:text-white text-lg mb-2">
-                      Mark Your Attendance
-                    </h3>
-                    <p className="text-gray-600 dark:text-gray-400 mb-4">
-                      Don't forget to mark your attendance for today's workout session!
-                    </p>
-                    <div className="flex flex-col sm:flex-row gap-3">
-                      <button
-                        onClick={() => navigate('/attendance')}
-                        className="flex items-center justify-center gap-2 px-5 py-3.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-medium transition-colors shadow-md"
-                      >
-                        <Scan className="w-4 h-4" />
-                        Mark Attendance
-                      </button>
-                      <button
-                        onClick={() => setShowAttendanceReminder(false)}
-                        className="px-5 py-3.5 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl font-medium transition-colors text-center"
-                      >
-                        Dismiss
-                      </button>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setShowAttendanceReminder(false)}
-                    className="p-2 text-gray-400 hover:text-gray-500 dark:text-gray-500 dark:hover:text-gray-400 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* Today's Workout Section - Mobile optimized */}
           <div className="bg-gradient-to-r from-red-500 to-orange-500 rounded-2xl sm:rounded-3xl p-5 sm:p-6 shadow-xl mb-5 sm:mb-8 transition-all hover:shadow-lg relative overflow-hidden">

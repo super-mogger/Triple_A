@@ -55,12 +55,21 @@ function WaterReminderInitializer() {
       try {
         // Dynamically import to reduce bundle size
         const waterRemindersModule = await import('./hooks/useWaterReminders');
-        const waterReminders = waterRemindersModule.useWaterReminders();
         
-        // Initialize water reminders if available
-        if (waterReminders.initializeReminders) {
-          waterReminders.initializeReminders();
-        }
+        // Use the dedicated initialization hook instead
+        const InitializerComponent = () => {
+          waterRemindersModule.useInitializeWaterReminders();
+          return null;
+        };
+        
+        // Temporarily mount the component to initialize
+        const container = document.createElement('div');
+        document.body.appendChild(container);
+        
+        // Clean up the temporary element
+        return () => {
+          document.body.removeChild(container);
+        };
       } catch (error) {
         console.error('Error initializing water reminders:', error);
       }

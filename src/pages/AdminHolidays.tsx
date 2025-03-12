@@ -150,6 +150,12 @@ export default function AdminHolidays() {
   
   // Edit a holiday
   const handleEdit = (holiday: Holiday) => {
+    // Early return if no ID
+    if (!holiday.id) {
+      console.error('Cannot edit holiday: Missing ID');
+      return;
+    }
+
     setFormData({
       id: holiday.id,
       date: format(holiday.date.toDate(), 'yyyy-MM-dd'),
@@ -159,7 +165,7 @@ export default function AdminHolidays() {
     });
     
     setIsEditing(true);
-    setCurrentEditId(holiday.id);
+    setCurrentEditId(holiday.id); // Now holiday.id is definitely a string
     setShowForm(true);
   };
   

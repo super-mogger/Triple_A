@@ -562,13 +562,26 @@ export default function Workouts() {
                       </span>
                       <ChevronDown className="w-4 h-4" />
                     </button>
+                    
                     {selectedWorkout.showSplitMenu && (
-                      <div className="absolute z-10 w-full mt-2 bg-white dark:bg-[#1E1E1E] rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+                      <div 
+                        className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-sm bg-white dark:bg-[#1E1E1E] rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden"
+                        style={{ zIndex: 9999 }}
+                      >
+                        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+                          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Select Split Type</h3>
+                        </div>
                         {Object.entries(splitTypes).map(([key, value]) => (
                           <button
                             key={key}
-                            onClick={() => handleSplitTypeSelect(key)}
-                            className={`w-full px-5 py-3 text-left hover:bg-gray-50 dark:hover:bg-[#282828] transition-all ${
+                            onClick={() => {
+                              handleSplitTypeSelect(key);
+                              setSelectedWorkout(prev => prev ? {
+                                ...prev,
+                                showSplitMenu: false
+                              } : null);
+                            }}
+                            className={`w-full px-5 py-4 text-left hover:bg-gray-50 dark:hover:bg-[#282828] transition-all ${
                               selectedWorkout.splitType === key 
                                 ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' 
                                 : 'text-gray-700 dark:text-gray-200'

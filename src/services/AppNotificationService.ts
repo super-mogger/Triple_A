@@ -11,6 +11,27 @@ interface NotificationScheduleOptions {
   daysOfWeek?: number[]; // 0 = Sunday, 1 = Monday, etc.
 }
 
+// Type for notification settings
+interface NotificationSettings {
+  workoutReminders: boolean;
+  membershipUpdates: boolean;
+  newFeatures: boolean;
+  progressAlerts: boolean;
+  specialOffers: boolean;
+  waterReminders: boolean;
+}
+
+// Type for scheduled notification
+interface ScheduledNotification {
+  type: keyof NotificationSettings;
+  userId: string;
+  title: string;
+  body: string;
+  scheduledTime: string;
+  workoutName?: string;
+  tag: string;
+}
+
 // Workout notification helper functions
 export const scheduleWorkoutReminder = async (
   workoutName: string,
@@ -218,7 +239,7 @@ export const checkScheduledNotifications = () => {
   try {
     const scheduledNotifications = JSON.parse(
       localStorage.getItem('scheduledNotifications') || '[]'
-    );
+    ) as ScheduledNotification[];
     
     const now = new Date();
     const updatedNotifications = [];

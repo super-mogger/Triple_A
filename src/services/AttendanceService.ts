@@ -641,9 +641,65 @@ class AttendanceService {
       
       // Calculate longest streak by testing each possible starting point
       let longestStreak = streakCount;
-      for (let i = 1; i < sortedRecords.length; i++) {
-        const potentialStreak = await this.calculateStreakWithHolidays(sortedRecords.slice(i));
-        longestStreak = Math.max(longestStreak, potentialStreak);
+      
+      // Regroup attendance records by date (YYYY-MM-DD format) for easier streak calculation
+      const attendanceByDate: { [key: string]: boolean } = {};
+      attendanceRecords.forEach(record => {
+        if (record.status === 'present') {
+          const dateStr = format(record.date.toDate(), 'yyyy-MM-dd');
+          attendanceByDate[dateStr] = true;
+        }
+      });
+      
+      // Get all dates with attendance
+      const attendanceDates = Object.keys(attendanceByDate).map(date => new Date(date));
+      attendanceDates.sort((a, b) => a.getTime() - b.getTime()); // Sort chronologically
+      
+      // Find longest consecutive streak
+      if (attendanceDates.length > 0) {
+        let currentStreak = 1;
+        let maxStreak = 1;
+        
+        for (let i = 1; i < attendanceDates.length; i++) {
+          const prevDate = new Date(attendanceDates[i-1]);
+          const currDate = new Date(attendanceDates[i]);
+          
+          // Check if dates are consecutive or only have holidays between them
+          const expectedNextDay = new Date(prevDate);
+          expectedNextDay.setDate(expectedNextDay.getDate() + 1);
+          
+          if (differenceInDays(currDate, prevDate) === 1) {
+            // Consecutive days
+            currentStreak++;
+          } else {
+            // Check if all days between are holidays
+            let allHolidays = true;
+            const checkDate = new Date(prevDate);
+            
+            while (differenceInDays(currDate, checkDate) > 1) {
+              checkDate.setDate(checkDate.getDate() + 1);
+              const dateHolidayCheck = await isHoliday(checkDate);
+              
+              if (!dateHolidayCheck.isHoliday) {
+                allHolidays = false;
+                break;
+              }
+            }
+            
+            if (allHolidays) {
+              // If all days between are holidays, continue the streak
+              currentStreak++;
+            } else {
+              // Streak broken, reset counter
+              maxStreak = Math.max(maxStreak, currentStreak);
+              currentStreak = 1;
+            }
+          }
+          
+          maxStreak = Math.max(maxStreak, currentStreak);
+        }
+        
+        longestStreak = Math.max(longestStreak, maxStreak);
       }
       
       // Additional stats for UI display

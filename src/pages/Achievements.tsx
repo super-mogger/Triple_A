@@ -1,8 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { Award, ChevronLeft, Lock, Filter, Search, TrendingUp, MapPin, Calendar } from 'lucide-react';
+import { Award, ChevronLeft, Lock, Filter, Search, TrendingUp, MapPin, Calendar, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Achievement, getAchievements } from '../services/AchievementService';
+import { Achievement, getAchievements, updateAchievement, checkAttendanceAchievements } from '../services/AchievementService';
+import { attendanceService } from '../services/AttendanceService';
+import { useProfile } from '../context/ProfileContext';
+import toast from 'react-hot-toast';
 
 type RarityType = 'common' | 'rare' | 'epic' | 'legendary';
 type CategoryType = 'all' | 'streak' | 'workout' | 'strength' | 'nutrition' | 'attendance';
@@ -51,17 +54,53 @@ const rarityNames = {
 
 export default function Achievements() {
   const navigate = useNavigate();
+  const { profile } = useProfile();
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<CategoryType>('all');
   const [selectedRarity, setSelectedRarity] = useState<'all' | RarityType>('all');
   const [sortBy, setSortBy] = useState<'recent' | 'rarity'>('recent');
   const [showFilters, setShowFilters] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
     const loadedAchievements = getAchievements();
     setAchievements(loadedAchievements);
   }, []);
+
+  // Function to sync achievements with attendance stats
+  const syncAttendanceAchievements = async () => {
+    if (!profile?.id) {
+      toast.error('Please sign in to sync achievements');
+      return;
+    }
+
+    setSyncing(true);
+    const syncToast = toast.loading('Syncing achievements with attendance data...');
+
+    try {
+      // Force recalculate attendance stats
+      const stats = await attendanceService.forceRecalculateStats(profile.id);
+      
+      if (stats) {
+        // Update achievements based on attendance stats
+        const { achievements: updatedAchievements } = checkAttendanceAchievements(stats.totalPresent, stats.currentStreak);
+        setAchievements(updatedAchievements);
+        
+        toast.dismiss(syncToast);
+        toast.success('Achievements synced successfully!');
+      } else {
+        toast.dismiss(syncToast);
+        toast.error('Failed to sync achievements');
+      }
+    } catch (error) {
+      console.error('Error syncing achievements:', error);
+      toast.dismiss(syncToast);
+      toast.error('Error syncing achievements');
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   const filteredAchievements = achievements.filter(achievement => {
     const categoryMatch = selectedCategory === 'all' || achievement.category === selectedCategory;
@@ -122,18 +161,29 @@ export default function Achievements() {
           <motion.div 
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="flex items-center gap-4 mb-4"
+            className="flex items-center justify-between gap-4 mb-4"
           >
-            <button 
-              onClick={() => navigate(-1)}
-              className="p-2 bg-white/20 hover:bg-white/30 rounded-full transition-colors"
+            <div className="flex items-center gap-3">
+              <button 
+                onClick={() => navigate(-1)}
+                className="p-2 bg-white/20 hover:bg-white/30 rounded-full transition-colors"
+              >
+                <ChevronLeft className="h-6 w-6 text-white" />
+              </button>
+              <h1 className="text-3xl font-bold text-white">Achievements</h1>
+            </div>
+            
+            <button
+              onClick={syncAttendanceAchievements}
+              disabled={syncing}
+              className="flex items-center gap-2 bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg transition-all"
             >
-              <ChevronLeft className="h-6 w-6 text-white" />
+              <RefreshCw className={`h-5 w-5 text-white ${syncing ? "animate-spin" : ""}`} />
+              <span className="text-white">Sync Achievements</span>
             </button>
-            <h1 className="text-3xl font-bold text-white">Achievements</h1>
           </motion.div>
           
-          {/* Enhanced Progress Overview */}
+          {/* Enhanced Progress Overview - Keeping original */}
           <motion.div 
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -249,7 +299,7 @@ export default function Achievements() {
                             ? rarity.id !== 'all'
                               ? `bg-gradient-to-r ${rarityColors[rarity.id as RarityType].gradient} text-white`
                               : 'bg-gray-700 text-white'
-                            : 'bg-gray-100 hover:bg-gray-200 dark:bg-[#282828] dark:hover:bg-[#333333] text-gray-700 dark:text-gray-300'
+                            : ''
                         }`}
                       >
                         {rarity.name}

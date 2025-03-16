@@ -11,7 +11,7 @@ import QRScanner from '../components/QRScanner';
 import { attendanceService } from '../services/AttendanceService';
 import MembershipRequired from '../components/MembershipRequired';
 import { useMembership } from '../context/MembershipContext';
-import { getAllHolidays } from '../services/HolidayService';
+import { getAllHolidays, getUpcomingHolidays } from '../services/HolidayService';
 import { Holiday } from '../types/holiday';
 
 // Custom dark mode styles for calendar
@@ -72,8 +72,19 @@ const Attendance = () => {
   const [allAttendance, setAllAttendance] = useState<any[]>([]);
   const [attendanceMarkedToday, setAttendanceMarkedToday] = useState(false);
   const [holidays, setHolidays] = useState<Holiday[]>([]);
+  const [allHolidays, setAllHolidays] = useState<Holiday[]>([]);
   const [isTodayHoliday, setIsTodayHoliday] = useState(false);
   const [todayHoliday, setTodayHoliday] = useState<Holiday | null>(null);
+
+  // Function to handle opening the QR scanner, with Sunday check
+  const handleOpenScanner = () => {
+    // Check if today is Sunday (0)
+    if (new Date().getDay() === 0) {
+      toast.error("Attendance marking is disabled on Sundays");
+      return;
+    }
+    setShowScanner(true);
+  };
 
   // Function to check if attendance is marked for today
   const checkTodayAttendance = () => {
@@ -126,12 +137,24 @@ const Attendance = () => {
   useEffect(() => {
     const fetchHolidays = async () => {
       try {
-        const holidays = await getAllHolidays();
-        setHolidays(holidays);
+        // For upcoming holidays section - get only future holidays
+        const upcomingHolidays = await getUpcomingHolidays(30);
+        
+        // Filter to ensure we only show future holidays or today's holiday
+        const today = new Date();
+        const filteredHolidays = upcomingHolidays.filter(holiday => {
+          const holidayDate = holiday.date.toDate();
+          return isToday(holidayDate) || holidayDate > today;
+        });
+        
+        setHolidays(filteredHolidays);
+        
+        // For calendar display - get all holidays
+        const allHolidaysData = await getAllHolidays();
+        setAllHolidays(allHolidaysData);
         
         // Check if today is a holiday
-        const today = new Date();
-        const holiday = holidays.find(h => isSameDay(h.date.toDate(), today));
+        const holiday = upcomingHolidays.find(h => isSameDay(h.date.toDate(), today));
         setIsTodayHoliday(!!holiday);
         setTodayHoliday(holiday || null);
       } catch (error) {
@@ -144,7 +167,7 @@ const Attendance = () => {
 
   // Function to check if a date is a holiday
   const isDateHoliday = (date: Date): Holiday | undefined => {
-    return holidays.find(holiday => 
+    return allHolidays.find(holiday => 
       isSameDay(holiday.date.toDate(), date)
     );
   };
@@ -440,12 +463,18 @@ const Attendance = () => {
             <p className="text-gray-600 dark:text-gray-400 max-w-md mx-auto px-4">
               No attendance records yet. Scan a QR code to mark your attendance and start building your streak.
             </p>
-            <button
-              onClick={() => setShowScanner(true)}
-              className="mt-6 px-6 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-medium text-sm transition-colors"
-            >
-              Mark Attendance Now
-            </button>
+            {new Date().getDay() !== 0 ? (
+              <button
+                onClick={handleOpenScanner}
+                className="mt-6 px-6 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-medium text-sm transition-colors"
+              >
+                Mark Attendance Now
+              </button>
+            ) : (
+              <div className="mt-6 px-6 py-2 bg-gray-500/30 text-white rounded-xl font-medium text-sm inline-block">
+                Sunday - No Attendance Today
+              </div>
+            )}
           </div>
         </div>
       );
@@ -543,14 +572,19 @@ const Attendance = () => {
                     <GiftIcon className="w-4 h-4" />
                     Today is Holiday: {todayHoliday?.title}
                   </div>
-                ) : !attendanceMarkedToday ? (
+                ) : !attendanceMarkedToday && new Date().getDay() !== 0 ? (
                   <button 
-                    onClick={() => setShowScanner(true)}
+                    onClick={handleOpenScanner}
                     className="py-2 px-4 bg-white text-emerald-700 rounded-lg flex items-center gap-2 text-sm transition-all hover:bg-white/90"
                   >
                     <Scan className="w-4 h-4" />
                     Mark Attendance
                   </button>
+                ) : new Date().getDay() === 0 ? (
+                  <div className="py-2 px-4 bg-gray-500/30 text-white rounded-lg flex items-center gap-2 text-sm">
+                    <CalendarIcon className="w-4 h-4" />
+                    Sunday - No Attendance
+                  </div>
                 ) : (
                   <div className="py-2 px-4 bg-emerald-500/30 text-white rounded-lg flex items-center gap-2 text-sm">
                     <CheckCircle2 className="w-4 h-4" />
@@ -601,7 +635,6 @@ const Attendance = () => {
                 </h4>
                 <div className="space-y-2">
                   {holidays
-                    .filter(holiday => isBefore(new Date(), holiday.date.toDate()) || isToday(holiday.date.toDate()))
                     .slice(0, 3)
                     .map(holiday => (
                       <div key={holiday.id} className="flex items-center justify-between">

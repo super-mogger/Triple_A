@@ -9,7 +9,6 @@ import { getAchievements, updateAchievement, checkStreakAchievements, checkWorko
 import { attendanceService } from '../services/AttendanceService';
 import { useAuth } from '../context/AuthContext';
 import ProfileSetupModal from '../components/ProfileSetupModal';
-import WaterIntakeCard from '../components/WaterIntakeCard';
 import { format, isToday, isTomorrow, addDays, differenceInDays, isSameDay } from 'date-fns';
 import { useMembership } from '../context/MembershipContext';
 import { getNextHoliday, getUpcomingHolidays, getAllHolidays } from '../services/HolidayService';
@@ -156,12 +155,19 @@ export default function Dashboard() {
     
     const fetchUpcomingHolidays = async () => {
       try {
-        // Get all holidays instead of just upcoming ones
-        const holidays = await getAllHolidays();
-        setUpcomingHolidays(holidays);
+        // Get upcoming holidays instead of all holidays
+        const holidays = await getUpcomingHolidays(30);
+        
+        // Filter to ensure we only show future holidays or today's holiday
+        const today = new Date();
+        const filteredHolidays = holidays.filter(holiday => {
+          const holidayDate = holiday.date.toDate();
+          return isToday(holidayDate) || holidayDate > today;
+        });
+        
+        setUpcomingHolidays(filteredHolidays);
         
         // Check if today is a holiday using isSameDay instead of isToday
-        const today = new Date();
         const holiday = holidays.find(h => isSameDay(h.date.toDate(), today));
         setIsTodayHoliday(!!holiday);
         setTodayHoliday(holiday || null);
@@ -255,7 +261,7 @@ export default function Dashboard() {
                   </div>
                   <div>
                     <h3 className="font-semibold text-white text-lg">Upgrade to Premium</h3>
-                    <p className="text-purple-100 text-sm sm:text-base">Unlock all features including Water Tracking & Attendance</p>
+                    <p className="text-purple-100 text-sm sm:text-base">Unlock all features including Attendance Tracking</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
@@ -557,17 +563,6 @@ export default function Dashboard() {
             </div>
           )}
           
-          {/* Water Intake Section */}
-          <div className="mb-5 sm:mb-8">
-            <WaterIntakeCard 
-              dailyGoal={2500}
-              onUpdate={(amount) => {
-                // TODO: Implement water intake tracking in the backend
-                console.log('Water intake updated:', amount);
-              }}
-            />
-          </div>
-
           {/* Main Content - Mobile Optimized */}
           <div className="space-y-5 sm:space-y-6">
             {/* Achievements - Mobile Optimized */}

@@ -14,7 +14,7 @@ import { useProfile } from '../context/ProfileContext';
 import { useNavigate } from 'react-router-dom';
 import { MuscleRadarChart } from '../components/MuscleRadarChart';
 import { exerciseDatabase } from '../data/exerciseDatabase';
-import type { Exercise, ExerciseDetails } from '../types/exercise';
+import type { Exercise, ExerciseDetails, Category, Difficulty } from '../types/exercise';
 import { useAuth } from '../context/AuthContext';
 import { checkMembershipStatus } from '../services/FirestoreService';
 import type { Membership } from '../types/profile';
@@ -251,6 +251,29 @@ function WeekdaySchedule({ schedule, currentDay, setCurrentDay }: WeekdaySchedul
   );
 }
 
+// Add this helper function near the top of the file with other utility functions
+const formatVideoUrl = (url: string | undefined): string => {
+  if (!url) return '';
+  
+  // Handle YouTube URLs
+  if (url.includes('youtube.com/watch')) {
+    // Convert YouTube watch URL to embed URL
+    const videoId = url.split('v=')[1]?.split('&')[0];
+    if (videoId) {
+      return `https://www.youtube.com/embed/${videoId}`;
+    }
+  } else if (url.includes('youtu.be')) {
+    // Handle youtu.be shortened URLs
+    const videoId = url.split('youtu.be/')[1]?.split('?')[0];
+    if (videoId) {
+      return `https://www.youtube.com/embed/${videoId}`;
+    }
+  }
+  
+  // If it's already an embed URL or another type, return as is
+  return url;
+};
+
 // Initial states
 export default function Workouts() {
   const { profile } = useProfile();
@@ -273,6 +296,12 @@ export default function Workouts() {
   const [showFilters, setShowFilters] = useState(false);
   const [showWorkoutList, setShowWorkoutList] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
+  
+  // New state for search functionality
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  const [searchResults, setSearchResults] = useState<Exercise[]>([]);
+  const [allExercises, setAllExercises] = useState<Exercise[]>([]);
 
   const [filters, setFilters] = useState<Filters>({
     level: '',
@@ -503,6 +532,100 @@ export default function Workouts() {
     }
   };
 
+  // Load all exercises for search functionality
+  const loadAllExercises = useCallback(() => {
+    const exercises: Exercise[] = [];
+    
+    // Extract all exercises from the exercise database
+    Object.keys(exerciseDatabase).forEach(level => {
+      const levelData = exerciseDatabase[level as keyof typeof exerciseDatabase];
+      
+      Object.keys(levelData).forEach(category => {
+        const categoryExercises = levelData[category as keyof typeof levelData];
+        
+        if (Array.isArray(categoryExercises)) {
+          categoryExercises.forEach(exercise => {
+            // Make sure the category is properly typed
+            const typedExercise: Exercise = {
+              ...exercise,
+              category: exercise.category as Category,
+              difficulty: exercise.difficulty as Difficulty,
+              sets: '3-4',
+              reps: '8-12',
+              notes: `${category} exercise - ${level} level`
+            };
+            exercises.push(typedExercise);
+          });
+        }
+      });
+    });
+    
+    setAllExercises(exercises);
+  }, []);
+
+  // Handle exercise search
+  const handleSearch = useCallback((searchTerm: string) => {
+    if (!searchTerm.trim()) {
+      setSearchResults([]);
+      setShowSearchResults(false);
+      return;
+    }
+
+    const term = searchTerm.toLowerCase().trim();
+    const results = allExercises.filter(exercise => 
+      exercise.name.toLowerCase().includes(term) || 
+      exercise.category?.toLowerCase().includes(term) ||
+      exercise.muscles_worked?.some(muscle => muscle.toLowerCase().includes(term)) ||
+      exercise.equipment?.some(eq => eq.toLowerCase().includes(term))
+    );
+
+    setSearchResults(results);
+    setShowSearchResults(true);
+  }, [allExercises]);
+
+  // Load all exercises when component mounts
+  useEffect(() => {
+    if (isActive) {
+      loadAllExercises();
+    }
+  }, [isActive, loadAllExercises]);
+
+  // Search handler with debouncing
+  useEffect(() => {
+    const debounceTimeout = setTimeout(() => {
+      handleSearch(searchTerm);
+    }, 300);
+
+    return () => clearTimeout(debounceTimeout);
+  }, [searchTerm, handleSearch]);
+
+  // Handle selecting an exercise from search results
+  const selectExerciseFromSearch = (exercise: Exercise) => {
+    // Instead of directly setting the exercise, fetch full details including video
+    setLoadingExercise(true);
+    setError(null);
+    
+    // Get the exercise details from the service, same as viewExerciseDetails does
+    getExerciseDetails(exercise.name)
+      .then(details => {
+        if (!details) {
+          throw new Error(`Exercise ${exercise.name} not found`);
+        }
+        setSelectedExercise(details);
+      })
+      .catch(err => {
+        console.error('Error loading exercise details:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load exercise details');
+        // Fall back to the basic exercise if no details found
+        setSelectedExercise(exercise);
+      })
+      .finally(() => {
+        setLoadingExercise(false);
+        setShowSearchResults(false);
+        setSearchTerm('');
+      });
+  };
+
   // Update loading check
   if (loading || membershipLoading) {
     return (
@@ -525,13 +648,12 @@ export default function Workouts() {
     );
   }
 
-  if (!showWorkoutList && selectedWorkout) {
-    const currentDayWorkout = getCurrentDayWorkout();
-
     return (
-      <>
         <div className="min-h-screen bg-gray-50 dark:bg-[#121212] py-8">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {!showWorkoutList && selectedWorkout ? (
+          // Workout Plan View
+          <>
             {/* Header Section with Gradient Background */}
             <div className="relative overflow-hidden bg-gradient-to-r from-emerald-500 to-teal-600 rounded-3xl shadow-lg p-6 mb-6">
               <div className="absolute top-0 right-0 -mt-8 -mr-8 opacity-10">
@@ -632,7 +754,7 @@ export default function Workouts() {
             </div>
 
             {/* Current Day Workout */}
-            {currentDayWorkout && (
+            {getCurrentDayWorkout() && (
               <div className="bg-white dark:bg-[#1E1E1E] rounded-3xl shadow-lg border border-gray-100 dark:border-gray-800 transition-all hover:shadow-xl">
                 <div className="p-5 sm:p-6 border-b border-gray-100 dark:border-gray-800">
                   <div className="flex items-center gap-3">
@@ -640,7 +762,7 @@ export default function Workouts() {
                       <Dumbbell className="w-5 h-5 text-white" />
                     </div>
                     <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                      {currentDayWorkout.focus}
+                      {getCurrentDayWorkout()?.focus || "Rest Day"}
                     </h2>
                   </div>
                 </div>
@@ -682,7 +804,7 @@ export default function Workouts() {
                           <Calendar className="w-8 h-8 text-amber-500" />
                         </div>
                         <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto">
-                          {currentDayWorkout.notes || "Rest day - Take time to recover and prepare for your next workout session."}
+                          {getCurrentDayWorkout()?.notes || "Rest day - Take time to recover and prepare for your next workout session."}
                         </p>
                       </div>
                     )}
@@ -690,8 +812,169 @@ export default function Workouts() {
                 </div>
               </div>
             )}
+          </>
+        ) : (
+          // Workout List View
+          <>
+            {/* Hero Section */}
+            <div className="relative overflow-hidden bg-gradient-to-r from-emerald-500 to-teal-600 rounded-3xl shadow-lg p-8 mb-8">
+              <div className="absolute top-0 right-0 -mt-8 -mr-8 opacity-10">
+                <Dumbbell className="w-64 h-64 text-white" />
+              </div>
+              <div className="relative z-10">
+                <h1 className="text-2xl sm:text-3xl font-bold text-white">Workout Plans</h1>
+                <p className="text-emerald-50 mt-2 max-w-xl text-lg">Choose a personalized workout plan that matches your fitness goals and experience level</p>
+              </div>
+            </div>
 
-            {/* Exercise Modal */}
+            {/* Search Exercise Bar */}
+            <div className="mb-6 relative z-30">
+              <div className="bg-white dark:bg-[#1E1E1E] rounded-2xl shadow-lg border border-gray-100 dark:border-gray-800 p-4 sm:p-5">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-2.5 bg-emerald-50 dark:bg-emerald-500/10 rounded-full">
+                    <Dumbbell className="w-5 h-5 text-emerald-500" />
+                  </div>
+                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                    Search Exercises
+                  </h2>
+                </div>
+                
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder="Search by exercise name, muscle group, or equipment..."
+                    className="w-full p-4 pr-12 bg-gray-50 dark:bg-[#282828] border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                  <button 
+                    className="absolute right-4 top-1/2 transform -translate-y-1/2 p-2 bg-emerald-500 rounded-lg text-white"
+                    onClick={() => handleSearch(searchTerm)}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                  </button>
+                  
+                  {/* Search Results Dropdown */}
+                  {showSearchResults && searchResults.length > 0 && (
+                    <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-[#1E1E1E] border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl max-h-96 overflow-y-auto z-50">
+                      <div className="p-2">
+                        <h3 className="px-3 py-2 text-sm font-medium text-gray-600 dark:text-gray-400">
+                          {searchResults.length} exercises found
+                        </h3>
+                        
+                        <div className="space-y-1">
+                          {searchResults.map((exercise) => (
+                            <button
+                              key={exercise.id}
+                              onClick={() => selectExerciseFromSearch(exercise)}
+                              className="w-full flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-[#282828] rounded-lg transition-colors text-left"
+                            >
+                              <div className="p-2 bg-gray-100 dark:bg-gray-800 rounded-full">
+                                <Dumbbell className="w-4 h-4 text-emerald-500" />
+                              </div>
+                              <div className="flex-1">
+                                <h4 className="font-medium text-gray-900 dark:text-white">
+                                  {exercise.name}
+                                </h4>
+                                <p className="text-sm text-gray-600 dark:text-gray-400">
+                                  {exercise.muscles_worked?.join(', ') || exercise.category}
+                                </p>
+                              </div>
+                              <div className="bg-emerald-50 dark:bg-emerald-500/10 px-2 py-1 rounded text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                                {exercise.equipment?.join(', ') || "No equipment"}
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {showSearchResults && searchResults.length === 0 && searchTerm && (
+                    <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-[#1E1E1E] border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl z-50">
+                      <div className="p-6 text-center">
+                        <p className="text-gray-600 dark:text-gray-400">No exercises found matching "{searchTerm}"</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {workouts.map((workout, index) => (
+                <div 
+                  key={index}
+                  className="bg-white dark:bg-[#1E1E1E] rounded-3xl shadow-lg border border-gray-100 dark:border-gray-800 overflow-hidden group hover:shadow-xl transition-all transform hover:-translate-y-1"
+                >
+                  <div className="relative h-52">
+                    <img
+                      src={workout.imageUrl}
+                      alt={workout.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
+                    <div className="absolute bottom-0 left-0 right-0 p-5">
+                      <h3 className="text-xl font-bold text-white">{workout.title}</h3>
+                    </div>
+                  </div>
+                  <div className="p-6">
+                    <div className="grid grid-cols-2 gap-3 text-sm mb-5">
+                      <div className="flex items-center gap-3 bg-gray-50 dark:bg-gray-800/40 p-3 rounded-xl">
+                        <div className="p-2 bg-blue-50 dark:bg-blue-500/10 rounded-full">
+                          <Clock className="w-4 h-4 text-blue-500" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">Duration</p>
+                          <p className="font-medium text-gray-900 dark:text-white">{workout.duration}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3 bg-gray-50 dark:bg-gray-800/40 p-3 rounded-xl">
+                        <div className="p-2 bg-purple-50 dark:bg-purple-500/10 rounded-full">
+                          <Target className="w-4 h-4 text-purple-500" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">Goal</p>
+                          <p className="font-medium text-gray-900 dark:text-white">{workout.goal}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3 bg-gray-50 dark:bg-gray-800/40 p-3 rounded-xl">
+                        <div className="p-2 bg-emerald-50 dark:bg-emerald-500/10 rounded-full">
+                          <Gauge className="w-4 h-4 text-emerald-500" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">Level</p>
+                          <p className="font-medium text-gray-900 dark:text-white">{workout.level}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3 bg-gray-50 dark:bg-gray-800/40 p-3 rounded-xl">
+                        <div className="p-2 bg-amber-50 dark:bg-amber-500/10 rounded-full">
+                          <Wrench className="w-4 h-4 text-amber-500" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">Equipment</p>
+                          <p className="font-medium text-gray-900 dark:text-white">{workout.equipment}</p>
+                        </div>
+                      </div>
+                    </div>
+                    <p className="text-gray-600 dark:text-gray-400 text-sm mb-6">{workout.description}</p>
+                    <button 
+                      onClick={() => selectWorkout(workout)}
+                      className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-4 py-3 rounded-xl transition-all font-medium shadow-md flex items-center justify-center gap-2"
+                    >
+                      <Play className="w-4 h-4" />
+                      Start Workout Plan
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+        
+        {/* Exercise Modal - Visible in both views */}
             {selectedExercise && (
               <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-start sm:items-center justify-center p-4 z-50">
                 <div className="bg-white dark:bg-[#1E1E1E] rounded-2xl sm:rounded-3xl p-5 sm:p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-2xl border border-gray-100 dark:border-gray-800">
@@ -714,12 +997,46 @@ export default function Workouts() {
                   {/* Video Section */}
                   <div className="mb-6 sm:mb-8">
                     <div className="relative pt-[56.25%] rounded-xl overflow-hidden bg-black shadow-md">
+                  {selectedExercise.videoUrl ? (
                       <iframe
-                        src={selectedExercise.videoUrl}
+                      src={formatVideoUrl(selectedExercise.videoUrl)}
                         className="absolute inset-0 w-full h-full"
+                      frameBorder="0"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                         allowFullScreen
                         title={`${selectedExercise.name} demonstration`}
-                      />
+                      onError={(e) => {
+                        // Hide iframe on error and show fallback
+                        if (e.target) {
+                          (e.target as HTMLIFrameElement).style.display = 'none';
+                          const parent = (e.target as HTMLIFrameElement).parentElement;
+                          if (parent) {
+                            parent.classList.add('flex', 'items-center', 'justify-center');
+                            const videoUrl = selectedExercise && selectedExercise.videoUrl ? selectedExercise.videoUrl : '#';
+                            parent.innerHTML += `<div class="text-white text-center p-4">
+                              <p>Video playback error.</p>
+                              <p class="text-sm mt-2">Try opening the video directly: 
+                                <a href="${videoUrl}" target="_blank" rel="noopener noreferrer" 
+                                   class="text-emerald-400 hover:underline">Open video</a>
+                              </p>
+                            </div>`;
+                          }
+                        }
+                      }}
+                    />
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="text-white text-center p-4">
+                        <Dumbbell className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                        <p>No video available for this exercise.</p>
+                        <p className="text-sm mt-2 text-gray-400">
+                          {selectedExercise && selectedExercise.name 
+                            ? `Try searching "${selectedExercise.name} demonstration" on YouTube.`
+                            : "Try searching for this exercise demonstration on YouTube."}
+                        </p>
+                      </div>
+                    </div>
+                  )}
                     </div>
                   </div>
 
@@ -823,6 +1140,7 @@ export default function Workouts() {
                 </div>
               </div>
             )}
+      </div>
 
             {/* Loading Overlay */}
             {loadingExercise && (
@@ -830,103 +1148,6 @@ export default function Workouts() {
                 <div className="animate-spin rounded-full h-14 w-14 border-4 border-gray-200 dark:border-gray-700 border-t-emerald-500"></div>
               </div>
             )}
-          </div>
-        </div>
-      </>
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#121212] py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Hero Section */}
-        <div className="relative overflow-hidden bg-gradient-to-r from-emerald-500 to-teal-600 rounded-3xl shadow-lg p-8 mb-8">
-          <div className="absolute top-0 right-0 -mt-8 -mr-8 opacity-10">
-            <Dumbbell className="w-64 h-64 text-white" />
-          </div>
-          <div className="relative z-10">
-            <h1 className="text-2xl sm:text-3xl font-bold text-white">Workout Plans</h1>
-            <p className="text-emerald-50 mt-2 max-w-xl text-lg">Choose a personalized workout plan that matches your fitness goals and experience level</p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {workouts.map((workout, index) => (
-            <div 
-              key={index}
-              className="bg-white dark:bg-[#1E1E1E] rounded-3xl shadow-lg border border-gray-100 dark:border-gray-800 overflow-hidden group hover:shadow-xl transition-all transform hover:-translate-y-1"
-            >
-              <div className="relative h-52">
-                <img
-                  src={workout.imageUrl}
-                  alt={workout.title}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
-                <div className="absolute bottom-0 left-0 right-0 p-5">
-                  <h3 className="text-xl font-bold text-white">{workout.title}</h3>
-                </div>
-              </div>
-              <div className="p-6">
-                <div className="grid grid-cols-2 gap-3 text-sm mb-5">
-                  <div className="flex items-center gap-3 bg-gray-50 dark:bg-gray-800/40 p-3 rounded-xl">
-                    <div className="p-2 bg-blue-50 dark:bg-blue-500/10 rounded-full">
-                      <Clock className="w-4 h-4 text-blue-500" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">Duration</p>
-                      <p className="font-medium text-gray-900 dark:text-white">{workout.duration}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3 bg-gray-50 dark:bg-gray-800/40 p-3 rounded-xl">
-                    <div className="p-2 bg-purple-50 dark:bg-purple-500/10 rounded-full">
-                      <Target className="w-4 h-4 text-purple-500" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">Goal</p>
-                      <p className="font-medium text-gray-900 dark:text-white">{workout.goal}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3 bg-gray-50 dark:bg-gray-800/40 p-3 rounded-xl">
-                    <div className="p-2 bg-emerald-50 dark:bg-emerald-500/10 rounded-full">
-                      <Gauge className="w-4 h-4 text-emerald-500" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">Level</p>
-                      <p className="font-medium text-gray-900 dark:text-white">{workout.level}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3 bg-gray-50 dark:bg-gray-800/40 p-3 rounded-xl">
-                    <div className="p-2 bg-amber-50 dark:bg-amber-500/10 rounded-full">
-                      <Wrench className="w-4 h-4 text-amber-500" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">Equipment</p>
-                      <p className="font-medium text-gray-900 dark:text-white">{workout.equipment}</p>
-                    </div>
-                  </div>
-                </div>
-                <p className="text-gray-600 dark:text-gray-400 text-sm mb-6">{workout.description}</p>
-                <button 
-                  onClick={() => selectWorkout(workout)}
-                  className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-4 py-3 rounded-xl transition-all font-medium shadow-md flex items-center justify-center gap-2"
-                >
-                  <Play className="w-4 h-4" />
-                  Start Workout Plan
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {selectedWorkout?.schedule?.days && Array.isArray(selectedWorkout.schedule.days) && selectedWorkout.schedule.days.length > 0 && (
-          <WeekdaySchedule
-            schedule={selectedWorkout.schedule}
-            currentDay={currentDay}
-            setCurrentDay={setCurrentDay}
-          />
-        )}
-      </div>
     </div>
   );
 } 

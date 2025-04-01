@@ -358,4 +358,64 @@ export async function updateAadhaarImages(
     console.error('Error updating Aadhaar images:', error);
     return { data: undefined, error: 'Failed to update Aadhaar images' };
   }
+}
+
+// Add this with other interfaces
+export interface TrainerWorkoutPlan {
+  id: string;
+  userId: string;
+  name: string;
+  description: string;
+  level: string;
+  duration: number;
+  created_at: Timestamp;
+  updated_at: Timestamp;
+  created_by: string;
+  days: {
+    day: string;
+    exercises: Array<{
+      exerciseId: string;
+      exerciseName: string;
+      sets: number;
+      reps: string;
+      rest: number;
+      weight: string;
+    }>;
+    notes: string;
+  }[];
+}
+
+// Add this with other functions
+export async function getTrainerWorkoutPlans(userId: string): Promise<FirestoreResponse<TrainerWorkoutPlan[]>> {
+  try {
+    const workoutPlansRef = collection(db, 'workout_plans');
+    const q = query(workoutPlansRef, where('userId', '==', userId));
+    const querySnapshot = await getDocs(q);
+
+    if (querySnapshot.empty) {
+      return { data: [], error: null };
+    }
+
+    const workoutPlans: TrainerWorkoutPlan[] = [];
+    querySnapshot.forEach((doc) => {
+      const plan = doc.data();
+      workoutPlans.push({
+        id: doc.id,
+        userId: plan.userId,
+        name: plan.name,
+        description: plan.description || "",
+        level: plan.level || "intermediate",
+        duration: plan.duration || 0,
+        created_at: plan.created_at,
+        updated_at: plan.updated_at,
+        created_by: plan.created_by || "system",
+        days: plan.days || []
+      });
+    });
+
+    return { data: workoutPlans, error: null };
+  } catch (error) {
+    console.error('Error getting trainer workout plans:', error);
+    return { data: [], error: 'Failed to get trainer workout plans' };
+  }
 } 

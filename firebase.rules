@@ -1,0 +1,60 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Basic user rules
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Profile rules
+    match /profiles/{userId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Trainer requests - users can create their own requests,
+    // admins can read and update all requests
+    match /trainerRequests/{requestId} {
+      // Allow users to create their own requests
+      allow create: if request.auth != null && 
+                     request.resource.data.userId == request.auth.uid;
+      
+      // Allow users to read their own requests
+      allow read: if request.auth != null && 
+                   (resource.data.userId == request.auth.uid || 
+                    get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role in ['admin', 'trainer']);
+      
+      // Allow admins and trainers to update any request
+      allow update, delete: if request.auth != null && 
+                             get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role in ['admin', 'trainer'];
+    }
+    
+    // Trainer assignments
+    match /trainerAssignments/{userId} {
+      // Users can read their own assignments
+      allow read: if request.auth != null && request.auth.uid == userId;
+      
+      // Only admins and trainers can create/update assignments
+      allow create, update, delete: if request.auth != null && 
+                                     get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role in ['admin', 'trainer'];
+    }
+    
+    // Admin rules
+    match /admins/{userId} {
+      // Admins can read all admin documents
+      allow read: if request.auth != null && 
+                   exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+      
+      // Only super admins can update admin roles
+      allow write: if request.auth != null && 
+                    get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role == 'superadmin';
+    }
+    
+    // Notifications
+    match /notifications/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow update: if request.auth != null && 
+                    get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role in ['admin', 'trainer'];
+    }
+  }
+} 

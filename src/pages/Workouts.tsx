@@ -5,6 +5,7 @@ import {
   generatePersonalizedWorkoutPlan, 
   getExerciseDetails, 
   generateWeeklySchedule,
+  convertTrainerWorkoutToAppFormat,
   type WorkoutPlan,
   type DayWorkout,
   type WeeklySchedule
@@ -16,7 +17,7 @@ import { MuscleRadarChart } from '../components/MuscleRadarChart';
 import { exerciseDatabase } from '../data/exerciseDatabase';
 import type { Exercise, ExerciseDetails, Category, Difficulty } from '../types/exercise';
 import { useAuth } from '../context/AuthContext';
-import { checkMembershipStatus } from '../services/FirestoreService';
+import { checkMembershipStatus, getTrainerWorkoutPlans } from '../services/FirestoreService';
 import type { Membership } from '../types/profile';
 import MembershipRequired from '../components/MembershipRequired';
 import { useMembership } from '../context/MembershipContext';
@@ -310,6 +311,9 @@ export default function Workouts() {
     equipment: ''
   });
 
+  const [trainerWorkouts, setTrainerWorkouts] = useState<WorkoutPlan[]>([]);
+  const [loadingTrainerWorkouts, setLoadingTrainerWorkouts] = useState(false);
+
   // Add fetchWorkouts function
   const fetchWorkouts = useCallback(async () => {
     try {
@@ -326,14 +330,42 @@ export default function Workouts() {
     }
   }, []);
 
-  // Update the useEffect that depends on membership status
+  // Add fetchTrainerWorkouts function
+  const fetchTrainerWorkouts = useCallback(async () => {
+    if (!user?.uid) return;
+    
+    try {
+      setLoadingTrainerWorkouts(true);
+      const { data: trainerPlans, error } = await getTrainerWorkoutPlans(user.uid);
+      
+      if (error) {
+        console.error('Error fetching trainer workout plans:', error);
+        return;
+      }
+      
+      if (trainerPlans && trainerPlans.length > 0) {
+        // Convert each trainer plan to app format
+        const convertedPlans = await Promise.all(
+          trainerPlans.map(plan => convertTrainerWorkoutToAppFormat(plan))
+        );
+        setTrainerWorkouts(convertedPlans);
+      }
+    } catch (err) {
+      console.error('Error in fetchTrainerWorkouts:', err);
+    } finally {
+      setLoadingTrainerWorkouts(false);
+    }
+  }, [user?.uid]);
+
+  // Update the useEffect that depends on membership status to also fetch trainer workouts
   useEffect(() => {
     if (isActive) {
       fetchWorkouts();
+      fetchTrainerWorkouts();
     } else {
       setLoading(false);
     }
-  }, [isActive, fetchWorkouts]);
+  }, [isActive, fetchWorkouts, fetchTrainerWorkouts]);
 
   // Define applyFilters at the top level
   const applyFilters = useCallback(() => {
@@ -903,6 +935,103 @@ export default function Workouts() {
               </div>
             </div>
 
+            {/* Trainer Workout Plans */}
+            {loadingTrainerWorkouts ? (
+              <div className="mb-10">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                  <div className="p-2 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg">
+                    <BarChart className="w-5 h-5 text-indigo-500" />
+                  </div>
+                  Loading Trainer Plans...
+                </h2>
+                <div className="bg-white dark:bg-[#1E1E1E] rounded-3xl shadow-lg p-8 flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-4 border-gray-200 dark:border-gray-700 border-t-indigo-500"></div>
+                </div>
+              </div>
+            ) : trainerWorkouts.length > 0 && (
+              <div className="mb-10">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                  <div className="p-2 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg">
+                    <BarChart className="w-5 h-5 text-indigo-500" />
+                  </div>
+                  Your Trainer Plans
+                </h2>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
+                  {trainerWorkouts.map((workout, index) => (
+                    <div 
+                      key={`trainer-${index}`}
+                      className="bg-white dark:bg-[#1E1E1E] rounded-3xl shadow-lg border-2 border-indigo-200 dark:border-indigo-800 overflow-hidden group hover:shadow-xl transition-all transform hover:-translate-y-1"
+                    >
+                      <div className="relative h-32 bg-gradient-to-r from-indigo-500 to-purple-600">
+                        <div className="absolute inset-0 bg-black/10"></div>
+                        <div className="absolute bottom-0 left-0 right-0 p-5">
+                          <div className="bg-white dark:bg-gray-800 text-xs text-indigo-600 dark:text-indigo-400 px-2 py-1 rounded-full inline-block mb-2">Trainer Plan</div>
+                          <h3 className="text-xl font-bold text-white">{workout.title}</h3>
+                        </div>
+                      </div>
+                      <div className="p-6">
+                        <div className="grid grid-cols-2 gap-3 text-sm mb-5">
+                          <div className="flex items-center gap-3 bg-gray-50 dark:bg-gray-800/40 p-3 rounded-xl">
+                            <div className="p-2 bg-blue-50 dark:bg-blue-500/10 rounded-full">
+                              <Clock className="w-4 h-4 text-blue-500" />
+                            </div>
+                            <div>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">Duration</p>
+                              <p className="font-medium text-gray-900 dark:text-white">{workout.duration}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3 bg-gray-50 dark:bg-gray-800/40 p-3 rounded-xl">
+                            <div className="p-2 bg-purple-50 dark:bg-purple-500/10 rounded-full">
+                              <Target className="w-4 h-4 text-purple-500" />
+                            </div>
+                            <div>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">Goal</p>
+                              <p className="font-medium text-gray-900 dark:text-white">{workout.goal}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3 bg-gray-50 dark:bg-gray-800/40 p-3 rounded-xl">
+                            <div className="p-2 bg-emerald-50 dark:bg-emerald-500/10 rounded-full">
+                              <Gauge className="w-4 h-4 text-emerald-500" />
+                            </div>
+                            <div>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">Level</p>
+                              <p className="font-medium text-gray-900 dark:text-white">{workout.level}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3 bg-gray-50 dark:bg-gray-800/40 p-3 rounded-xl">
+                            <div className="p-2 bg-amber-50 dark:bg-amber-500/10 rounded-full">
+                              <Calendar className="w-4 h-4 text-amber-500" />
+                            </div>
+                            <div>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">Created</p>
+                              <p className="font-medium text-gray-900 dark:text-white">By Trainer</p>
+                            </div>
+                          </div>
+                        </div>
+                        <p className="text-gray-600 dark:text-gray-400 text-sm mb-6">{workout.description}</p>
+                        <button 
+                          onClick={() => selectWorkout(workout)}
+                          className="w-full bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white px-4 py-3 rounded-xl transition-all font-medium shadow-md flex items-center justify-center gap-2"
+                        >
+                          <Play className="w-4 h-4" />
+                          Start Trainer Plan
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Standard Workout Plans - keep existing code */}
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+              <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
+                <Dumbbell className="w-5 h-5 text-emerald-500" />
+              </div>
+              Standard Workout Plans
+            </h2>
+            
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {workouts.map((workout, index) => (
                 <div 

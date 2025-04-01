@@ -1,5 +1,6 @@
 import { Exercise } from '../types/exercise';
 import { getAllExercises, getExercisesByCategory, getExercisesByMuscleGroup } from './ExerciseService';
+import { TrainerWorkoutPlan } from './FirestoreService';
 
 export interface DayWorkout {
   day: string;
@@ -24,6 +25,7 @@ export interface WorkoutPlan {
   schedule?: WeeklySchedule;
   showSplitMenu?: boolean;
   splitType?: 'bro-split' | 'push-pull-legs' | 'upper-lower';
+  isTrainerPlan?: boolean;
 }
 
 export interface ExerciseDetails extends Exercise {
@@ -406,5 +408,75 @@ export const generatePersonalizedWorkoutPlan = (profileData: any): WorkoutPlan =
     goal: 'Custom',
     equipment: 'Full Gym',
     splitType: 'push-pull-legs'
+  };
+};
+
+/**
+ * Converts trainer workout plans from Firestore to the format expected by the Workouts component
+ */
+export const convertTrainerWorkoutToAppFormat = async (trainerPlan: TrainerWorkoutPlan): Promise<WorkoutPlan> => {
+  const allExercises = await getAllExercises();
+  
+  // Process each day's exercises to match the expected Exercise type
+  const days = trainerPlan.days.map(day => {
+    // Map each exercise to the full Exercise object
+    const processedExercises = day.exercises.map(exerciseItem => {
+      // Try to find the full exercise details from our exercise database
+      const exerciseDetails = allExercises.find(e => 
+        e.id === exerciseItem.exerciseId || e.name === exerciseItem.exerciseName
+      );
+      
+      if (exerciseDetails) {
+        // If found, use the details but override with trainer-specified values
+        return {
+          ...exerciseDetails,
+          sets: exerciseItem.sets.toString(),
+          reps: exerciseItem.reps,
+          notes: exerciseItem.weight || ''
+        };
+      } else {
+        // If not found, create a minimal exercise object with available data
+        return {
+          id: exerciseItem.exerciseId || `exercise-${Math.random().toString(36).substring(2, 9)}`,
+          name: exerciseItem.exerciseName,
+          sets: exerciseItem.sets.toString(),
+          reps: exerciseItem.reps,
+          notes: exerciseItem.weight || '',
+          targetMuscles: [],
+          secondaryMuscles: [],
+          instructions: [],
+          tips: [],
+          equipment: [],
+          difficulty: 'Intermediate' as any,
+          category: 'back' as any,
+          muscles_worked: [],
+          common_mistakes: [],
+          variations: [],
+          videoUrl: ''
+        } as Exercise;
+      }
+    });
+
+    return {
+      day: day.day,
+      focus: day.day + (day.notes ? `: ${day.notes}` : ''),
+      exercises: processedExercises,
+      notes: day.notes
+    } as DayWorkout;
+  });
+
+  // Convert to WorkoutPlan format
+  return {
+    id: trainerPlan.id,
+    title: `${trainerPlan.name}'s Trainer Plan`,
+    description: trainerPlan.description || 'Custom workout plan created by your trainer',
+    imageUrl: 'https://images.unsplash.com/photo-1599058917765-a780eda07a3e?ixlib=rb-1.2.1&auto=format&fit=crop&w=1349&q=80',
+    level: trainerPlan.level,
+    duration: trainerPlan.duration.toString() + ' weeks',
+    goal: 'Custom',
+    equipment: 'Custom',
+    schedule: { days },
+    isTrainerPlan: true,
+    splitType: 'bro-split'
   };
 }; 

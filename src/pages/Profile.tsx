@@ -1,4 +1,4 @@
-import { Edit, Crown, ArrowLeft, Activity, Calendar, User2, Scale, Heart, Phone } from 'lucide-react';
+import { Edit, Crown, ArrowLeft, Activity, Calendar, User2, Scale, Heart, Phone, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useState, useEffect } from 'react';
@@ -6,15 +6,18 @@ import { getProfile } from '../services/FirestoreService';
 import type { Profile } from '../types/profile';
 import { toast } from 'react-hot-toast';
 import { useMembership } from '../context/MembershipContext';
+import { useTheme } from '../context/ThemeContext';
 import UserInfoCard from '../components/profile/UserInfoCard';
 import StatsGrid from '../components/profile/StatsGrid';
 import MembershipCard from '../components/profile/MembershipCard';
 import PreferencesCard from '../components/profile/PreferencesCard';
 import ProfileSetupModal from '../components/ProfileSetupModal';
+import MyTrainer from '../components/MyTrainer';
 
 export default function Profile() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { isDarkMode } = useTheme();
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<Profile | null>(null);
   const { membership, isActive, loading: membershipLoading } = useMembership();
@@ -127,6 +130,47 @@ export default function Profile() {
 
           {/* Membership Card */}
           <MembershipCard isActive={isActive} membership={membership} />
+
+          {/* My Trainer Card */}
+          <MyTrainer />
+
+          {/* Link to Trainers Directory */}
+          <div className={`rounded-lg overflow-hidden shadow ${
+            isDarkMode ? 'bg-gray-800' : 'bg-white'
+          }`}>
+            <div className={`px-6 py-4 ${isDarkMode ? 'bg-gray-750' : 'bg-gray-50'} border-b ${
+              isDarkMode ? 'border-gray-700' : 'border-gray-200'
+            }`}>
+              <h3 className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                Explore Trainers
+              </h3>
+            </div>
+            <div className="p-6">
+              <div className="flex items-center">
+                <div className={`p-3 rounded-full ${isDarkMode ? 'bg-blue-900/30' : 'bg-blue-100'} mr-4`}>
+                  <Users className={`h-6 w-6 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`} />
+                </div>
+                <div>
+                  <h4 className={`text-lg font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                    Browse Our Trainer Directory
+                  </h4>
+                  <p className={`mt-1 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                    View trainer profiles and choose the one that best fits your fitness goals
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => navigate('/trainers')}
+                className={`mt-4 w-full px-4 py-2 rounded-md font-medium ${
+                  isDarkMode 
+                    ? 'bg-blue-900/30 text-blue-400 hover:bg-blue-900/50 border border-blue-800/30' 
+                    : 'bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200'
+                }`}
+              >
+                View All Trainers
+              </button>
+            </div>
+          </div>
 
           {/* Preferences Card */}
           <PreferencesCard profile={profile} />

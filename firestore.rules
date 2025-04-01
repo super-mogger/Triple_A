@@ -2,214 +2,110 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Helper function to check if user is authenticated
+    // Simple check for authentication
     function isAuthenticated() {
       return request.auth != null;
     }
 
-    // Helper function to check if user is admin (simplified)
-    function isAdmin() {
-      return isAuthenticated() && (
-        request.auth.token.admin == true ||
-        exists(/databases/$(database)/documents/admins/$(request.auth.email)) && 
-        get(/databases/$(database)/documents/admins/$(request.auth.email)).data.role == 'admin'
-      );
-    }
-    
-    // Helper function to check if a user exists in the admins collection with admin role
-    function isAdminRole() {
-      return isAuthenticated() && 
-        exists(/databases/$(database)/documents/admins/$(request.auth.email)) && 
-        get(/databases/$(database)/documents/admins/$(request.auth.email)).data.role == 'admin';
-    }
-    
-    // Helper function to check if user is a trainer
-    function isTrainer() {
-      return isAuthenticated() && 
-        exists(/databases/$(database)/documents/admins/$(request.auth.email)) && 
-        get(/databases/$(database)/documents/admins/$(request.auth.email)).data.role == 'trainer';
-    }
-    
-    // Helper function to check if user is either admin or trainer (staff)
-    function isStaff() {
-      return isAuthenticated() && (
-        request.auth.token.admin == true ||
-        exists(/databases/$(database)/documents/admins/$(request.auth.email)) &&
-        (
-          get(/databases/$(database)/documents/admins/$(request.auth.email)).data.role == 'admin' ||
-          get(/databases/$(database)/documents/admins/$(request.auth.email)).data.role == 'trainer'
-        )
-      );
-    }
-    
-    // Helper function to check if a user has any admin access (admin or trainer)
-    function hasAdminAccess() {
-      return isAuthenticated() && (
-        isAdmin() || 
-        isAdminRole() || 
-        isTrainer()
-      );
-    }
-    
-    // Helper function to check if user is accessing their own data
-    function isUserOwned(userId) {
-      return isAuthenticated() && request.auth.uid == userId;
-    }
-    
-    // Helper function to check if user is trying to update photo fields
-    function hasPhotoFields() {
-      return request.resource.data.diff(resource.data).affectedKeys()
-        .hasAny(['photoURL', 'avatar_url', 'aadhaarCardFrontURL', 'aadhaarCardBackURL']);
+    // Super admin is always allowed access
+    function isSuperAdmin() {
+      return request.auth.token.email == "rawatamit446@gmail.com";
     }
 
-    // Allow users to read and write their own data
-    match /users/{userId} {
-      allow read: if isAuthenticated();
-      allow write: if isUserOwned(userId) || isStaff();
-      
-      // Allow users to update their own membership
-      match /membership/{document=**} {
-        allow read: if isUserOwned(userId) || isStaff();
-        allow write: if isUserOwned(userId) || isStaff();
-      }
+    // Super admin override - always gives full access
+    match /{document=**} {
+      allow read, write: if isAuthenticated() && isSuperAdmin();
     }
 
-    // Allow users to read and write their own profile
-    match /profiles/{userId} {
-      allow read: if isAuthenticated();
-      allow create: if isUserOwned(userId) || isStaff();
-      // Allow updates but restrict photo fields to admin/trainer only
-      allow update: if isStaff() || (isUserOwned(userId) && !hasPhotoFields());
-      allow delete: if isAdmin(); // Only admins can delete profiles
-    }
-
-    // Allow users to read their own membership details
-    match /memberships/{membershipId} {
-      allow read: if isAuthenticated();
-      allow create, update: if isStaff() || 
-        (isAuthenticated() && request.resource.data.userId == request.auth.uid);
-      allow delete: if isAdmin(); // Only admins can delete memberships
-    }
-
-    // Diet Plans Collection
-    match /dietPlans/{planId} {
-      allow read: if isAuthenticated();
-      allow write: if isStaff() || 
-        (isAuthenticated() && request.resource.data.userId == request.auth.uid);
-    }
-
-    // Attendance Collection
-    match /attendance/{attendanceId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && 
-        (request.resource.data.userId == request.auth.uid || isStaff());
-      allow update, delete: if isStaff() || 
-        (isAuthenticated() && resource.data.userId == request.auth.uid);
-    }
-    
-    // Attendance Stats Collection
-    match /attendanceStats/{userId} {
-      allow read: if isAuthenticated() && (request.auth.uid == userId || isStaff());
-      allow write: if isAuthenticated() && (request.auth.uid == userId || isStaff());
-    }
-
-    // Water Intake Collection
-    match /waterIntake/{document} {
-      function isDocumentOwner() {
-        return isAuthenticated() && (
-          // Check userId field in the document
-          (resource != null && resource.data.userId == request.auth.uid) ||
-          // Check document ID format (userId_date)
-          document.split('_')[0] == request.auth.uid
-        );
-      }
-      
-      allow read: if isAuthenticated() && (
-        isDocumentOwner() || 
-        isStaff()
-      );
-      
-      allow create: if isAuthenticated() && (
-        // Ensure userId in data matches auth ID
-        request.resource.data.userId == request.auth.uid ||
-        // Allow staff to create documents for any user
-        isStaff()
-      );
-      
-      allow update, delete: if isAuthenticated() && (
-        isDocumentOwner() || 
-        isStaff()
-      );
-    }
-
-    // Payment Collections
-    match /payments/{paymentId} {
-      allow read: if isAuthenticated() && 
-        (resource.data.userId == request.auth.uid || isStaff());
-      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if isAdmin(); // Only admins can modify payment records
-    }
-
-    match /payment-history/{userId} {
-      allow read: if isUserOwned(userId) || isStaff();
-      match /transactions/{transactionId} {
-        allow read: if isUserOwned(userId) || isStaff();
-      }
-    }
-    
-    // Admin Collection for admin management
+    // Check if user is an admin without complex lookups
     match /admins/{adminId} {
-      // Allow both admins and trainers to read
+      // Everyone can read admins collection
       allow read: if isAuthenticated();
       
-      // Simplified admin write rules - allow if user has admin role in admins collection
+      // Super admin can always write; other admins can write if they exist in collection
       allow write: if isAuthenticated() && (
-        request.auth.token.admin == true || 
-        exists(/databases/$(database)/documents/admins/$(request.auth.email)) && 
-        get(/databases/$(database)/documents/admins/$(request.auth.email)).data.role == 'admin'
+        isSuperAdmin() || 
+        // Direct document ID match
+        adminId == request.auth.uid || 
+        adminId == request.auth.token.email
+      );
+    }
+
+    // Give broad access to critical collections
+    match /memberships/{membershipId} {
+      allow read, write: if isAuthenticated();
+    }
+    
+    match /profiles/{profileId} {
+      allow read, write: if isAuthenticated();
+    }
+    
+    match /attendance/{attendanceId} {
+      allow read, write: if isAuthenticated();
+    }
+    
+    match /payments/{paymentId} {
+      allow read, write: if isAuthenticated();
+    }
+    
+    match /notifications/{notificationId} {
+      allow read, write: if isAuthenticated();
+    }
+    
+    match /holidays/{holidayId} {
+      allow read, write: if isAuthenticated();
+    }
+    
+    // Add rule for attendanceStats collection
+    match /attendanceStats/{statId} {
+      // Allow users to read any stats
+      allow read: if isAuthenticated();
+      // Allow users to write only to their own stats document
+      allow write: if isAuthenticated() && (
+        isSuperAdmin() || 
+        exists(/databases/$(database)/documents/admins/$(request.auth.token.email)) ||
+        statId == request.auth.uid
       );
     }
     
-    // Holidays Collection
-    match /holidays/{holidayId} {
-      // Anyone authenticated can read holidays
+    // Add rule for trainerAssignments collection
+    match /trainerAssignments/{assignmentId} {
+      // Allow authenticated users to read
       allow read: if isAuthenticated();
-      // Both admins and trainers can manage holidays
-      allow create, update: if isStaff();
-      allow delete: if isAdmin(); // Only admins can delete holidays
+      // Only admins can write to trainer assignments
+      allow write: if isAuthenticated() && (
+        isSuperAdmin() || 
+        exists(/databases/$(database)/documents/admins/$(request.auth.token.email))
+      );
     }
-
-    // Workouts Collection
-    match /workouts/{workoutId} {
+    
+    // Add rule for trainerRequests collection
+    match /trainerRequests/{requestId} {
+      // Allow authenticated users to read their own requests
+      allow read: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid ||
+        isSuperAdmin() || 
+        exists(/databases/$(database)/documents/admins/$(request.auth.token.email))
+      );
+      
+      // Allow users to create their own requests
+      allow create: if isAuthenticated();
+      
+      // Allow admins to update and delete any request
+      allow update, delete: if isAuthenticated() && (
+        isSuperAdmin() || 
+        exists(/databases/$(database)/documents/admins/$(request.auth.token.email))
+      );
+    }
+    
+    // Fallback rule for everything else
+    match /{document=**} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && 
-        (request.resource.data.userId == request.auth.uid || isStaff());
-      allow update, delete: if isStaff() || 
-        (isAuthenticated() && resource.data.userId == request.auth.uid);
-    }
-
-    // Exercises Collection
-    match /exercises/{exerciseId} {
-      allow read: if isAuthenticated();
-      allow write: if isStaff(); // Only staff can modify exercise database
-    }
-
-    // Workout Plans Collection
-    match /workoutPlans/{planId} {
-      allow read: if isAuthenticated();
-      allow write: if isStaff();
-    }
-
-    // Exercise Categories Collection
-    match /exerciseCategories/{categoryId} {
-      allow read: if isAuthenticated();
-      allow write: if isStaff();
-    }
-
-    // User Workout Progress
-    match /workoutProgress/{userId} {
-      allow read: if isAuthenticated() && (request.auth.uid == userId || isStaff());
-      allow write: if isAuthenticated() && (request.auth.uid == userId || isStaff());
+      // Super admin or a user in the admins collection can write
+      allow write: if isAuthenticated() && (
+        isSuperAdmin() || 
+        exists(/databases/$(database)/documents/admins/$(request.auth.token.email))
+      );
     }
   }
 }

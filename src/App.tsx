@@ -32,6 +32,7 @@ const Settings = lazy(() => import('./pages/Settings'));
 const NotificationSettings = lazy(() => import('./pages/NotificationSettings'));
 const PrivacyAndSecurity = lazy(() => import('./pages/PrivacyAndSecurity'));
 const HelpAndSupport = lazy(() => import('./pages/HelpAndSupport'));
+const Trainers = lazy(() => import('./pages/Trainers'));
 
 // Loading component
 const LoadingSpinner = () => (
@@ -133,6 +134,7 @@ function AppRoutes() {
           <Route path="/achievements" element={<Achievements />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/notifications" element={<NotificationSettings />} />
+          <Route path="/trainers" element={<Trainers />} />
         </Route>
 
         {/* Admin Routes */}

@@ -28,6 +28,15 @@ dist-ssr
 **/firebase-adminsdk*.json
 **/serviceAccountKey.json
 triple-a-b8605-firebase-adminsdk-h9m98-be8c77729f.json
+triplea-service-key.json
+**/triplea-*-firebase-*.json
+admin-setup.js
+db-init.js
+*-setup.js
+*-init.js
+*ServiceAccount*.json
+*serviceAccount*.json
+*service-account*.json
 
 # Gradle files
 .gradle/
@@ -105,3 +114,8 @@ functions/.env
 
 # Firebase Admin SDK
 src/config/triple-a-b8605-firebase-adminsdk-h9m98-0f803aa0e4.json
+**/triplea-7794b-*.json
+*-adminsdk-*.json
+*secret*.json
+*key*.json
+*credential*.json

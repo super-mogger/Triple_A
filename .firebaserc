@@ -1,9 +1,10 @@
 {
   "projects": {
-    "default": "triple-a-b8605"
+    "default": "triplea-7794b",
+    "staging": "triplea-7794b"
   },
   "targets": {
-    "triple-a-b8605": {
+    "triplea-7794b": {
       "hosting": {
         "triple-a": [
           "localhost:5173"

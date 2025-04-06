@@ -1,12 +1,26 @@
 rules_version = '2';
 
-// Craft rules based on data in your Firestore database
-// allow write: if firestore.get(
-//    /databases/(default)/documents/users/$(request.auth.uid)).data.isAdmin;
+// Craft rules based on your security requirements
 service firebase.storage {
   match /b/{bucket}/o {
+    // Default rule - require authentication for all storage operations
     match /{allPaths=**} {
-      allow read, write: if false;
+      allow read, write: if request.auth != null;
+    }
+    
+    // Profile images - anyone can view, only authenticated users can upload their own
+    match /profile_images/{userId} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Admin-only accessible files
+    match /admin/{fileName} {
+      allow read, write: if request.auth != null && (
+        request.auth.token.email == "rawatamit446@gmail.com" || 
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.token.email))
+      );
     }
   }
 }

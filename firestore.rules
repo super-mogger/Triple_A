@@ -12,99 +12,117 @@ service cloud.firestore {
       return request.auth.token.email == "rawatamit446@gmail.com";
     }
 
+    // Check if user is an admin
+    function isAdmin() {
+      return isSuperAdmin() || 
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.token.email));
+    }
+
+    // Check if user is a trainer
+    function isTrainer() {
+      return get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.role == "trainer";
+    }
+
+    // Check if the user is the owner of the document
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
     // Super admin override - always gives full access
     match /{document=**} {
       allow read, write: if isAuthenticated() && isSuperAdmin();
     }
 
-    // Check if user is an admin without complex lookups
+    // Admins collection
     match /admins/{adminId} {
       // Everyone can read admins collection
       allow read: if isAuthenticated();
       
-      // Super admin can always write; other admins can write if they exist in collection
-      allow write: if isAuthenticated() && (
-        isSuperAdmin() || 
-        // Direct document ID match
-        adminId == request.auth.uid || 
-        adminId == request.auth.token.email
-      );
+      // Only admins can write to admin collection
+      allow write: if isAuthenticated() && isAdmin();
     }
 
-    // Give broad access to critical collections
-    match /memberships/{membershipId} {
-      allow read, write: if isAuthenticated();
-    }
-    
+    // Profiles collection
     match /profiles/{profileId} {
-      allow read, write: if isAuthenticated();
-    }
-    
-    match /attendance/{attendanceId} {
-      allow read, write: if isAuthenticated();
-    }
-    
-    match /payments/{paymentId} {
-      allow read, write: if isAuthenticated();
-    }
-    
-    match /notifications/{notificationId} {
-      allow read, write: if isAuthenticated();
-    }
-    
-    match /holidays/{holidayId} {
-      allow read, write: if isAuthenticated();
-    }
-    
-    // Add rule for attendanceStats collection
-    match /attendanceStats/{statId} {
-      // Allow users to read any stats
+      // Authenticated users can read profiles
       allow read: if isAuthenticated();
-      // Allow users to write only to their own stats document
-      allow write: if isAuthenticated() && (
-        isSuperAdmin() || 
-        exists(/databases/$(database)/documents/admins/$(request.auth.token.email)) ||
-        statId == request.auth.uid
-      );
+      
+      // Admins can write any profile, users can only write their own
+      allow write: if isAuthenticated() && (isAdmin() || isOwner(profileId));
+    }
+
+    // Memberships collection - defines available membership types
+    match /memberships/{membershipId} {
+      // Anyone can read membership types
+      allow read: if true;
+      
+      // Only admins can create/update/delete membership types
+      allow write: if isAuthenticated() && isAdmin();
     }
     
-    // Add rule for trainerAssignments collection
+    // Attendance collection
+    match /attendance/{attendanceId} {
+      // Authenticated users can read attendance
+      allow read: if isAuthenticated();
+      
+      // Admins can write attendance records
+      allow write: if isAuthenticated() && isAdmin();
+    }
+    
+    // Trainer assignments collection
     match /trainerAssignments/{assignmentId} {
       // Allow authenticated users to read
       allow read: if isAuthenticated();
+      
       // Only admins can write to trainer assignments
-      allow write: if isAuthenticated() && (
-        isSuperAdmin() || 
-        exists(/databases/$(database)/documents/admins/$(request.auth.token.email))
-      );
+      allow write: if isAuthenticated() && isAdmin();
     }
     
-    // Add rule for trainerRequests collection
+    // Trainer requests collection
     match /trainerRequests/{requestId} {
-      // Allow authenticated users to read their own requests
+      // Allow members to read their own requests, trainers to see requests assigned to them, admins to see all
       allow read: if isAuthenticated() && (
-        resource.data.userId == request.auth.uid ||
-        isSuperAdmin() || 
-        exists(/databases/$(database)/documents/admins/$(request.auth.token.email))
+        resource.data.memberId == request.auth.uid ||
+        (isTrainer() && resource.data.trainerId == request.auth.uid) ||
+        isAdmin()
       );
       
-      // Allow users to create their own requests
+      // Allow members to create their own requests
       allow create: if isAuthenticated();
       
-      // Allow admins to update and delete any request
-      allow update, delete: if isAuthenticated() && (
-        isSuperAdmin() || 
-        exists(/databases/$(database)/documents/admins/$(request.auth.token.email))
+      // Allow admins to update any request, members to update their own
+      allow update: if isAuthenticated() && (
+        isAdmin() || 
+        resource.data.memberId == request.auth.uid
       );
+      
+      // Only admins can delete requests
+      allow delete: if isAuthenticated() && isAdmin();
     }
     
-    // Fallback rule for everything else
-    match /{document=**} {
-      allow read: if isAuthenticated();
-      // Super admin or a user in the admins collection can write
+    // Workout plans collection
+    match /workout_plans/{planId} {
+      // Anyone can read public workout plans
+      allow read: if true;
+      
+      // Only admins can write workout plans
+      allow write: if isAuthenticated() && isAdmin();
+    }
+    
+    // Member-specific workout plans
+    match /profiles/{memberId}/workout_plans/{planId} {
+      // The member, their assigned trainer, and admins can read
+      allow read: if isAuthenticated() && (
+        isOwner(memberId) || 
+        isAdmin() ||
+        (isTrainer() && exists(/databases/$(database)/documents/trainerAssignments/$(resource.data.trainerId + '_' + memberId)))
+      );
+      
+      // Only the assigned trainer and admins can create/update
       allow write: if isAuthenticated() && (
-        isSuperAdmin() || 
-        exists(/databases/$(database)/documents/admins/$(request.auth.token.email))
+        isAdmin() || 
+        (isTrainer() && exists(/databases/$(database)/documents/trainerAssignments/$(request.auth.uid + '_' + memberId)))
       );
     }
   }
